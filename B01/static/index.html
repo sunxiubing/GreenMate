@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GreenMate B01 — 大棚监测 A/B 对照</title>
+<style>
+  :root {
+    --ink: #0f172a;
+    --ink-soft: #475569;
+    --ink-faint: #94a3b8;
+    --line: #e2e8f0;
+    --surface: #ffffff;
+    --canvas: #f6f8fb;
+
+    --a-ink: #1d4ed8;
+    --a-fill: #eff6ff;
+    --a-line: #bfdbfe;
+
+    --b-ink: #be123c;
+    --b-fill: #fff1f2;
+    --b-line: #fecdd3;
+
+    --warn: #b45309;
+    --bad: #b91c1c;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 24px 64px;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: system-ui, "Microsoft YaHei", -apple-system, sans-serif;
+    line-height: 1.6;
+  }
+
+  .page { max-width: 1180px; margin: 0 auto; }
+
+  /* --------------------------------------------------------- current strip */
+  .current-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin-bottom: 18px;
+  }
+  .current-info { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
+  .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--a-ink); flex: none;
+    transition: background .2s;
+  }
+  .dot.is-b { background: var(--b-ink); }
+  .sim {
+    font-size: 11px; font-weight: 700; letter-spacing: .08em;
+    color: var(--warn); background: #fffbeb;
+    border: 1px solid #fde68a; border-radius: 5px; padding: 2px 7px;
+  }
+  .strip-values { font-family: ui-monospace, Consolas, monospace; color: var(--ink-soft); }
+
+  /* -------------------------------------------------------------- controls */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .controls label { font-size: 14px; font-weight: 600; color: var(--ink-soft); }
+  #question {
+    flex: 1 1 300px;
+    padding: 10px 14px;
+    font-size: 15px;
+    font-family: inherit;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--surface);
+  }
+  #question:focus { outline: 2px solid var(--a-line); outline-offset: 1px; }
+
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 9px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: filter .15s, background .15s;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--ink); color: #fff; }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.25); }
+  .btn-primary:disabled { opacity: .45; cursor: progress; }
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--ink);
+    border-color: var(--line);
+  }
+  .btn-ghost:hover:not(:disabled) { background: #f1f5f9; }
+  .btn-ghost:disabled { opacity: .5; cursor: progress; }
+
+  .status { min-height: 22px; margin: 6px 0 18px; font-size: 14px; color: var(--ink-soft); }
+  .status.is-error { color: var(--bad); font-weight: 600; }
+
+  /* ------------------------------------------------------------ comparison */
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    gap: 24px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+  }
+  .card-a { border-color: var(--a-line); }
+  .card-b { border-color: var(--b-line); }
+
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+  }
+  .card-a .card-head { background: var(--a-fill); border-bottom: 1px solid var(--a-line); }
+  .card-b .card-head { background: var(--b-fill); border-bottom: 1px solid var(--b-line); }
+  .card-head h2 { margin: 0; font-size: 17px; letter-spacing: .01em; }
+  .card-a .card-head h2 { color: var(--a-ink); }
+  .card-b .card-head h2 { color: var(--b-ink); }
+  .card-head .sim { background: transparent; border: none; padding: 0; color: var(--ink-faint); font-size: 10px; }
+
+  /* 数值输入框：看起来是数值，实际可编辑 */
+  .metrics { padding: 4px 18px; }
+  .metric {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  .metric:last-child { border-bottom: none; }
+  .metric label {
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-family: ui-monospace, Consolas, monospace;
+    cursor: text;
+  }
+  .value { display: flex; align-items: baseline; gap: 5px; }
+  .value input {
+    width: 104px;
+    text-align: right;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #fcfdff;
+    color: var(--ink);
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  .value input::-webkit-outer-spin-button,
+  .value input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .value input:hover { border-color: #cbd5e1; }
+  .value input:focus { outline: 2px solid var(--a-line); outline-offset: 1px; }
+  .card-b .value input:focus { outline-color: var(--b-line); }
+  /* 超出 min/max 立刻标红，不用等点按钮 */
+  .value input:invalid { border-color: #fca5a5; background: #fff5f5; color: var(--bad); }
+  .value .unit { font-size: 12px; color: var(--ink-faint); min-width: 24px; }
+
+  .question-box {
+    margin: 12px 18px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    font-size: 14px;
+  }
+  .qb-label { display: block; font-size: 11px; letter-spacing: .06em; color: var(--ink-faint); margin-bottom: 3px; }
+  .qb-text { font-weight: 600; }
+
+  .answer-box {
+    margin: 0 18px 18px;
+    border: 1px solid var(--a-line);
+    border-radius: 9px;
+    overflow: hidden;
+  }
+  .card-b .answer-box { border-color: var(--b-line); }
+  .ab-label {
+    display: block;
+    padding: 7px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: #fff;
+    background: var(--a-ink);
+  }
+  .card-b .ab-label { background: var(--b-ink); }
+  .ab-body {
+    padding: 14px;
+    min-height: 150px;
+    font-size: 14.5px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .ab-body.is-placeholder { color: var(--ink-faint); font-style: italic; }
+  .ab-body.is-error { color: var(--bad); font-weight: 600; font-style: normal; }
+  .ab-body.is-loading { color: var(--ink-faint); }
+
+  .context { margin: 0 18px 18px; font-size: 12.5px; }
+  .context summary { cursor: pointer; color: var(--ink-soft); padding: 5px 0; user-select: none; }
+  .context summary:hover { color: var(--ink); }
+  .context pre {
+    margin: 8px 0 0;
+    padding: 11px 13px;
+    background: #0f172a;
+    color: #cbd5e1;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+  }
+
+  @media (max-width: 880px) {
+    .compare { grid-template-columns: 1fr; gap: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <section class="current-bar">
+    <div class="current-info">
+      <span class="dot" id="current-dot"></span>
+      <span>服务端当前状态：<strong id="current-label">—</strong></span>
+      <span class="sim">SIMULATED</span>
+      <span class="strip-values" id="current-values">—</span>
+    </div>
+    <button id="switch-btn" class="btn-ghost">切换到 <span id="switch-target">B</span></button>
+  </section>
+
+  <section class="controls">
+    <label for="question">同一个问题</label>
+    <input id="question" type="text" value="当前环境怎么样？">
+    <button id="preset-btn" class="btn-ghost">加载预设 A/B</button>
+    <button id="run-btn" class="btn-primary">运行 A/B 对照</button>
+  </section>
+
+  <p id="status" class="status">两侧数值可直接编辑；问题与系统提示词始终相同，唯一变量是状态。</p>
+
+  <section class="compare">
+    <article class="card card-a" id="card-A"></article>
+    <article class="card card-b" id="card-B"></article>
+  </section>
+
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const PANELS = ['A', 'B'];
+  const FIELDS = [
+    { key: 'temperature', unit: '°C',  step: '0.1' },
+    { key: 'humidity',    unit: '%',   step: '0.1' },
+    { key: 'light',       unit: 'lux', step: '1'   },
+  ];
+
+  const questionEl = $('question');
+  const statusEl = $('status');
+
+  let LIMITS = {};   // 由 GET /api/limits 填充，前端校验和输入框 min/max 都用它
+
+  const fmt = (n) => Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
+  const card = (id) => $(`card-${id}`);
+  const field = (id, key) => $(`${id}-${key}`);
+  const part = (id, role) => card(id).querySelector(`[data-role=${role}]`);
+
+  function setStatus(text, isError = false) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle('is-error', isError);
+  }
+
+  /* FastAPI 的 detail 可能是字符串（HTTPException），
+     也可能是对象数组（pydantic 校验失败）。直接拼进字符串会得到
+     "[object Object]"——这正是之前 190°C 那次报错的样子。 */
+  function describeError(body, fallback) {
+    const detail = body && body.detail;
+    if (typeof detail === 'string' && detail) return detail;
+    if (Array.isArray(detail)) {
+      return detail.map((item) => {
+        const where = Array.isArray(item.loc) ? item.loc.filter((p) => p !== 'body').join('.') : '';
+        return where ? `${where}: ${item.msg}` : item.msg;
+      }).join('；');
+    }
+    if (detail && typeof detail === 'object') return JSON.stringify(detail);
+    return fallback;
+  }
+
+  async function request(url, options) {
+    const res = await fetch(url, options);
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(describeError(body, `${url} 返回 ${res.status}`));
+    return body;
+  }
+
+  /* ---------------------------------------------------------- 渲染骨架 */
+  function cardHtml(id) {
+    const rows = FIELDS.map((f) => `
+      <div class="metric">
+        <label for="${id}-${f.key}">${f.key}</label>
+        <span class="value">
+          <input id="${id}-${f.key}" type="number" step="${f.step}" data-field="${f.key}" inputmode="decimal">
+          <span class="unit">${f.unit}</span>
+        </span>
+      </div>`).join('');
+
+    return `
+      <header class="card-head">
+        <h2>State ${id}</h2>
+        <span class="sim">SIMULATED</span>
+      </header>
+      <div class="metrics">${rows}</div>
+      <div class="question-box">
+        <span class="qb-label">同一个问题</span>
+        <span class="qb-text" data-role="question">—</span>
+      </div>
+      <div class="answer-box">
+        <span class="ab-label">AI Answer ${id}</span>
+        <div class="ab-body is-placeholder" data-role="answer">点击「运行 A/B 对照」查看回答</div>
+      </div>
+      <details class="context">
+        <summary>本次注入的 Context</summary>
+        <pre data-role="context">尚未调用</pre>
+      </details>`;
+  }
+
+  /* 数值一变，之前的回答就不再对应屏幕上的状态，必须清掉——
+     否则会出现"显示的数值和回答对不上"的假证据。 */
+  function invalidateAnswers(text) {
+    for (const id of PANELS) {
+      const body = part(id, 'answer');
+      body.className = 'ab-body is-placeholder';
+      body.textContent = text;
+      part(id, 'context').textContent = '尚未调用';
+    }
+  }
+
+  function syncQuestion() {
+    const text = questionEl.value.trim() || '（问题为空）';
+    for (const id of PANELS) part(id, 'question').textContent = text;
+  }
+
+  /* 失败要一次性说清楚：状态栏 + 两侧回答区 + Context 面板全部落下原因。
+     只写状态栏的话，回答区还停在"请重新运行"，用户会以为再点一次就行。 */
+  function showFailure(message) {
+    setStatus(message, true);
+    for (const id of PANELS) {
+      const body = part(id, 'answer');
+      body.className = 'ab-body is-error';
+      body.textContent = '未取到回答：' + message;
+      part(id, 'context').textContent = '本次未发送任何状态给模型。\n失败原因：' + message;
+    }
+  }
+
+  /* ------------------------------------------------------------ 读写面板 */
+  function fillCard(state) {
+    for (const f of FIELDS) field(state.state_id, f.key).value = fmt(state[f.key]);
+  }
+
+  function readCard(id) {
+    const values = { id };
+    for (const f of FIELDS) {
+      const raw = field(id, f.key).value.trim();
+      const limit = LIMITS[f.key];
+
+      if (raw === '') {
+        throw new Error(`State ${id} 的 ${limit ? limit.label : f.key} 不能为空`);
+      }
+      const num = Number(raw);
+      if (!Number.isFinite(num)) {
+        throw new Error(`State ${id} 的 ${limit ? limit.label : f.key} 不是有效数字：「${raw}」`);
+      }
+      if (limit && (num < limit.min || num > limit.max)) {
+        throw new Error(
+          `State ${id} 的${limit.label}（${f.key}）为 ${num}，` +
+          `超出允许范围 ${limit.min} ~ ${limit.max} ${limit.unit}`);
+      }
+      values[f.key] = num;
+    }
+    return values;
+  }
+
+  /* ---------------------------------------------------------------- 初始化 */
+  async function loadPresets() {
+    const states = await request('/api/states');
+    for (const state of states) fillCard(state);
+    invalidateAnswers('已载入预设，点击「运行 A/B 对照」生成回答');
+  }
+
+  async function loadLimits() {
+    LIMITS = await request('/api/limits');
+    for (const id of PANELS) {
+      for (const f of FIELDS) {
+        const limit = LIMITS[f.key];
+        if (!limit) continue;
+        const input = field(id, f.key);
+        input.min = limit.min;
+        input.max = limit.max;
+      }
+    }
+  }
+
+  async function init() {
+    for (const id of PANELS) card(id).innerHTML = cardHtml(id);
+    syncQuestion();
+
+    for (const id of PANELS) {
+      for (const f of FIELDS) {
+        field(id, f.key).addEventListener('input', () => {
+          invalidateAnswers('数值已修改，请重新运行对照');
+          setStatus('数值已修改，重新运行后回答才会与当前状态对应。');
+        });
+      }
+    }
+
+    await loadLimits();
+    await loadPresets();
+    renderCurrent(await request('/api/state'));
+  }
+
+  function renderCurrent(state) {
+    $('current-label').textContent = state.label;
+    $('current-values').textContent =
+      `${fmt(state.temperature)} ${state.units.temperature} · `
+      + `${fmt(state.humidity)} ${state.units.humidity} · `
+      + `${fmt(state.light)} ${state.units.light}`;
+    $('current-dot').classList.toggle('is-b', state.state_id === 'B');
+    $('switch-target').textContent = state.state_id === 'A' ? 'B' : 'A';
+  }
+
+  /* ---------------------------------------------------------------- 交互 */
+  questionEl.addEventListener('input', syncQuestion);
+
+  $('switch-btn').addEventListener('click', async () => {
+    try {
+      renderCurrent(await request('/api/state/switch', { method: 'POST' }));
+      setStatus(`服务端当前状态已切换为 ${$('current-label').textContent}。`);
+    } catch (err) {
+      setStatus('切换失败：' + err.message, true);
+    }
+  });
+
+  $('preset-btn').addEventListener('click', async () => {
+    const btn = $('preset-btn');
+    btn.disabled = true;
+    try {
+      await loadPresets();
+      setStatus('已载入预设 A/B，点击「运行 A/B 对照」生成回答。');
+    } catch (err) {
+      setStatus('载入预设失败：' + err.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('run-btn').addEventListener('click', async () => {
+    const btn = $('run-btn');
+    const question = questionEl.value.trim();
+
+    if (!question) {
+      setStatus('问题不能为空。', true);
+      return;
+    }
+
+    let states;
+    try {
+      states = PANELS.map(readCard);
+    } catch (err) {
+      showFailure(err.message);
+      return;
+    }
+
+    btn.disabled = true;
+    setStatus('A / B 并发调用中…');
+
+    for (const id of PANELS) {
+      part(id, 'question').textContent = question;
+      const body = part(id, 'answer');
+      body.className = 'ab-body is-loading';
+      body.textContent = '调用中…';
+      part(id, 'context').textContent = '尚未调用';
+    }
+
+    try {
+      // 这里不用 request()：两侧全失败时后端返回 502，但 body 里仍然带着
+      // results（哪一侧、因为什么失败）。request() 一见非 200 就抛异常，
+      // 那些细节会被压成一句笼统的话——而 Step 5 要的恰恰是失败说得清楚。
+      const res = await fetch('/api/compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, states }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      // results 都没有，说明错在请求本身（问题为空、数值超范围），不是 LLM 调用
+      if (!Array.isArray(data.results)) {
+        throw new Error(describeError(data, `/api/compare 返回 ${res.status}`));
+      }
+
+      let failed = 0;
+      for (const item of data.results) {
+        const id = item.state.state_id;
+        const body = part(id, 'answer');
+
+        if (item.error) {
+          failed += 1;
+          body.className = 'ab-body is-error';
+          body.textContent = '调用失败：' + item.error;
+          // Context 面板必须跟着落原因。留在"尚未调用"会和状态栏的失败自相矛盾，
+          // 看起来像界面卡住，而不是一次明确的失败。
+          part(id, 'context').textContent = '模型未读取任何状态。失败原因：' + item.error;
+        } else {
+          body.className = 'ab-body';
+          body.textContent = item.answer;
+          part(id, 'context').textContent = item.context;
+        }
+      }
+
+      // 措辞要跟实际结果一致：全挂了就不能说"完成"
+      if (failed === data.results.length) {
+        setStatus(`对照失败：${failed} 侧调用全部失败。`, true);
+      } else if (failed) {
+        setStatus(`部分失败：${failed} 侧未取到回答，其余成功。`, true);
+      } else {
+        setStatus(`完成 · 模型 ${data.results[0].model}`);
+      }
+    } catch (err) {
+      showFailure('对照失败：' + err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  init().catch((err) => setStatus('初始化失败：' + err.message, true));
+</script>
+
+</body>
+</html>
