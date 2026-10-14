@@ -1,0 +1,12 @@
+# GreenMate 项目统一依赖
+# 安装方式：pip install -r requirements.txt
+#
+# B01 需要：FastAPI + LLM 调用
+# B02 需要：FastAPI（时序查询服务）
+# 两者的公共依赖已合并在此
+
+fastapi==0.143.0
+uvicorn==0.54.0
+pydantic==2.14.1
+openai==3.29.0
+python-dotenv==1.2.4

@@ -3,6 +3,11 @@
 .env.*
 !.env.example
 
+# B02 数据文件
+greenmate.db
+greenmate.db-wal
+greenmate.db-shm
+
 # Python
 __pycache__/
 *.py[cod]
