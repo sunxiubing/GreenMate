@@ -5,7 +5,11 @@ Step 3 已验证配置（API Key / Base URL / 模型名）可用，见 check_llm
 """
 
 import os
+import sys
 from pathlib import Path
+
+# 从根目录起服务时，B01 模块找不到。加上路径。
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from dotenv import load_dotenv
 from openai import OpenAI

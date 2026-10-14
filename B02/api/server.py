@@ -29,6 +29,34 @@ from api.history import (
     get_current_environment,
     get_environment_history,
     query_stats,
+    _parse_datetime,
+)
+from database.store import (
+    DB_PATH,
+    init_schema,
+    is_empty,
+    write_samples,
+    row_count,
+    verify_count,
+    verify_order,
+)
+from simulator.engine import GreenhouseSimulator
+
+
+def _parse_datetime(s: str) -> datetime:
+    s = s.strip()
+    if s.endswith("+08:00"):
+        s = s[:-6]
+    elif s.endswith("Z"):
+        s = s[:-1]
+    return datetime.fromisoformat(s)
+if str(_b02_root) not in sys.path:
+    sys.path.insert(0, str(_b02_root))
+
+from api.history import (
+    get_current_environment,
+    get_environment_history,
+    query_stats,
 )
 from database.store import (
     DB_PATH,
@@ -63,7 +91,7 @@ def stats_endpoint(
         if not current:
             raise HTTPException(status_code=404, detail="数据库无数据，请先调用 POST /api/generate")
         end = current.timestamp.isoformat()
-        start_dt = datetime.fromisoformat(end) - timedelta(days=3)
+        start_dt = _parse_datetime(end) - timedelta(days=3)
         start = start_dt.isoformat()
 
     try:

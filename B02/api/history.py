@@ -8,11 +8,23 @@
 """
 
 import sys
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Literal
 
 _self_path = Path(__file__).resolve().parent
+
+
+def _parse_datetime(s: str) -> datetime:
+    """解析时间字符串，兼容 'YYYY-MM-DDTHH:MM'（datetime-local 输入）
+    和 'YYYY-MM-DDTHH:MM:SS'（ISO 格式）以及带时区后缀的字符串。"""
+    s = s.strip()
+    # 去掉时区后缀（+08:00 或 Z），fromisoformat 无法直接处理
+    if s.endswith("+08:00"):
+        s = s[:-6]
+    elif s.endswith("Z"):
+        s = s[:-1]
+    return datetime.fromisoformat(s)
 _b02_root = _self_path.parent
 if str(_b02_root) not in sys.path:
     sys.path.insert(0, str(_b02_root))
@@ -66,9 +78,9 @@ def get_environment_history(
     """
     init_schema()
     if isinstance(start_time, str):
-        start_time = datetime.fromisoformat(start_time)
+        start_time = _parse_datetime(start_time)
     if isinstance(end_time, str):
-        end_time = datetime.fromisoformat(end_time)
+        end_time = _parse_datetime(end_time)
 
     conn = get_connection()
     cur = conn.execute(

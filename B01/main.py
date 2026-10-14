@@ -11,9 +11,14 @@ B01 完成标准：同一个问题，只改变当前状态，AI 的回答能合�
 """
 
 import sys
+from pathlib import Path
+
+# B01 与根目录平级，从根目录起服务时找不到 B01 模块。
+# 把 B01 目录加入 Python 路径，import llm 才能找到。
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 # 启动日志含中文。输出被重定向到文件或管道时 Windows 会退回 GBK，日志就不成人话了。
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")

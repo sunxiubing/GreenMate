@@ -115,7 +115,7 @@ def _build_disturbances(seed: int) -> list[Disturbance]:
         {
             "name": "drought",
             "temp_delta": +6.0,
-            "humidity_delta": -30.0,
+            "humidity_delta": -10.0,
             "duration_hours": 24,
             "transition_hours": 6,
             "temp_ceil": 44.0,

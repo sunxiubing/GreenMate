@@ -28,11 +28,16 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+# 从根目录起服务时，B01 模块找不到。加上路径。
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 # 输出含中文，重定向到管道时 Windows 会退回 GBK。
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-BASE_DIR = Path(__file__).resolve().parent
-PYTHON = BASE_DIR / "venv" / "Scripts" / "python.exe"
+B01_DIR = Path(__file__).resolve().parent
+# venv 已统一到根目录
+ROOT_DIR = B01_DIR.parent
+PYTHON = ROOT_DIR / "venv" / "Scripts" / "python.exe"
 if not PYTHON.exists():
     PYTHON = Path(sys.executable)
 
