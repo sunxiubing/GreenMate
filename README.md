@@ -66,82 +66,102 @@ GreenMate/
 
 ## 快速开始
 
-### B01 — LLM 状态上下文对照
+所有命令在 **项目根目录** `D:\GreenMate>` 下直接运行，无需 cd 进入子文件夹。
 
-**1. 安装依赖**
+### 前置命令
 
-```bash
-pip install -r requirements.txt
+**激活虚拟环境（Windows CMD）**
+```cmd
+D:\GreenMate> venv\Scripts\activate.bat
 ```
 
-**2. 配置**
+**清理端口占用（可选，端口被占时用）**
+```cmd
+:: 查端口占用
+netstat -ano | findstr :8000
+netstat -ano | findstr :8001
 
-根目录已有 `.env` 文件，填入三个值：
+:: 杀进程（替换 <PID> 为实际进程号）
+taskkill /F /PID <PID>
+```
 
+---
+
+### B01 — LLM 状态上下文对照（端口 8000）
+
+**1. 启动服务**
+
+```cmd
+D:\GreenMate> venv\Scripts\activate.bat
+(venv) D:\GreenMate> python -m uvicorn B01.main:app --host 127.0.0.1 --port 8000
+```
+
+**启动成功标志：** `Uvicorn running on http://127.0.0.1:8000`
+
+**浏览器访问：** <http://127.0.0.1:8000/>
+
+**2. 配置 LLM（如未配置）**
+
+编辑根目录 `.env` 文件：
 ```
 LLM_API_KEY=sk-你的密钥
 LLM_BASE_URL=https://<你的工作空间>.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
 LLM_MODEL=qwen3.5-27b
 ```
 
-书写要求（踩过坑）：
-- **不要加引号**，不要写 `export`
-- **`=` 两边不要留空格**
-- 文件编码用 **UTF-8 无 BOM**
+修改后需重启 B01 服务。
 
-**3. 验证 LLM 配置（不能跳过）**
+**3. 验证 LLM 配置**
 
-```bash
-python check_llm.py
+```cmd
+(venv) D:\GreenMate> python B01/check_llm.py
 ```
 
-**4. 启动服务**
+---
 
-```bash
-python -m uvicorn main:app --host 127.0.0.1 --port 8000
+### B02 — 数据记忆（端口 8001）
+
+**1. 生成 7 天时序数据（336 条）**
+
+```cmd
+(venv) D:\GreenMate> python B02/database/generate.py        # 如有旧数据则跳过
+(venv) D:\GreenMate> python B02/database/generate.py --force  # 强制重刷
 ```
 
-浏览器打开 **<http://127.0.0.1:8000/>**
+**2. 启动时序查询服务**
 
-点「加载预设 A/B」→ 改数值 → 点「运行 A/B 对照」，对比两侧 AI Answer。
-
-### B02 — 数据记忆
-
-**1. 生成并持久化 7 天时序数据（336 条，environment_samples 表）**
-
-```bash
-cd B02
-python database/generate.py        # 如有旧数据则跳过
-python database/generate.py --force  # 强制重刷
+```cmd
+(venv) D:\GreenMate> python -m uvicorn B02.api.server:app --host 127.0.0.1 --port 8001
 ```
 
-**2. 生成少量样本（env_data 表，用于独立测试）**
+**启动成功标志：** `Uvicorn running on http://127.0.0.1:8001`
 
-```bash
-python gen_sample.py               # 生成 20 条
-python query_sample.py             # 查询全部
-python query_sample.py --last 10   # 最近 10 条
-python query_sample.py --clear     # 清空表
+**浏览器访问：** <http://127.0.0.1:8001/>
+
+**3. 查询数据**
+
+```cmd
+:: 查看全部数据（environment_samples 表，336 条）
+(venv) D:\GreenMate> python B02/check_disturbance.py
+
+:: 查看最近 N 条
+(venv) D:\GreenMate> python B02/query_sample.py --last 10
+
+:: 查看全部（env_data 表，gen_sample 生成的）
+(venv) D:\GreenMate> python B02/query_sample.py
+
+:: 清空 env_data 表
+(venv) D:\GreenMate> python B02/query_sample.py --clear
+
+:: 质量检查（6 项全部 PASS 才可继续）
+(venv) D:\GreenMate> python -m B02.quality.checker
 ```
 
-**3. 质量检查（6 项全部 PASS 才可继续）**
-
-```bash
-python -m quality.checker
-```
-
-**4. 启动时序查询服务**
-
-```bash
-python -m uvicorn api.server:app --host 127.0.0.1 --port 8001
-```
-
-浏览器打开 **<http://127.0.0.1:8001/>**
-
-**5. B07 接口（直接调用，不过 HTTP）**
+**4. B07 接口（Python 代码调用，不过 HTTP）**
 
 ```python
-from api.history import get_current_environment, get_environment_history, query_stats
+import sys; sys.path.insert(0, 'D:/GreenMate')
+from B02.api.history import get_current_environment, get_environment_history, query_stats
 from datetime import datetime, timedelta
 
 cur = get_current_environment()
@@ -153,6 +173,17 @@ samples = get_environment_history(start, end)
 stats = query_stats(start, end)
 print(stats["temperature"], stats["trend"])
 ```
+
+---
+
+### 常见报错
+
+| 报错 | 原因 | 解决 |
+|------|------|------|
+| `ModuleNotFoundError` | 未激活 venv | 先运行 `venv\Scripts\activate.bat` |
+| `Port already in use` | 端口被占 | 杀旧进程或换端口 `--port 8002` |
+| 改了 `.env` 没生效 | 进程未重启 | 重启 B01 服务 |
+| 页面空白/数据加载失败 | 服务未启动或缓存 | Ctrl+Shift+R 强制刷新，重启服务 |
 
 ---
 
@@ -308,6 +339,50 @@ HTML 响应已带 `Cache-Control: no-cache`，仍不对就 **Ctrl+Shift+R** 强�
 5. **无并发控制**：API 层无流量限制，不适合生产环境直接暴露。
 6. **B02 无增量更新**：新数据只能全量重刷或手动 append，不支持实时流写入。
 7. **B01 和 B02 暂无关联**：两者独立运行，数据不互通，未来计划由 B01 向 B02 写入实时状态。
+8. **B03 Open-Meteo 数据为预报非实测**：降水概率等字段为概率预测，夜间太阳辐射为 0，非测量值。
+
+---
+
+## B03 — 天气 API 接入
+
+接入 Open-Meteo 免费天气 API，获取真实外部环境证据。
+
+**1. 运行命令**
+
+```cmd
+(venv) D:\GreenMate> python B03/weather_service.py
+```
+
+**2. 运行命令（卡尔曼滤波 + 可视化）**
+
+```cmd
+(venv) D:\GreenMate> python B03/weather_service.py
+```
+
+**3. B01 接入（通过 API）**
+
+```cmd
+(venv) D:\GreenMate> curl -X POST http://127.0.0.1:8000/api/weather/current -H "Content-Type: application/json" -d "{\"location\":\"北京大兴\",\"forecast_window\":\"now\"}"
+```
+
+**参数变更验证步骤**
+
+| 测试 | 变更参数 | 预期结果 |
+|------|---------|---------|
+| 测试A | location=南京, forecast_window=6h | 返回多条 hourly 预报记录 |
+| 测试B | location=(32.06, 118.79) 元组 | 按经纬度查询，数据与北京不同 |
+| 失败验证 | latitude=999 | HTTP 400，系统拒绝返回旧缓存 |
+
+**B03 功能清单**
+
+| 功能 | 说明 |
+|------|------|
+| WeatherEvidence 结构 | temperature / humidity / precipitation_probability / cloud_cover / solar_radiation |
+| 两类数据源 | PUBLIC（Open-Meteo）+ SIMULATED（B02 本地模拟） |
+| 卡尔曼滤波 | 1D 卡尔曼滤波平滑温度时序，抖动抑制率 ~40% |
+| 可视化 | matplotlib 对比曲线：蓝色原始预报 vs 红色滤波后 |
+| 失败可观测 | HTTP 400/429/timeout 触发时返回值 None，无静默降级 |
+| LLM 上下文 | format_state() 自动区分 PUBLIC 和 SIMULATED 来源 |
 
 ---
 
@@ -317,3 +392,4 @@ HTML 响应已带 `Cache-Control: no-cache`，仍不对就 **Ctrl+Shift+R** 强�
 |---|---|
 | B01 — LLM 状态上下文对照 | ✅ 完成 |
 | B02 — 数据记忆：时序持久化 + 变点检测 | ✅ 完成 |
+| B03 — 天气 API 接入 + 卡尔曼滤波 | ✅ 完成 |

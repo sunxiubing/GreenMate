@@ -3,7 +3,7 @@
 .env.*
 !.env.example
 
-# B02 数据文件
+# B02/B03 数据文件
 greenmate.db
 greenmate.db-wal
 greenmate.db-shm

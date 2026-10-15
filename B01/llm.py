@@ -95,14 +95,32 @@ def get_client() -> OpenAI:
 
 def format_state(state: dict) -> str:
     """把状态字典渲染成提示词里的文本块。"""
-    return (
-        "【当前大棚状态】\n"
-        f"数据来源：{state['source']}（模拟数据，非真实传感器读数）\n"
-        f"状态：{state['label']}\n"
-        f"temperature 温度：{state['temperature']} {state['units']['temperature']}\n"
-        f"humidity 湿度：{state['humidity']} {state['units']['humidity']}\n"
-        f"light 光照：{state['light']} {state['units']['light']}"
-    )
+    source = state.get("source", "UNKNOWN")
+    if source == "PUBLIC":
+        # B03 Open-Meteo 外部真实天气数据
+        weather = state.get("_weather", {})
+        return (
+            "【当前大棚状态】\n"
+            f"数据来源：{source}（{weather.get('provider', 'Open-Meteo')} 真实天气数据）\n"
+            f"状态：{state['label']}\n"
+            f"temperature 温度：{state['temperature']} {state['units']['temperature']}\n"
+            f"humidity 湿度：{state['humidity']} {state['units']['humidity']}\n"
+            f"light 光照：{state['light']} {state['units']['light']}\n"
+            f"降水概率：{weather.get('precipitation_probability', 0):.0f}%\n"
+            f"云量：{weather.get('cloud_cover', 0):.0f}%\n"
+            f"太阳辐射：{weather.get('solar_radiation', 0):.0f} W/m²\n"
+            f"天气：{weather.get('weather_description', '未知')}"
+        )
+    else:
+        # B02 SIMULATED 本地模拟数据
+        return (
+            "【当前大棚状态】\n"
+            f"数据来源：{source}（模拟数据，非真实传感器读数）\n"
+            f"状态：{state['label']}\n"
+            f"temperature 温度：{state['temperature']} {state['units']['temperature']}\n"
+            f"humidity 湿度：{state['humidity']} {state['units']['humidity']}\n"
+            f"light 光照：{state['light']} {state['units']['light']}"
+        )
 
 
 def ask(question: str, state: dict) -> dict:

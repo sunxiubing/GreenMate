@@ -33,6 +33,16 @@ import llm
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 
+# B03 天气数据接入（可选）
+try:
+    _b03_root = BASE_DIR.parent
+    if str(_b03_root) not in sys.path:
+        sys.path.insert(0, str(_b03_root))
+    from B03.weather_service import get_weather_evidence, evidence_to_state
+    B03_AVAILABLE = True
+except ImportError:
+    B03_AVAILABLE = False
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -65,6 +75,7 @@ LIMITS = {
 }
 
 _current = {"id": "A"}
+_current_source = {"source": "SIMULATED", "location": "北京大兴", "window": "now"}
 
 
 def build_state(state_id: str, values: dict) -> dict:
@@ -125,6 +136,47 @@ def switch_state():
     """Step 2：在 A / B 之间切换当前状态。"""
     _current["id"] = "B" if _current["id"] == "A" else "A"
     return current_state()
+
+
+# --------------------------------------------------------------------------
+# B03: Open-Meteo 外部天气数据接入
+# --------------------------------------------------------------------------
+
+class WeatherSourceRequest(BaseModel):
+    location: str = "北京大兴"
+    forecast_window: str = "now"
+
+
+@app.get("/api/weather/sources")
+def list_sources():
+    """列出可用的数据来源（SIMULATED / PUBLIC）。"""
+    sources = ["SIMULATED"]
+    if B03_AVAILABLE:
+        sources.append("PUBLIC")
+    return {"sources": sources, "b03_available": B03_AVAILABLE}
+
+
+@app.post("/api/weather/current")
+def get_weather_current(req: WeatherSourceRequest):
+    """获取当前天气数据（Open-Meteo），返回 B01 state 格式。"""
+    if not B03_AVAILABLE:
+        raise HTTPException(status_code=503, detail="B03 未安装，请先安装 httpx：pip install httpx")
+
+    try:
+        we = get_weather_evidence(req.location, req.forecast_window)
+        state = evidence_to_state(we, _current["id"])
+        _current_source["source"] = "PUBLIC"
+        _current_source["location"] = req.location
+        _current_source["window"] = req.forecast_window
+        return state
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"天气 API 调用失败：{exc}")
+
+
+@app.get("/api/weather/status")
+def get_weather_status():
+    """返回当前天气数据来源状态。"""
+    return _current_source
 
 
 # --------------------------------------------------------------------------
