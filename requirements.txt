@@ -3,8 +3,9 @@
 #
 # B01 需要：FastAPI + LLM 调用
 # B02 需要：FastAPI（时序查询服务）
-# B03 需要：httpx（天气 API 调用）+ matplotlib（可视化）+ 卡尔曼滤波
-# 两者的公共依赖已合并在此
+# B04 需要：scikit-learn（TF-IDF 向量检索）
+scikit-learn==1.6.1
+# B01/B02/B03/B04 的公共依赖已合并在此
 
 fastapi==0.143.0
 uvicorn==0.54.0

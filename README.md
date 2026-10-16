@@ -50,8 +50,25 @@ GreenMate/
     │
     ├── gen_sample.py      # 生成 20 条样本写入 env_data 表
     ├── query_sample.py    # 查询 / 验证 env_data 表
+    ├── check_disturbance.py  # 查询扰动数据
     ├── __init__.py
     └── greenmate.db       # SQLite 数据库（已 commit，gitignore）
+│
+└── B03/                   # 气象 API 接入：外部环境证据 + 卡尔曼滤波
+    ├── SPEC.py            # API 文档 / 预置城市坐标 / WMO 天气代码
+    ├── weather.py         # 最小真实调用：打印 HTTP status + 原始 JSON
+    ├── weather_service.py # 主程序：PUBLIC/SIMULATED 对比 + 卡尔曼滤波 + 可视化
+    └── .env.example       # 配置模板（终端传参优先级高于此文件）
+│
+└── B04/                   # 检索增强知识库问答：带溯源引用的 RAG
+    ├── SPEC.py            # 知识库问题 / 可信资料 / 切片定义
+    ├── retrieve.py        # TF-IDF 向量检索（纯 Python，无需大模型 API）
+    ├── answer.py          # Step 5-6：回答生成 + 边界幻觉测试
+    └── __pycache__/       # Python 缓存（gitignore）
+│
+└── docs/                  # B04 项目设计文档
+    ├── b01_b03_design.md  # SIMULATED/PUBLIC 数据源定义
+    └── b03_weather.md     # HTTP 400 缓存策略 / Fail Loudly 设计
 ```
 
 ---
@@ -343,6 +360,34 @@ HTML 响应已带 `Cache-Control: no-cache`，仍不对就 **Ctrl+Shift+R** 强�
 
 ---
 
+## B04 — 检索增强知识库问答
+
+实现带溯源引用的 RAG（Retrieval-Augmented Generation）。
+
+**运行命令**
+
+```cmd
+(venv) D:\GreenMate> python B04/answer.py
+```
+
+**测试用例**
+
+| ID | 类型 | 说明 |
+|----|------|------|
+| KB-001 | 业务问答 | SIMULATED 与 PUBLIC 数据源的本质区别，A/B 实验选取规则 |
+| KB-002 | 业务问答 | drought 的 humidity_delta 偏移量及服务重启要求 |
+| KB-003 | 业务问答 | HTTP 400 不返回旧缓存的原因及 Fail Loudly 原则 |
+| KB-004 | 边界幻觉测试 | 告警音频文件名（知识库不存在，模型拒绝编造） |
+| KB-005 | 边界幻觉测试 | PWM 工作频率（知识库不存在，模型拒绝编造） |
+
+**技术方案**
+
+- 向量检索：TF-IDF + cosine similarity（纯 Python，无需大模型 API）
+- 知识库来源：项目文档切片（docs/ + 源码），元数据包含 source_id / section / page
+- 引用约束：回答仅可使用本次检索命中的 chunk_id，禁止编造来源
+
+---
+
 ## B03 — 天气 API 接入
 
 接入 Open-Meteo 免费天气 API，获取真实外部环境证据。
@@ -393,3 +438,4 @@ HTML 响应已带 `Cache-Control: no-cache`，仍不对就 **Ctrl+Shift+R** 强�
 | B01 — LLM 状态上下文对照 | ✅ 完成 |
 | B02 — 数据记忆：时序持久化 + 变点检测 | ✅ 完成 |
 | B03 — 天气 API 接入 + 卡尔曼滤波 | ✅ 完成 |
+| B04 — 检索增强知识库问答 | ✅ 完成 |
