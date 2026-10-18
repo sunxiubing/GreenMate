@@ -20,6 +20,9 @@ weather_evidence 结构：
     "weather_description": str # 天气描述
 }
 
+
+
+
 误差说明：
 - 温度误差 ±1°C，湿度 ±5%
 - 降水概率为概率预测，非实测

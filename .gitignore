@@ -8,6 +8,9 @@ greenmate.db
 greenmate.db-wal
 greenmate.db-shm
 
+# B05 MCP soilgrids session/cache
+.mcp/
+
 # Python
 __pycache__/
 *.py[cod]

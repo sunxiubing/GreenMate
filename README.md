@@ -25,48 +25,53 @@ GreenMate/
 │   ├── .env               # 密钥（已移至根目录，gitignore 排除）
 │   └── venv/              # 已移除，统一使用根目录 venv/
 │
-└── B02/                   # 数据记忆：时序持久化 + 变点检测
-    ├── SPEC.py            # 字段规范 / 时间轴 / sim_scenario 使用限制
-    │
-    ├── simulator/
-    │   └── engine.py      # 7天 × 336点时序数据生成器（GreenhouseSimulator）
-    │
-    ├── database/
-    │   ├── store.py       # SQLite 持久化（建表 / 写入 / 校验）
-    │   └── generate.py    # 主程序入口（生成 + 写入 + 报告）
-    │
-    ├── api/
-    │   ├── history.py     # B07 预留接口（直接调用，不过 HTTP）
-    │   └── server.py      # FastAPI 时序查询服务（端口 8001）
-    │
-    ├── quality/
-    │   └── checker.py     # 6 项质量检查
-    │
-    ├── changepoint/
-    │   └── detector.py    # 变点监测算法
-    │
-    ├── static/
-    │   └── history.html   # Chart.js 时序曲线页面
-    │
-    ├── gen_sample.py      # 生成 20 条样本写入 env_data 表
-    ├── query_sample.py    # 查询 / 验证 env_data 表
-    ├── check_disturbance.py  # 查询扰动数据
-    ├── __init__.py
-    └── greenmate.db       # SQLite 数据库（已 commit，gitignore）
+├── B02/                   # 数据记忆：时序持久化 + 变点检测
+│   ├── SPEC.py            # 字段规范 / 时间轴 / sim_scenario 使用限制
+│   ├── simulator/
+│   │   └── engine.py      # 7天 × 336点时序数据生成器（GreenhouseSimulator）
+│   ├── database/
+│   │   ├── store.py       # SQLite 持久化（建表 / 写入 / 校验）
+│   │   └── generate.py    # 主程序入口（生成 + 写入 + 报告）
+│   ├── api/
+│   │   ├── history.py     # 直接调用，不过 HTTP
+│   │   └── server.py      # FastAPI 时序查询服务（端口 8001）
+│   ├── quality/
+│   │   └── checker.py     # 6 项质量检查
+│   ├── changepoint/
+│   │   └── detector.py    # 变点监测算法
+│   ├── static/
+│   │   └── history.html   # Chart.js 时序曲线页面
+│   ├── gen_sample.py      # 生成 20 条样本写入 env_data 表
+│   ├── query_sample.py    # 查询 / 验证 env_data 表
+│   ├── check_disturbance.py  # 查询扰动数据
+│   ├── __init__.py
+│   └── greenmate.db       # SQLite 数据库（已 commit，gitignore）
 │
-└── B03/                   # 气象 API 接入：外部环境证据 + 卡尔曼滤波
-    ├── SPEC.py            # API 文档 / 预置城市坐标 / WMO 天气代码
-    ├── weather.py         # 最小真实调用：打印 HTTP status + 原始 JSON
-    ├── weather_service.py # 主程序：PUBLIC/SIMULATED 对比 + 卡尔曼滤波 + 可视化
-    └── .env.example       # 配置模板（终端传参优先级高于此文件）
+├── B03/                   # 气象 API 接入：外部环境证据 + 卡尔曼滤波
+│   ├── SPEC.py            # API 文档 / 预置城市坐标 / WMO 天气代码
+│   ├── weather.py         # 最小真实调用：打印 HTTP status + 原始 JSON
+│   ├── weather_service.py # 主程序：PUBLIC/SIMULATED 对比 + 卡尔曼滤波 + 可视化
+│   └── .env.example       # 配置模板（终端传参优先级高于此文件）
 │
-└── B04/                   # 检索增强知识库问答：带溯源引用的 RAG
-    ├── SPEC.py            # 知识库问题 / 可信资料 / 切片定义
-    ├── retrieve.py        # TF-IDF 向量检索（纯 Python，无需大模型 API）
-    ├── answer.py          # Step 5-6：回答生成 + 边界幻觉测试
-    └── __pycache__/       # Python 缓存（gitignore）
+├── B04/                   # 检索增强知识库问答：带溯源引用的 RAG
+│   ├── SPEC.py            # 知识库问题 / 可信资料 / 切片定义
+│   ├── retrieve.py        # TF-IDF 向量检索（纯 Python，无需大模型 API）
+│   ├── answer.py          # Step 5-6：回答生成 + 边界幻觉测试
+│   └── __pycache__/       # Python 缓存（gitignore）
 │
-└── docs/                  # B04 项目设计文档
+├── B05/                   # 工具调用编排器 + SoilGrids MCP
+│   ├── orchestrator.py    # ReAct 流水线：参数验证 / 超时保护 / unavailable 重试
+│   ├── tools.py           # OpenAI function-calling 工具定义（4 个工具）
+│   ├── test_functions.py  # 四个底层业务函数测试（ok/unavailable/error 三态）
+│   ├── test_connect_error.py   # 网络异常注入测试
+│   ├── test_multi_tool.py      # 多工具任务验证（五步日志格式）
+│   ├── test_orchestrator.py    # 编排器 ask() 主流程测试
+│   ├── test_boundary.py        # 边界幻觉测试
+│   ├── test_soilgrids.py       # SoilGrids MCP 五步 + Step 6 手动交互
+│   ├── verify_weather_source.py # 气象数据源验证
+│   └── run_all_b05.py     # 全量测试串行执行器
+│
+└── docs/                  # 项目设计文档
     ├── b01_b03_design.md  # SIMULATED/PUBLIC 数据源定义
     └── b03_weather.md     # HTTP 400 缓存策略 / Fail Loudly 设计
 ```
@@ -388,6 +393,74 @@ HTML 响应已带 `Cache-Control: no-cache`，仍不对就 **Ctrl+Shift+R** 强�
 
 ---
 
+## B05 — 工具调用编排器 + SoilGrids MCP
+
+ReAct 风格的 LLM 工具编排流水线，支持多工具串联调用与失败验证。
+
+**运行命令**
+
+```cmd
+(venv) D:\GreenMate> python B05/run_all_b05.py        # 全量测试串行执行
+(venv) D:\GreenMate> python B05/test_soilgrids.py     # 单独运行 SoilGrids Step 6 手动交互
+```
+
+**核心模块**
+
+| 文件 | 说明 |
+|------|------|
+| `orchestrator.py` | 编排器主流程：ReAct loop、Schema 验证、超时保护、unavailable 重试 |
+| `tools.py` | OpenAI function-calling 工具定义（4 个底层工具） |
+| `test_functions.py` | 四个底层业务函数（ok/unavailable/error 三态） |
+| `test_connect_error.py` | 网络异常注入测试 |
+| `test_multi_tool.py` | 多工具任务验证（五步日志格式） |
+| `test_orchestrator.py` | 编排器 ask() 主流程测试 |
+| `test_boundary.py` | 边界幻觉测试 |
+| `test_soilgrids.py` | SoilGrids MCP 五步 + Step 6 失败验证与手动交互 |
+| `run_all_b05.py` | 全量测试串行执行器 |
+
+**编排器架构（orchestrator.py 重构）**
+
+- **参数验证**：`validate_tool_args()` 解析 TOOLS schema，LLM 参数错误返回明确错误信息，不静默失败
+- **超时保护**：`_exec_with_timeout()` 线程包装器，10s 超时强制终止
+- **unavailable 重试**：工具返回 `status: "unavailable"` 时自动重试一次
+- **max_turns 耗尽保护**：返回已执行工具摘要，而非静态字符串
+
+**四步流水线**
+
+1. 用户输入自然语言任务（禁止硬编码工具顺序）
+2. LLM 判断调用哪个工具、传什么参数（`tool_choice="auto"`）
+3. 后端解析 tool call → Schema 验证 → 超时保护执行 → unavailable 重试 → 返回真实结果
+4. 结果注入消息上下文，LLM 生成最终回答
+
+**工具清单（tools.py）**
+
+| 工具名 | 功能 | 数据来源 |
+|--------|------|---------|
+| `get_current_environment` | 最新环境样本 | B02 SQLite |
+| `get_environment_history` | 最近 N 小时时序 | B02 SQLite |
+| `get_weather_forecast` | 天气预报 | Open-Meteo API |
+| `search_tomato_knowledge` | 番茄知识库检索 | B04 TF-IDF |
+
+**外部 MCP 接入（Step 5）**
+
+SoilGrids MCP（`https://gateway.pipeworx.io/soilgrids/mcp`）补齐土壤数据缺口：
+
+| 工具名 | 功能 |
+|--------|------|
+| `soil_properties` | pH / 有机碳 / 黏粒 / 砂粒 / 含水量 |
+| `soil_classification` | FAO/WRB 世界土壤分类 |
+| `list_soil_properties` | 可用属性列表 |
+
+串联路径：`Open-Meteo(气象) + SoilGrids(土壤) → 精准灌溉策略`
+
+**Step 6 失败验证（三类证据）**
+
+| 场景 | 触发方式 | 证据 |
+|------|---------|------|
+| 参数错误 | latitude=999 | error="latitude must be between -90 and 90" |
+| 超时 | timeout=0.001s | error="tool execution timeout after Xs" |
+| 空结果 | 海洋坐标 | properties 全为 null |
+
 ## B03 — 天气 API 接入
 
 接入 Open-Meteo 免费天气 API，获取真实外部环境证据。
@@ -438,4 +511,5 @@ HTML 响应已带 `Cache-Control: no-cache`，仍不对就 **Ctrl+Shift+R** 强�
 | B01 — LLM 状态上下文对照 | ✅ 完成 |
 | B02 — 数据记忆：时序持久化 + 变点检测 | ✅ 完成 |
 | B03 — 天气 API 接入 + 卡尔曼滤波 | ✅ 完成 |
+| B05 — 工具调用编排器 + SoilGrids MCP | ✅ 完成 |
 | B04 — 检索增强知识库问答 | ✅ 完成 |
