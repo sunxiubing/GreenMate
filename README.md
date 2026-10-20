@@ -71,6 +71,20 @@ GreenMate/
 │   ├── verify_weather_source.py # 气象数据源验证
 │   └── run_all_b05.py     # 全量测试串行执行器
 │
+├── B06/                   # 实时窗口推理 + SHAP 贡献
+│   ├── SPEC.py            # 时间窗口结构 + DTW 算法（纯 Python）
+│   ├── config.py          # 特征白名单、标签阈值、DTW 配置
+│   ├── generate.py        # 窗口构造 + trace CLI（WINDOW_SIZE=6 可配置）
+│   ├── feature.py         # 33 特征提取（仅从 history 窗口）
+│   ├── split.py           # 时间切分 + 泄漏自检（4 项检查）
+│   ├── train.py           # 朴素基线 + LogisticRegression 训练评估
+│   ├── persist/           # 模型持久化
+│   │   ├── persist.py     # save_model / load_model（含一致性校验）
+│   │   └── __main__.py    # CLI：save / load
+│   └── inference/         # 实时推理
+│       ├── inference.py   # predict_window / MODEL_OUTPUT / SHAP / DTW
+│       └── __main__.py    # CLI：infer / verify
+│
 └── docs/                  # 项目设计文档
     ├── b01_b03_design.md  # SIMULATED/PUBLIC 数据源定义
     └── b03_weather.md     # HTTP 400 缓存策略 / Fail Loudly 设计
@@ -513,3 +527,50 @@ SoilGrids MCP（`https://gateway.pipeworx.io/soilgrids/mcp`）补齐土壤数据
 | B03 — 天气 API 接入 + 卡尔曼滤波 | ✅ 完成 |
 | B05 — 工具调用编排器 + SoilGrids MCP | ✅ 完成 |
 | B04 — 检索增强知识库问答 | ✅ 完成 |
+| B06 — 实时窗口推理 + SHAP 贡献 | ✅ 完成 |
+
+---
+
+## B06 — 实时窗口推理
+
+基于 B02 时序数据和 B06 训练好的 LogisticRegression 模型，对实时窗口进行推理，输出预测结果和 SHAP 特征贡献。
+
+**运行命令**
+
+```cmd
+(venv) D:\GreenMate> python B06/inference/inference.py infer --model B06/artifacts/b06-20261020-v1
+(venv) D:\GreenMate> python B06/inference/inference.py verify --model B06/artifacts/b06-20261020-v1
+(venv) D:\GreenMate> python B06/persist/persist.py save --model B06/artifacts/b06-20261020-v1
+(venv) D:\GreenMate> python B06/persist/persist.py load --model B06/artifacts/b06-20261020-v1
+```
+
+**核心模块**
+
+| 文件 | 说明 |
+|------|------|
+| `inference/inference.py` | 核心推理模块：DTW + 特征提取 + LR推理 + SHAP 贡献 |
+| `inference/__main__.py` | CLI 入口 |
+| `persist/persist.py` | 模型保存与重载（含一致性校验） |
+| `SPEC.py` | 时间窗口结构 + DTW 算法 |
+| `config.py` | 特征列白名单、标签阈值、DTW 配置 |
+| `feature.py` | 33 特征提取（仅从 history 窗口） |
+| `split.py` | 时间切分 + 泄漏自检 |
+| `train.py` | 朴素基线 + LogisticRegression 训练评估 |
+
+**验证说明**
+
+- `infer`：执行正常窗口推理，从 B02 最新样本构造实时窗口，输出 MODEL_OUTPUT（predicted_attention、confidence、SHAP Top-5、DTW 值、33 特征值）
+- `verify`：执行失败验证，包含参数错误、超时、空结果三个场景，输出完整 tool_call / execute / 原始返回报文证据
+
+**MODEL_OUTPUT 结构**
+
+```
+predicted_attention: NORMAL / WATCH
+confidence: float（概率值）
+model_version: b06-YYYYMMDD-vN
+shap.top5_contributions: [{feature, contribution}, ...]
+dtw_temperature / dtw_humidity / dtw_lux: float
+raw_features: {特征名: 值}（33 个）
+errors: [异常记录]（容错收集）
+```
+

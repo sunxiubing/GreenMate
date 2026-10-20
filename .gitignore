@@ -32,3 +32,15 @@ logs/
 report/
 # 临时文件
 *.tmp
+
+# B06 训练产物
+B06/artifacts/
+B06/data/
+B06/__pycache__/
+*.csv
+*.joblib
+*.json
+
+# B06 子模块缓存
+B06/**/__pycache__/
+B06/**/*.pyc
