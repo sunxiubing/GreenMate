@@ -78,9 +78,19 @@ def get_environment_history(hours: int = 24):
 # --------------------------------------------------------------------------
 def get_weather_forecast(
     location: str | tuple[float, float] = "北京大兴",
+    forecast_window: str = "now",
     _inject: dict | None = None,
 ):
-    """获取天气预报，模拟断网场景（超时注入）。"""
+    """获取天气预报，模拟断网场景（超时注入）。
+
+    Args:
+        location: 预置城市名（如 "北京大兴"）或 (lat, lon) 元组
+        forecast_window: 预测窗口，透传给 B03。
+            取值见 B03.weather_service._WINDOW_TO_HOURS：
+            now / 1h / 3h / 6h / 12h / 1d / 3d。
+            默认 "now" —— 保持既有行为完全不变。
+        _inject: 测试用注入，{"status": "unavailable"|"error", "error": "..."}
+    """
     from B03.weather_service import get_weather_evidence
     import httpx
 
@@ -94,7 +104,7 @@ def get_weather_forecast(
                 "data": None,
                 "error": _inject.get("error", "injected error"),
             }
-        we = get_weather_evidence(location, forecast_window="now")
+        we = get_weather_evidence(location, forecast_window=forecast_window)
         return {
             "status": "ok",
             "provider": we.provider,

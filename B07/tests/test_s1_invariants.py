@@ -337,6 +337,38 @@ def test_failed_run_is_explainable(broken_llm, tmp_runs_dir):
     assert "llm_explanation" in result["answer"]
 
 
+def test_failure_prints_one_line_to_stderr(broken_llm, tmp_runs_dir, capsys):
+    """失败必须往 stderr 留一行（stage + 异常类型 + 消息），不许静默。"""
+    from B07.runs import run_analysis
+
+    with pytest.raises(Exception):
+        run_analysis(datetime.fromisoformat(ANCHOR), LOCATION)
+
+    err = capsys.readouterr().err
+    assert "llm_explanation" in err
+    assert "RuntimeError" in err or "Error" in err
+    assert "模拟 LLM 服务不可用" in err
+
+
+def test_progress_callback_error_is_reported_not_swallowed(fake_llm, tmp_runs_dir, capsys):
+    """进度回调出错不能影响主流程，但必须打到 stderr，不许 `except: pass`。"""
+    from B07.runs import run_analysis
+
+    def _boom(stage, extra=None):
+        raise NameError("未定义的变量")
+
+    archive = run_analysis(datetime.fromisoformat(ANCHOR), LOCATION, progress=_boom)
+
+    # 主流程照常完成
+    assert archive["status"] == "success"
+
+    # 但异常留了痕
+    err = capsys.readouterr().err
+    assert "NameError" in err
+    assert "未定义的变量" in err
+    assert "evidence" in err   # 记了是哪个阶段出的问题
+
+
 # --------------------------------------------------------------------------
 # 附：固定问题与敏感信息
 # --------------------------------------------------------------------------

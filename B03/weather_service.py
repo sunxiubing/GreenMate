@@ -64,7 +64,16 @@ def get_weather_evidence(
     }
 
     if hour_offset > 0:
-        params["forecast_days"] = max(1, (hour_offset // 24) + 1)
+        # hourly 数组必须一直覆盖到"目标小时 = 当前小时 + hour_offset"，
+        # 否则跨夜时目标时刻会落在 hourly 之外（例：现在 22 点、+6h → 目标 28 点）。
+        # 原式 max(1, (hour_offset // 24) + 1) 只按偏移量算天数，跨夜时覆盖不到目标小时。
+        #
+        # current["time"][11:13] 是 API 返回值，请求前拿不到；
+        # Open-Meteo 的 current.time 用的是请求里的 timezone（Asia/Shanghai），
+        # 所以用同一时区的本地钟点小时，与 current["time"][11:13] 等价。
+        _now_hour = datetime.now(timezone(timedelta(hours=8))).hour
+        hours_needed = _now_hour + hour_offset
+        params["forecast_days"] = max(2, hours_needed // 24 + 1)
         params["hourly"] = "temperature_2m,relative_humidity_2m,precipitation_probability,cloud_cover,shortwave_radiation,weather_code"
 
     with httpx.Client(timeout=10.0) as client:
@@ -76,6 +85,7 @@ def get_weather_evidence(
     if not current:
         raise RuntimeError(f"API 返回异常: {data}")
 
+    timestamp = current.get("time", "")
     temp = float(current.get("temperature_2m", 0))
     humid = float(current.get("relative_humidity_2m", 0))
     precip = float(current.get("precipitation_probability", 0))
@@ -83,10 +93,42 @@ def get_weather_evidence(
     radiation = float(current.get("shortwave_radiation", 0))
     code = int(current.get("weather_code", 0))
 
+    if hour_offset > 0:
+        # 真正的"未来预报"：从 hourly 数组里取"当前小时 + hour_offset"那一小时。
+        # 取不到就显式失败，绝不静默回退到 current（回退会让 forecast_window 变成摆设）。
+        hourly = data.get("hourly") or {}
+        times = hourly.get("time") or []
+        if not times:
+            raise RuntimeError(
+                f"API 未返回 hourly 数组，无法取到 +{hour_offset}h 的预报"
+            )
+
+        cur_prefix = str(timestamp)[:13]   # "YYYY-MM-DDTHH"
+        idx = next((i for i, t in enumerate(times) if str(t)[:13] == cur_prefix), None)
+        if idx is None:
+            raise RuntimeError(
+                f"hourly 数组里找不到当前小时 {cur_prefix}，无法定位 +{hour_offset}h 的预报"
+            )
+
+        j = idx + hour_offset
+        if j >= len(times):
+            raise RuntimeError(
+                f"hourly 数组长度不足（需要第 {j} 个，实际 {len(times)} 个），"
+                f"无法取到 +{hour_offset}h 的预报"
+            )
+
+        timestamp = times[j]
+        temp = float(hourly["temperature_2m"][j])
+        humid = float(hourly["relative_humidity_2m"][j])
+        precip = float(hourly["precipitation_probability"][j])
+        cloud = float(hourly["cloud_cover"][j])
+        radiation = float(hourly["shortwave_radiation"][j])
+        code = int(hourly["weather_code"][j])
+
     return WeatherEvidence(
         location=loc_name,
         forecast_window=forecast_window,
-        timestamp=current.get("time", ""),
+        timestamp=timestamp,
         temperature=round(temp, 1),
         humidity=round(humid, 1),
         precipitation_probability=round(precip, 1),

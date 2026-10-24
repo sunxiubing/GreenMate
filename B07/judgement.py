@@ -5,6 +5,11 @@
     current_environment / recent_trend / predicted_attention /
     evidence_status / limitations
 
+  S3-1 起**可选**追加第 6 个字段 external_conditions（外部天气条件）：
+    - 没有外部条件时，输出**严格是原来的 5 个字段**，键名、顺序、取值全不变
+      （S1 / S2 的既有断言依赖这一点）
+    - 有外部条件时，在 5 个字段之后**追加**第 6 个（追加，不是替换）
+
 硬约束：
   - 不接 LLM，不调用任何模型
   - 五个字段必须能脱离 LLM 文本单独存在，且能被重新算出来
@@ -78,7 +83,17 @@ def _judge_stability(run_bundle: dict) -> dict:
     samples = _history_samples(run_bundle)
     if not samples:
         return {"passed": False, "criteria": [], "conclusion": "无历史数据，无法判定"}
-    return judge_stability(samples)
+    rich = _rich_failure(run_bundle)
+    return judge_stability(samples, rich_failure=rich)
+
+
+def _rich_failure(run_bundle: dict) -> bool:
+    """该 run 是否使用富化失败结论句（由场景决定；S1 保持原文本）。"""
+    try:
+        from B07.scenarios import rich_failure_for
+        return rich_failure_for(run_bundle.get("scenario"))
+    except Exception:
+        return False
 
 
 def _tail_window_stability() -> tuple[bool, str]:
@@ -136,12 +151,17 @@ def _recent_trend(run_bundle: dict) -> dict:
 
     key_numbers = {}
     for c in criteria:
-        key_numbers[c["name"]] = {
+        item = {
             "value": c["value"],
             "threshold": c["threshold"],
             "passed": c["passed"],
             "note": c["note"],
         }
+        # 富化失败结论里的"超出幅度"一并带出来，
+        # 这样 LLM 复述这个数字时不会被判成"事实越界"
+        if "excess" in c:
+            item["excess"] = c["excess"]
+        key_numbers[c["name"]] = item
 
     history = run_bundle.get("history") or []
     first = history[0] if history else {}
@@ -314,15 +334,25 @@ def _limitations(run_bundle: dict) -> dict:
         "tail_window_conclusion": tail_conclusion,
     }
 
-    # ④ 未接入 B03 / B04
+    # ④ 模块边界：B04 未接入；B03 外部条件是**可选**的
+    #
+    # 这条限制的文字在"接了外部条件"和"没接"两种运行里必须**完全一样**：
+    #   - 结构化判断的前 5 个字段要能逐字段对比，接了外部条件不许改动它们；
+    #   - 如果这里写死"未接入 B03 天气"，接了外部条件时它就是**假话**，
+    #     而 LLM 会照着它说"当前判断未接入真实天气"——自相矛盾的状态会
+    #     把外部条件直接压掉，实验就白做了。
+    # 所以这里只写**恒为真的边界**：以 B02 历史 + B06 预测为主、B04 未接入、
+    # 外部条件（若接入）只作方向性参考。
     no_weather_no_kb = {
         "key": "no_weather_no_kb",
-        "text": ("本阶段未接入 B03 天气数据与 B04 知识库，"
-                 "判断只基于 B02 历史 + B06 预测；"
-                 "没有外部气象校正，也没有农艺知识库佐证，"
-                 "无法解释'为什么该数值对番茄意味着什么'。"),
+        "text": ("本阶段的判断以 B02 历史 + B06 预测为主；"
+                 "B04 农艺知识库未接入，"
+                 "因此无法解释『为什么该数值对番茄意味着什么』；"
+                 "外部信息只作方向性参考，"
+                 "不参与内部数值的判定，其数值也不能与内部模拟值直接比较。"),
         "connected_modules": ["B02", "B05", "B06"],
-        "not_connected_modules": ["B03", "B04"],
+        "not_connected_modules": ["B04"],
+        "optional_modules": ["B03"],
     }
 
     return {
@@ -338,18 +368,88 @@ def _limitations(run_bundle: dict) -> dict:
 # 公开接口
 # --------------------------------------------------------------------------
 
-def build_judgement(run_bundle: dict) -> dict:
-    """由 run_bundle 生成结构化判断（五个字段）。
+# 用来区分"没传 external_conditions"和"显式传了 None"
+_EXTERNAL_UNSET = object()
+
+# external_conditions 的稳定字段名（顺序即输出顺序）
+EXTERNAL_FIELDS = [
+    "signal",
+    "baseline_point",
+    "forecast_point",
+    "precip_delta",
+    "temp_delta",
+    "cloud_delta",
+    "solar_radiation",
+    "judge_method",
+    "basis",
+    "caveats",
+]
+
+
+def _external_conditions(external: dict) -> dict:
+    """把 B07.weather.build_external_context() 的结果整成稳定字段。
+
+    字段名固定不变，取值来自真实数据；外部条件不可用时 signal 为
+    external_unavailable、judge_method 为 unavailable，不做任何粉饰。
+    """
+    if not isinstance(external, dict):
+        return {
+            "signal": None,
+            "baseline_point": None,
+            "forecast_point": None,
+            "precip_delta": None,
+            "temp_delta": None,
+            "cloud_delta": None,
+            "solar_radiation": None,
+            "judge_method": None,
+            "basis": None,
+            "caveats": [],
+        }
+
+    out = {
+        "signal": external.get("signal"),
+        "baseline_point": external.get("baseline_point"),
+        "forecast_point": external.get("forecast_point"),
+        "precip_delta": external.get("precip_delta"),
+        "temp_delta": external.get("temp_delta"),
+        "cloud_delta": external.get("cloud_delta"),
+        "solar_radiation": external.get("solar_radiation"),
+        "judge_method": external.get("judge_method"),
+        "basis": external.get("basis"),
+        "caveats": list(external.get("caveats") or []),
+    }
+    # 附加信息（不属于稳定字段，但一起带出，便于回溯时核对）
+    out["available"] = external.get("available")
+    out["future_ok"] = external.get("future_ok")
+    out["warnings"] = list(external.get("warnings") or [])
+    out["location"] = external.get("location")
+    out["forecast_window"] = external.get("forecast_window")
+    out["analysis_time"] = external.get("analysis_time")
+    return out
+
+
+def build_judgement(run_bundle: dict, external_conditions=_EXTERNAL_UNSET) -> dict:
+    """由 run_bundle 生成结构化判断。
 
     Args:
         run_bundle: S1-3 predict_for_run() 的返回值
+        external_conditions: 可选的第 6 个字段内容
+            （B07.weather.build_external_context() 的返回值）。
+            不传时从 run_bundle.get("external_conditions") 取；
+            显式传 None 表示"确定没有外部条件"。
 
     Returns:
-        恰好五个顶层字段：
+        没有外部条件时，恰好五个顶层字段（键名、顺序、取值全不变）：
         current_environment / recent_trend / predicted_attention /
         evidence_status / limitations
+
+        有外部条件时，在上述 5 个字段之后**追加**第 6 个：
+        external_conditions
     """
-    return {
+    if external_conditions is _EXTERNAL_UNSET:
+        external_conditions = run_bundle.get("external_conditions")
+
+    judgement = {
         "current_environment": _current_environment(run_bundle),
         "recent_trend": _recent_trend(run_bundle),
         "predicted_attention": _predicted_attention(run_bundle),
@@ -357,16 +457,21 @@ def build_judgement(run_bundle: dict) -> dict:
         "limitations": _limitations(run_bundle),
     }
 
+    if external_conditions is not None:
+        judgement["external_conditions"] = _external_conditions(external_conditions)
 
-def recompute_judgement(run_bundle: dict) -> dict:
+    return judgement
+
+
+def recompute_judgement(run_bundle: dict, external_conditions=_EXTERNAL_UNSET) -> dict:
     """用同样输入重新算一遍同样五个字段（用于自检）。"""
-    return build_judgement(run_bundle)
+    return build_judgement(run_bundle, external_conditions)
 
 
-def self_check(run_bundle: dict) -> dict:
+def self_check(run_bundle: dict, external_conditions=_EXTERNAL_UNSET) -> dict:
     """自检：复算结果是否与 build_judgement 逐字段相等。"""
-    a = build_judgement(run_bundle)
-    b = recompute_judgement(run_bundle)
+    a = build_judgement(run_bundle, external_conditions)
+    b = recompute_judgement(run_bundle, external_conditions)
 
     fields = list(a.keys())
     diffs = []
@@ -376,14 +481,85 @@ def self_check(run_bundle: dict) -> dict:
     # 顺序也要一致
     same_order = list(a.keys()) == list(b.keys())
 
+    # 有没有第 6 个字段，取决于有没有外部条件
+    expected_count = 6 if "external_conditions" in fields else 5
+
     return {
         "fields": fields,
         "field_count": len(fields),
-        "expected_field_count": 5,
+        "expected_field_count": expected_count,
         "identical": not diffs and same_order,
         "differing_fields": diffs,
         "same_order": same_order,
-        "passed": (not diffs) and same_order and len(fields) == 5,
+        "passed": (not diffs) and same_order and len(fields) == expected_count,
+    }
+
+
+# --------------------------------------------------------------------------
+# 合成关注等级（内部 B06 预测 × 外部天气信号）
+# --------------------------------------------------------------------------
+#
+# 这是**独立于结构化判断五/六字段**的一层：它不进 build_judgement 的输出，
+# 因此 S1 / S2 的"5 字段"不变量不受影响；它作为存档里的一个独立字段存在，
+# 可从存档完全复算。
+#
+# 规则（S3 完成线第三条，写死在程序里，不靠 LLM 措辞）：
+#     内部 predicted_attention == "WATCH"                → watch_internal
+#     内部 NORMAL 且 signal == "external_deteriorating"  → watch_external
+#     内部 NORMAL 且 signal ∈ {stable, improving, unknown} → internal_only
+
+COMBINED_WATCH_INTERNAL = "watch_internal"
+COMBINED_WATCH_EXTERNAL = "watch_external"
+COMBINED_INTERNAL_ONLY = "internal_only"
+
+# 没有外部条件时，外部信号按"未知"处理
+EXTERNAL_SIGNAL_UNKNOWN = "unknown"
+
+
+def combined_attention(predicted_attention: str | None,
+                        external_signal: str | None = None) -> str:
+    """把内部 B06 预测与外部天气信号合成一个关注等级（纯程序，不经过 LLM）。"""
+    from B07.weather import SIGNAL_DETERIORATING
+
+    if predicted_attention == "WATCH":
+        return COMBINED_WATCH_INTERNAL
+    if external_signal == SIGNAL_DETERIORATING:
+        return COMBINED_WATCH_EXTERNAL
+    return COMBINED_INTERNAL_ONLY
+
+
+def build_combined_attention(run_bundle: dict) -> dict:
+    """合成关注等级 + 判定理由。
+
+    run_bundle 只需要两个键：model_output（含 predicted_attention）与
+    external_conditions（可为 None / 缺省）。存档里也是这两个键，
+    所以回溯时可以用同一份存档直接复算。
+    """
+    mo = run_bundle.get("model_output") or {}
+    internal = mo.get("predicted_attention")
+
+    ext = run_bundle.get("external_conditions")
+    signal = ext.get("signal") if isinstance(ext, dict) else None
+    if not signal:
+        signal = EXTERNAL_SIGNAL_UNKNOWN
+
+    value = combined_attention(internal, signal)
+
+    if value == COMBINED_WATCH_INTERNAL:
+        reason = (f"内部 B06 预测为 {internal}，按内部信号直接提升关注度；"
+                  f"外部信号 {signal} 不改变这一结论")
+    elif value == COMBINED_WATCH_EXTERNAL:
+        reason = (f"内部 B06 预测为 {internal}，但外部条件判定为 {signal}，"
+                  f"关注度由外部信号抬升")
+    else:
+        reason = (f"内部 B06 预测为 {internal}，外部信号为 {signal}"
+                  f"（无外部信号，或外部条件平稳/好转），关注度保持内部结论")
+
+    return {
+        "value": value,
+        "internal_predicted_attention": internal,
+        "external_signal": signal,
+        "reason": reason,
     }
 
 

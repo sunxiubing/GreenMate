@@ -85,25 +85,44 @@ GreenMate/
 │       ├── inference.py   # predict_window / MODEL_OUTPUT / SHAP / DTW
 │       └── __main__.py    # CLI：infer / verify
 │
-├── B07/                   # S1 稳态基线：选窗 → 取数 → 推理 → 判断 → 解释 → 存档
+├── B07/                   # S1 稳态基线 / S2 渐进漂移：选窗 → 取数 → 推理 → 判断 → 解释 → 存档
 │   ├── __init__.py        # 包声明（让 python -m B07.runs 能跑）
-│   ├── __main__.py        # 入口分发：默认 S1 全流程，list/explain 透传给 runs
+│   ├── __main__.py        # 入口分发：默认 S1 全流程，--scenario S1/S2，list/explain 透传给 runs
 │   ├── s1.py              # S1 统一入口 + 阶段报告生成
+│   ├── s2.py              # S2 统一入口（渐进漂移）+ 阶段报告生成
+│   ├── scenarios.py       # 场景注册表（S1/S2）：哪个场景用哪个选窗策略
+│   ├── check_s2_experiment.py  # S2 实验有效性校验脚本（只读存档，9 条自检）
 │   ├── config.py          # 位置 / 窗口点数 / 采样间隔 / gap 阈值
 │   ├── stability.py       # 稳定窗口扫描 + 透明稳定判定规则
 │   ├── evidence.py        # 当前状态 + 最近历史 + 时间锚点（含校验）
 │   ├── predict.py         # 加载 B06 已存模型做一次预测
-│   ├── judgement.py       # 结构化判断五字段（纯程序，无 LLM）
+│   ├── judgement.py       # 结构化判断五/六字段 + 合成关注等级（纯程序，无 LLM）
 │   ├── explain.py         # LLM 解释 + 一致性校验（只解释，不判断）
-│   ├── runs.py            # run 存档 + index 索引 + explain_run 回溯
-│   ├── tests/             # S1 不变量测试（pytest）
+│   ├── runs.py            # run 存档 + index 索引 + explain_run 回溯 + rebuild_index
+│   ├── weather.py         # S3 天气证据接入层（B03 未来外部天气，走 B05 工具接口）
+│   ├── s3.py              # S3-2 单变量对照实验（真实组 / 离线组 / 降级验证）
+│   ├── s3_report.py       # 从实测存档生成 s3_report.md
+│   ├── s3_citation_probe.py   # 引用率探针（冻结 ⑥ 块重复跑，只测 LLM 采样波动）
+│   ├── s3_citation_table.py   # 全部 S3_with 存档的统一判定表
+│   ├── tests/             # S1/S2/S3 不变量测试（pytest）
 │   │   ├── conftest.py    # 路径注入 + 假 LLM 客户端
-│   │   └── test_s1_invariants.py
+│   │   ├── test_s1_invariants.py
+│   │   ├── test_s2_invariants.py
+│   │   ├── test_weather_invariants.py
+│   │   └── test_s3_invariants.py
 │   ├── runs/              # 运行时生成的存档（gitignore *.json）
 │   │   ├── index.json     # 索引：run_id → 摘要
 │   │   └── run_XXX/run.json
 │   └── artifacts/         # 阶段报告
-│       └── s1_report.md
+│       ├── s1_report.md
+│       ├── s2_report.md
+│       ├── s3_report.md
+│       ├── s3_raw_result.json
+│       ├── s3_offline_result.json
+│       ├── s3_citation_stats.json
+│       ├── s3_citation_table.json
+│       ├── s3_frozen_ext.json
+│       └── s3_calibration.json
 │
 └── docs/                  # 项目设计文档
     ├── b01_b03_design.md  # SIMULATED/PUBLIC 数据源定义
@@ -549,6 +568,8 @@ SoilGrids MCP（`https://gateway.pipeworx.io/soilgrids/mcp`）补齐土壤数据
 | B04 — 检索增强知识库问答 | ✅ 完成 |
 | B06 — 实时窗口推理 + SHAP 贡献 | ✅ 完成 |
 | B07 — S1 稳态基线：选窗 → 取数 → 推理 → 判断 → 解释 → 存档 | ✅ 完成 |
+| B07 — S2 渐进漂移：同一流程，只换历史窗口 | ✅ 完成 |
+| B07 — S3 天气证据接入层：接 B03 未来外部天气（走 B05 工具接口） | ✅ 完成 |
 
 ---
 
@@ -665,12 +686,15 @@ B07 的 S1 阶段做一件事：**用「当前状态 + 最近历史 + 已保存�
 | `B07/predict.py` | 只加载 B06 已存模型做一次预测（不重训、不重切数据） | ✅ |
 | `B07/judgement.py` | 结构化判断五字段，可脱离 LLM 复算（`recompute_judgement`） | ✅ |
 | `B07/explain.py` | LLM 解释 + 结论冲突 / 事实越界一致性校验 | ✅ |
-| `B07/runs.py` | run 存档、index 索引、`explain_run` 回溯 | ✅ |
+| `B07/runs.py` | run 存档、index 索引、`explain_run` 回溯、`rebuild_index` | ✅ |
 | `B07/s1.py` | S1 统一入口 + 阶段报告生成 | ✅ |
-| `B07/tests/` | S1 不变量测试（22 条，pytest） | ✅ |
-| `B07/runs/index.json` | 索引：run_id → {created_at, question, verdict, model_version, status} | ❌ gitignore |
+| `B07/s2.py` | S2 统一入口（渐进漂移，只做编排）+ 6 条自检 + 阶段报告 | ✅ |
+| `B07/scenarios.py` | 场景注册表（S1 / S2） | ✅ |
+| `B07/tests/` | S1 + S2 + S3 不变量测试（68 条，pytest） | ✅ |
+| `B07/runs/index.json` | 索引：run_id → {created_at, scenario, question, verdict, model_version, status} | ❌ gitignore |
 | `B07/runs/<run_id>/run.json` | 单次运行完整快照 | ❌ gitignore |
 | `B07/artifacts/s1_report.md` | 阶段报告（run_id / 证据来源 / 判据 / 五字段 / coef Top5 / LLM 原文 / 回溯输出） | ✅ |
+| `B07/artifacts/s2_report.md` | S2 阶段报告（S1/S2 并排对比 / 实验有效性证明 / 温度带约定 / 边界与局限） | ✅ |
 
 > `B07/runs/*.json` 命中 `.gitignore` 的全局 `*.json` 规则，属于运行时产物，不入库；需要留档请自行备份该目录。
 
@@ -684,5 +708,417 @@ B07 的 S1 阶段做一件事：**用「当前状态 + 最近历史 + 已保存�
 - `B07/runs.py` — run 存档、索引、失败留痕、`explain_run` 回溯（复算而非复读）
 - `B07/runs/` — 每次运行的完整快照与索引（本地留存）
 - `B07/artifacts/s1_report.md` — 本阶段报告
-- `B07/tests/` — 22 条不变量测试，全部离线可跑（LLM 用假客户端）
+- `B07/artifacts/s2_report.md` — S2 阶段报告（渐进漂移的对比证据）
+- `B07/tests/` — 68 条不变量测试（S1 24 + S2 26 + S3 18），全部离线可跑（LLM 用假客户端、天气用假工具）
 
+---
+
+## B07 — S2 渐进漂移
+
+S2 与 S1 **共用同一套流程、同一个固定问题、同一个 system prompt、同一个模型、同一套判据阈值**，
+唯一不同的是**看哪一段历史**。所以 S1 与 S2 的输出可以直接横向比较。
+
+> **S2 只改变历史过程，不新增任何模块。**
+> 没接 B03 天气、没接 B04 知识库、没改 B01/B02/B05/B06 任何文件、没重训模型、没重切数据、没动 B02 数据库。
+> 新增的只有 B07 内部三样东西：`B07/scenarios.py`（场景注册表）、
+> `B07/s2.py`（S2 入口，只做编排，逻辑全部复用 `B07.runs.run_analysis()`）、
+> 以及 `B07/stability.py` 里的选窗策略 `pick_drifting_window()`。
+> 判据阈值、提示词文字、固定问题、模型产物一个字没改。
+
+| | S1 稳态基线 | S2 渐进漂移 |
+|---|---|---|
+| `anchor_policy` | `stable_window` | `drifting_comparable_to_S1` |
+| `expect_stability` | `True` | `False`（必须判为不稳定） |
+| 固定问题 | 与 S2 同一个字符串对象，一字不改 | 同左 |
+| 判据阈值 | 不变 | 不变 |
+| 选中窗口 | 2026-10-21T13:30 → 16:00 | 2026-10-20T09:30 → 12:00 |
+| 末点温度 | 32.8℃ | 32.8℃（与 S1 差 0.0℃，当前值可比） |
+| ΔT | 0.8℃ | 7.5℃ |
+| 稳定判定 | 稳定 | **不稳定（持续升温）** |
+| B06 预测 | NORMAL | NORMAL（预期，见下） |
+
+**S1 / S2 对照结论**
+
+两次的**当前值几乎一样**（温度都是 32.8℃、湿度都是 56.7%，差 0.0℃），
+**提示词也完全一样**（`system_prompt_sha256` = `aa1400cf8568`，
+`question_sha256` = `d3cc394bfcbe`，两次完全相同），
+**唯一的差别是喂进去的那 6 个历史点**：
+
+- S1：33.9 → 34.1 → 34.0 → 33.9 → 33.3 → 32.8℃（在平台上缓降，判为**稳定**）
+- S2：25.3 → 27.6 → 30.5 → 31.6 → 32.2 → 32.8℃（单调升温，判为**不稳定**）
+
+**同一个 32.8℃，在 S1 是「稳态平台的最后一点」，在 S2 是「持续升温过程的最后一点」。**
+GreenMate 判的是"当前值 + 历史过程"，不是当前值本身——这就是 S2 想证明的事。
+完整证据见 `B07/artifacts/s2_report.md` 第 7~9 节。
+
+**选窗策略 `drifting_comparable_to_S1`（实现在 `B07/stability.pick_drifting_window`）**
+
+在全部 331 个连续 6 点窗口里，同时满足下面三条的才算候选，再取 ΔT 最大的：
+
+- (a) 末点温度落在 S1 参考带 `[32.8, 33.6]℃`（S1 末点 32.8℃，容差 0.8℃，单侧带：末点须已达到 S1 水平）
+- (b) 窗口内温度**全程单调上升**
+- (c) `judge_stability` 判定为**不稳定**
+
+选窗时数据先被投影成只含 `timestamp / temperature / humidity / lux` 的行，
+`sim_scenario` 字段在这一步被物理丢弃——**想用也用不上**。
+选窗后还会跑一次对抗性自检：把 `sim_scenario` 全改成 `"XXXXXXXX"` 重跑选窗，结果必须完全一样。
+选中的窗口恰好跨了 `cold_snap → normal` 的场景边界，这正是"没偷看 sim_scenario"的证据。
+
+**入口**
+
+```cmd
+(venv) D:\GreenMate> python -m B07.s2
+(venv) D:\GreenMate> python -m B07 --scenario S2
+(venv) D:\GreenMate> python -m B07 --scenario S1        # 等价于 python -m B07.s1
+(venv) D:\GreenMate> python -m B07 --scenario S3        # 未知场景 → 报错退出（退出码 2）
+
+(venv) D:\GreenMate> python -m B07.s2 --report-only     # 只按已有存档重建 s2_report.md（不新增 run）
+(venv) D:\GreenMate> python B07\check_s2_experiment.py --s1 run_012 --s2 run_015
+(venv) D:\GreenMate> python -m B07.runs rebuild-index   # 按实际存在的存档重建 index.json
+(venv) D:\GreenMate> python -m B07.runs explain run_014
+(venv) D:\GreenMate> python -m B07 list
+(venv) D:\GreenMate> python -m pytest B07/tests -v
+```
+
+> `--question` 同样必须是固定问题，改写直接被拒（退出码 2）。
+> `--scenario` 只在跑全流程时生效；`list / explain / run` 仍是 B07.runs 的子命令。
+
+**提示词指纹**
+
+`llm_meta` 里新增两个字段，S1 / S2 存档可以直接比对"是不是同一套提示词、同一个问题"：
+
+| 字段 | 值（当前） |
+|---|---|
+| `system_prompt_sha256` | `aa1400cf8568`（= `sha256(SYSTEM_PROMPT)[:12]`） |
+| `question_sha256` | `d3cc394bfcbe`（= `sha256(FIXED_QUESTION)[:12]`） |
+
+SYSTEM_PROMPT 文字本身一个字没动。
+
+**实际输出（run_014）**
+
+```
+选中窗口：2026-10-20T09:30:00 → 2026-10-20T12:00:00
+  25.3℃/68.8%/44222 → 27.6℃/66.1%/50200 → 30.5℃/62.3%/53208
+  → 31.6℃/59.4%/55877 → 32.2℃/57.9%/58106 → 32.8℃/56.7%/59594
+
+逐条判据
+  ❌ 温度最大波动     实测 7.5  阈值 2.0     超出 5.5
+  ❌ 湿度首尾总变化   实测 -12.1  阈值 3.0    超出 9.1
+  ❌ 湿度单步最大变化 实测 3.8  阈值 1.5     超出 2.3
+  ✅ 光照单步最大跳变 实测 5978  阈值 15000
+  ❌ 湿度无持续单向趋势  全程单调下降
+
+稳定性结论句
+  近 3 小时温度 25.3→32.8℃ 单调上升，温度波动 7.5℃ 超过阈值 2.0℃（超出 5.5）；
+  湿度首尾变化 -12.1% 超过阈值 3.0%（超出 9.1）；湿度单步最大变化 3.8% 超过阈值 1.5%（超出 2.3）；
+  湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（持续升温）
+```
+
+结论句必须写清"不稳定"、超了哪个阈值、超了多少——否则 LLM 解释不会提到升温，S2 就白做了。
+S1 的结论文本**逐字未变**（富化措辞只在 S2 开启）。
+
+**实验有效性自检（S2 每次运行自动打印 6 条）**
+
+| # | 检查项 | 实测 |
+|---|---|---|
+| 1 | 本次 LLM 的问题字符串与 S1 存档完全相同 | S2 = S1(run_012) = `分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。`；旧存档 run_001 也逐字相同 |
+| 2 | `system_prompt_sha256` 与 S1 存档相同 | 本次 `aa1400cf8568` = run_012(S1) = 现场实算 `sha256(SYSTEM_PROMPT)[:12]`；run_001 是旧存档，没有指纹字段 |
+| 3 | S2 与 S1 的当前状态温度差 ≤ 0.8℃ | 32.8℃ vs 32.8℃，差 **0.0℃** |
+| 4 | S2 稳定判定 `passed == False` | `passed=False` |
+| 5 | 存档 `scenario == "S2"`，index.json 能分别列出 | S1=`['run_012']`，S2=`['run_014']` |
+| 6 | ★对抗性自检：污染 `sim_scenario` 后选窗不变 | 干净 `09:30→12:00 / temp_range 7.5` = 污染后 `09:30→12:00 / temp_range 7.5` |
+
+**预期行为（不是 bug）**
+
+- B06 仍预测 **NORMAL**：B06 判断的是"未来 1-2 小时是否越界"（阈值 TEMP_MAX=40℃），32.8℃ 没越界。
+  不为制造差异去改模型输出、改阈值或重训。
+- S2 的 `hours_gap = 37.5` 小时（锚点 2026-10-20 12:00 → 库末点 2026-10-22 01:30），
+  超过 `config.GAP_WARNING_HOURS = 24` → **必然多出一条 gap 警告**，输出里单独归类为"时间锚点 gap 警告（预期）"。
+- B06 的 `recall ≈ 0.45`（测试集 accuracy=0.745 / precision=0.591 / recall=0.448 / f1=0.510），
+  对异常窗口存在明显漏报 → **本次 S2 输出 NORMAL 不能当成"模型在异常场景下也能正确判断"的证据**，
+  把趋势识别出来的是结构化判断的 `recent_trend`，不是模型输出。
+
+**末点温度带的约定（实验设计决策）**
+
+S2 选窗条件 (a) 采用**单侧带 `[32.8, 33.6]℃`**：S2 是升温过程，末点天然不低于 S1 基准。
+若用对称带 `[32.0, 33.6]`，会选到 2026-10-20 09:00→11:30（末点 32.2℃、ΔT=8.8），
+该窗口末点低于 S1 基准、实为"从更冷处升上来"，"当前值相近"的对照会变弱。
+判据阈值侧一个字没动，变化只发生在"挑哪一段历史"这一步。详见 `s2_report.md` 第 2.1 节。
+
+**产物清单**
+
+| 路径 | 内容 | 是否入库 |
+|---|---|---|
+| `B07/scenarios.py` | 场景注册表（S1 / S2）：哪个场景用哪个 anchor_policy | ✅ |
+| `B07/s2.py` | S2 统一入口（只做编排）+ 6 条自检 + 阶段报告 + `--report-only` | ✅ |
+| `B07/stability.py` | 新增 `pick_drifting_window()`、`project_rows()`、`judge_stability(..., rich_failure=True)` | ✅ |
+| `B07/runs.py` | 存档 / 索引里的 `scenario` 字段、`scenario_label()`、回溯显示场景、`rebuild_index()` | ✅ |
+| `B07/explain.py` | `llm_meta` 的 `system_prompt_sha256` / `question_sha256` 指纹 | ✅ |
+| `B07/__main__.py` | `--scenario S1 / S2` 分发，未知场景报错 | ✅ |
+| `B07/artifacts/s2_report.md` | S2 阶段报告（S1/S2 并排对比、实验有效性证明、温度带约定、边界与局限） | ✅ |
+| `B07/check_s2_experiment.py` | S2 实验有效性校验脚本（只读两份存档，9 条自检 + 并排对比，不产生新 run） | ✅ |
+| `B07/tests/test_s2_invariants.py` | S2 不变量测试（26 条，含对抗性检验、指纹、S1/S2 存档对照、目录隔离） | ✅ |
+
+---
+
+## B07 — S3 天气证据接入层（B03 未来外部天气）
+
+S3 分三步走完：**S3-0 接入**（把 B03 的公开天气数据接进来）→ **S3-1 判定**（把外部信号接进结构化判断）→
+**S3-2/3 实验与报告**（单变量对照实验 + 可审计报告）。
+
+> **S3 的硬边界**：不接 B04 知识库、不接摄像头、不接新智能体，
+> 不改 B01 / B02 / B06，**不改 LLM 提示词与固定问题**（指纹 `aa1400cf8568` / `d3cc394bfcbe` 全程未变）。
+
+**完整报告：[`B07/artifacts/s3_report.md`](B07/artifacts/s3_report.md)**
+（由 `python -m B07.s3_report` 从实测存档自动生成，报告里每个数字都可复核）
+
+---
+
+### S3-0 接入层
+
+`B07/weather.py` 通过 **B05 的稳定工具接口** `B05.test_functions.get_weather_forecast()` 取天气，
+**不绕过 B05 直接调 B03，也不重写天气请求、不新增任何网络调用**。
+为此只改了 B05 一处：给 `get_weather_forecast` 加了可选参数 `forecast_window: str = "now"`，
+默认 `"now"` → 既有调用方行为完全不变，非 `"now"` 时透传给 B03 的 `get_weather_evidence(..., forecast_window=...)`。
+请求参数拼装与 ok / unavailable / error 三态错误处理一个字没动。
+
+**接口**
+
+```python
+from B07.weather import build_weather_evidence
+ev = build_weather_evidence(analysis_time)   # 默认 河北固安 / 6h
+```
+
+默认参数为什么是"河北固安 / 6h"：
+
+> 默认地点用河北固安而非山东寿光：实测当前寿光外部条件平稳
+> （降水概率 0%、晴），无法体现"外部条件将有明显变化"；
+> 固安当前降水概率 21%、+6h 升至 70%，外部信号有区分度。
+> 注意：真实天气的数值随真实时间变化，地点与窗口是教学参数，
+> 选点依据是"能让外部条件信号有区分度"，不是为了制造某个结论；
+> 若当天实测外部条件平稳，external_signal 会是 external_stable，
+> 这同样是合法结果。
+
+**三条硬规矩**
+
+| 规矩 | 实现 | 违反时的表现 |
+|---|---|---|
+| 天气必须真的在 analysis_time 之后 | `future_ok = forecast_time > analysis_time` | `future_ok=False` + warning，**data 仍然保留**（不静默丢弃这份证据） |
+| 拿不到就明说拿不到 | `status != "ok"` → `available=False`、`error` 原样带出、`data=None` | **绝不用静态文案伪装成成功的天气** |
+| 天气与 B02 不在同一时间基准 | 恒定一条 warning，写明 B02 模拟时间轴的实际范围 | 只作"外部条件方向参考"，不做时刻级跨源对齐 |
+
+`available` 与 `future_ok` 是两个字段，不混着骗人：
+`available` 只表示"取到了"，`future_ok` 才表示"能当未来天气用"。
+
+**B03 的两处修复（S3-0 修订）**
+
+原先 `get_weather_evidence` 有两个缺陷，导致 `forecast_window` 形同虚设：
+
+1. **取值只读 `current`**：`hourly` 预报数组请求了却从未被读取 →
+   `forecast_window="3h"` 取到的仍是当前实况。
+2. **`forecast_days` 算不够**：原式 `max(1, (hour_offset // 24) + 1)` 只按偏移量算天数，
+   跨夜时（现在 22 点、+6h → 目标 28 点）hourly 覆盖不到目标小时。
+
+修法（只改这两处）：
+
+- `forecast_days` 按"当前小时 + hour_offset"计算：`max(2, hours_needed // 24 + 1)`（至少 2 天留冗余）。
+  `current["time"][11:13]` 是响应里的值、请求前拿不到，
+  而 Open-Meteo 的 `current.time` 用的是请求里的 `timezone=Asia/Shanghai`，
+  所以请求前用同一时区的本地钟点小时，与 `current["time"][11:13]` 等价。
+- 取值逻辑：`hour_offset > 0` 时在 `hourly["time"]` 里按前 13 位（`YYYY-MM-DDTHH`）
+  定位当前小时的索引 `idx`，取 `j = idx + hour_offset` 那一小时的值，
+  `timestamp` 用 `hourly["time"][j]`——**这才是真正的 forecast_time**。
+  `j` 越界或 `hourly` 缺失时**抛明确异常，不静默回退到 current**
+  （回退等于让 `forecast_window` 变回摆设）。
+- `hour_offset == 0`（默认 `"now"`）走原路径，**行为完全不变**（见下方新旧对照）。
+
+**新旧行为对照（`forecast_window="now"`，旧版 = `git show HEAD:B03/weather_service.py`）**
+
+| 地点 | 逐字段完全相同 | timestamp | T | precip | cloud | 描述 |
+|---|---|---|---|---|---|---|
+| 山东寿光 | ✅ True | 2026-10-24T22:30 | 13.8 | 0.0 | 0.0 | 晴朗 |
+| 河北固安 | ✅ True | 2026-10-24T22:30 | 13.4 | 21.0 | 100.0 | 阴天 |
+| 北京大兴 | ✅ True | 2026-10-24T22:30 | 13.3 | 34.0 | 100.0 | 阴天 |
+
+含 `location / forecast_window / timestamp / temperature / humidity /
+precipitation_probability / cloud_cover / solar_radiation / weather_code /
+weather_description / provider` 在内全部字段逐字段相等（`retrieved_at` 为取数时刻，单独比对时区后缀）。
+
+---
+
+### S3-1 判定层：相对差分为主，绝对阈值只兜底
+
+外部信号的判定在 `B07/weather.py` 的 `judge_external_points()` 里，**纯函数、不联网**，
+在线取数与"从存档重读后复算"用的是同一份判据。
+
+**主判定：相对基线差分**
+
+```
+ΔPP = forecast.precipitation_probability - baseline.precipitation_probability
+ΔPP ≥ +30 pp → external_deteriorating
+ΔPP ≤ -30 pp → external_improving
+其余          → external_stable
+```
+
+**兜底（仅当基线点 `now` 取不到时）**：`judge_method = "absolute_fallback"`
+（预报降水概率 ≥ 60 → 恶化；≤ 10 且云量 ≤ 20 → 好转；其余 → 平稳）。
+
+**为什么不用绝对阈值当主判定**——用同一份实现对同一组点各判一次
+（`B07/artifacts/s3_calibration.json` 是校准数据文件，代码里不写死任何天气数值）：
+
+| 组 | 降水概率 | 相对差分 | 绝对阈值 | 结论 |
+|---|---|---|---|---|
+| 寿光（晴天，S3-0 实测校准） | 0.0% → 0.0% | `external_stable` | `external_improving` | ⚠️ **不一致** |
+| 构造·5% → 55% | 5.0% → 55.0% | `external_deteriorating` | `external_stable` | ⚠️ **不一致** |
+| 固安（S3-0 实测校准） | 21.0% → 70.0% | `external_deteriorating` | `external_deteriorating` | ✅ 一致 |
+| 大兴（S3-0 实测校准） | 34.0% → 96.0% | `external_deteriorating` | `external_deteriorating` | ✅ 一致 |
+
+绝对阈值**只看预报点的绝对值、没有基线可比**，于是 `(10%, 60%)` 开区间里的任何值一律判"平稳"，
+`≤10%` 且云量 `≤20%` 一律判"好转"——**"本来就晴"被误判成"在好转"**。所以主判定必须用相对差分。
+
+**接进结构化判断的方式：`external_conditions` 是第 6 个字段，只追加、不替换**
+
+- `external_conditions is None` → 结构化判断**严格是原来的 5 个字段**，
+  字段名、取值、顺序全都不变（既有 S1 / S2 的不变量不受影响）。
+- `external_conditions` 非 None → 5 + 1 = 6 个字段，**前 5 个逐字段完全相同**。
+  这个不变量由 `B07/tests/test_s3_invariants.py` 断言锁住。
+
+**外加一道硬门槛**：预报时刻必须真的晚于 `analysis_time`，
+否则**不产生任何判定，也不返回 `external_stable`**——拿一份不在未来的预报去说"稳定"是误导。
+
+---
+
+### S3-2 单变量对照实验
+
+`python -m B07.s3` 跑一组对照：**同一个锚点**（`2026-10-21T16:00:00`）、
+同一套提示词、同一个问题、同一个 B06 模型、同一段 B02 历史、同一套阈值，
+**唯一的变量是"发给 LLM 的 state 里有没有 ⑥ 外部天气条件块"**。
+
+| | Run A（`S3_without`） | Run B（`S3_with`） |
+|---|---|---|
+| 结构化判断字段数 | 5 | 6（`external_conditions` 为追加） |
+| 前 5 个字段 | — | **逐字段与 A 相同** |
+| LLM 上下文 | 5 块 / 2599 字 | 6 块 / 3212 字，**前 2599 字与 A 逐字节相同**，B == A + `"\n\n"` + ⑥ 块 |
+| 提示词 / 问题指纹 | `aa1400cf8568` / `d3cc394bfcbe` | 同上，一字未改 |
+| 外部判定 | 无 | `external_deteriorating`（相对差分，Δ52.0 pp） |
+| **合成关注等级** | `internal_only` | **`watch_external`** |
+
+**失败必须显式暴露**：天气服务不可用时，整次分析 `status` 仍是 `success`，
+外部条件被显式标成 `external_unavailable` 并带 warning，
+LLM 上下文里写明"外部天气不可用、不要编造天气"，
+实测降级回答里**零天气断言、零外部数值**。
+
+**run_016 / run_017 是失败的尝试，保留在存档里不删**：Run B 收到了 ⑥ 块，
+回答却写"当前判断未接入真实天气与农艺知识库"——根因是 ⑤ 限制条件里的
+"本阶段未接入 B03 天气数据"与 ⑥ 自相矛盾，模型挑了更保守的那一条。
+修法是把 `B07/judgement.py` 的 `no_weather_no_kb` 文案改成两次都成立的中性表述。
+**教训**：接入外部证据时，必须同步清理描述"未接入该证据"的旧文案。
+
+---
+
+### S3-3 合成关注等级 `combined_attention`（程序规则，不经过 LLM）
+
+规则写死在 `B07/judgement.py`：
+
+```
+内部 predicted_attention == "WATCH"                  → watch_internal
+内部 NORMAL 且外部 signal == "external_deteriorating" → watch_external
+内部 NORMAL 且外部 signal ∈ {stable, improving, unknown} → internal_only
+```
+
+- **不是**结构化判断的第 7 个字段（那会破坏 5/6 字段的不变量），
+  只是存档里的一个**独立字段** `combined_attention`。
+- **不进 LLM 上下文**——这样"上下文只差 ⑥ 块"这个可复核的不变量才成立。
+- **可脱离 LLM 复算**：`python -m B07.runs explain <run_id>` 只用 `run.json`
+  就能把内部判定、外部判定、稳定判据、`combined_attention` 全部重新推导一遍并与存档值对照。
+
+**但要说清楚**：`combined_attention` 是确定的，**模型会不会引用 ⑥ 块不是确定的**。
+在全部 16 次 `S3_with` 运行里，引用率是 **14/16**；但**按 `llm_context` 分组看**
+（同一个 sha = 喂给 LLM 的上下文逐字节相同），组内差异只能来自 LLM 采样：
+
+| llm_context sha | 次数 | 引用 | 外部 Δpp |
+|---|---|---|---|
+| `125298fb60b7` | 12 | 12/12 | 43.0 pp |
+| `83ccc0be47d3` | 2 | **1/2** | 52.0 pp |
+| `d1cf9e568eaf` | 1 | 0/1 | 54.0 pp |
+| `e33083033e8d` | 1 | 1/1 | 56.0 pp |
+
+`run_021` 与 `run_023` 的 `llm_context` **逐字节相同**，
+一次引用了外部天气、一次没引用——这是"可测量的解释层波动"的直接证据。
+所以"外部证据接入后模型会讨论外部天气"这句话目前**不成立**，
+只能说"模型**有时**会讨论外部天气"，而且"有时"的比例**随 ⑥ 块内容变化**。
+
+**这正是 B07「判断与解释分离」架构的价值**：判断层只由程序规则决定且可复算，
+解释层的波动被**显式度量**（引用率 N/M）并**隔离**在解释环节——
+**完成线不随 LLM 措辞波动**。详见报告 §3.7（同状态并排样本）、
+§3.8（分组引用率）、§3.9（三种来源的区分）、§3.10（架构论点）与 §8 L13。
+
+---
+
+### 已知边界（不是缺陷，是 B03 现状）
+
+- `_WINDOW_TO_HOURS.get(w, 0)` 对未知窗口**静默降级为 now**；
+  层里对不在支持列表内的窗口单独记一条 warning。
+- 天气是 PUBLIC 真实数据，B02 是 SIMULATED 模拟数据，**时间基准不同**，只作方向参考。
+- 真实天气数值随真实时间变化，**不得把任何实测值硬编码进代码**。
+- **全部实测点都在夜间**（22:00 → 05:00），`solar_radiation` 恒为 0，
+  高温分支（≥35℃）**完全没被实测覆盖过** → 需要白天 / 夏季再验。
+- 外部判定**只用降水概率一个维度**；温度、云量只作描述，湿度（实测 91%）尚未参与判定。
+- 外部取的是窗口末时刻的**单点值**，不是窗口极值，中途更高/更低的值可能被漏掉。
+- `MAX_ANSWER_CHARS = 250` 目前只是提示词里的约束说明常量，**代码不做强制截断**；
+  实测回答经常超（Run A 318 字 / Run B 268 字），
+  而硬截断会把外部引用句拦腰截断（`run_021` 的引用句在第 244–259 字）。
+
+### 产物清单
+
+| 路径 | 内容 | 是否入库 |
+|---|---|---|
+| `B07/weather.py` | S3 天气证据接入层 + 外部判定（`build_weather_evidence` / `build_external_context` / `judge_external_points` + CLI 自检），默认 河北固安 / 6h | ✅ |
+| `B07/judgement.py` | 结构化判断的第 6 字段 `external_conditions` + 合成关注等级 `combined_attention` | ✅ |
+| `B07/s3.py` | S3-2 对照实验（真实组 / 离线组 / 降级验证 / 两种判据对照） | ✅ |
+| `B07/s3_report.py` | 从实测存档生成 `s3_report.md` | ✅ |
+| `B07/s3_citation_probe.py` | 引用率探针：冻结 ⑥ 块重复跑 N 次，只测 LLM 采样波动（失败也计入分母） | ✅ |
+| `B07/s3_citation_table.py` | 全部 S3_with 存档的统一判定表（mentions / claims / cited 三级） | ✅ |
+| `B07/verify_s3.py` | **S3 阶段验收自检**（一条命令跑完 14 项检查，全部离线、不调 LLM） | ✅ |
+| `B07/artifacts/s3_report.md` | **S3 阶段报告**（0–10 节 + L1–L13 限制清单） | ✅ |
+| `B07/artifacts/s3_raw_result.json` | 报告的原始数据（`python -m B07.s3` 落盘） | ✅ |
+| `B07/artifacts/s3_offline_result.json` | 离线组重跑结果（判定器扩词后重跑，报告以此为准） | ✅ |
+| `B07/artifacts/s3_citation_stats.json` | 引用率探针的记账（分母含失败） | ✅ |
+| `B07/artifacts/s3_citation_table.json` | 全部 S3_with 存档的判定明细 | ✅ |
+| `B07/artifacts/s3_frozen_ext.json` | 冻结的 ⑥ 块（保证"同一状态"跨调用成立） | ✅ |
+| `B07/artifacts/s3_calibration.json` | 判据校准点（数据文件，不是代码常量） | ✅ |
+| `B03/weather_service.py` | 修 `forecast_days` 跨夜覆盖 + 改用 `hourly` 取目标小时预报（越界显式抛错） | ✅ |
+| `B05/test_functions.py` | `get_weather_forecast` 增加可选参数 `forecast_window="now"`（其余逻辑未动） | ✅ |
+| `B07/tests/test_weather_invariants.py` | S3 不变量测试（离线，用假天气工具，不联网） | ✅ |
+| `B07/tests/test_s3_invariants.py` | S3-1/2/3 不变量测试（离线） | ✅ |
+
+### 复现命令
+
+```bash
+./venv/Scripts/python.exe -m B07.s3          # 跑对照实验，落盘 s3_raw_result.json
+./venv/Scripts/python.exe -m B07.s3_report   # 由原始结果生成 s3_report.md
+./venv/Scripts/python.exe -m B07.runs explain run_023   # 只用存档重算一遍
+./venv/Scripts/python.exe -m pytest B07/tests -q        # 离线不变量测试
+
+# 引用率探针（同一 anchor / 同一状态，只测采样波动；失败也计入分母）
+./venv/Scripts/python.exe -c "from B07.s3_citation_probe import main; main(8, 4, append=True)"
+./venv/Scripts/python.exe -m B07.s3_citation_table       # 全部 S3_with 存档的判定表
+```
+
+### 验收自检（一条命令，全部离线）
+
+```bash
+./venv/Scripts/python.exe -m B07.verify_s3
+```
+
+跑 14 项检查，**不联网、不调 LLM**（LLM 额度用尽时也能跑）：
+
+| 检查 | 内容 |
+|---|---|
+| C1 | `B07/tests` 全过 |
+| C2 | 全部 S3_with 存档可被当前判定器重判，且与落盘表格一致 |
+| C3 | 存在"同一 `llm_context` 既有引用又有未引用"的分组（波动证据） |
+| C4 | `combined_attention` 可脱离 LLM 从存档复算一致 |
+| C5 | 报告可重新生成，且含 §3.7/§3.8/§3.9/§3.10/L13 |
+| C6 | 55% 那条只能以「构造用例」出现，不得混进实测表 |
+| C7 | 存档目录与 `index.json` 一致；`run_016`/`run_017` 仍在且带说明 |

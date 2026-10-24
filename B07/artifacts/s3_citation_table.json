@@ -1,0 +1,443 @@
+{
+  "anchor": "2026-10-21T16:00:00",
+  "total": 16,
+  "cited": 14,
+  "failed": 0,
+  "mentions_any": 16,
+  "rate_text": "14/16",
+  "rows": [
+    {
+      "run_id": "run_017",
+      "created_at": "2026-10-24T23:18:31",
+      "status": "success",
+      "answer_length": 285,
+      "mentions": 1,
+      "claims": 0,
+      "cited": false,
+      "cited_fragments": [],
+      "mention_sentences": [
+        "当前判断未接入真实天气与农艺知识库"
+      ],
+      "claim_sentences": [],
+      "meta_only_sentences": [
+        "当前判断未接入真实天气与农艺知识库"
+      ],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 54.0,
+      "context_sha12": "d1cf9e568eaf",
+      "answer": "本次分析基于模拟数据，描述的是2026-10-21T16:00:00时刻的状态。当时大棚内温度32.8℃、湿度56.7%、光照39842.0 lux。近3小时环境稳定：温度波动1.3℃（阈值2.0℃），湿度变化1.5%（阈值3.0%），光照单步最大跳变4948 lux（阈值15000）。B06模型预测关注等级为NORMAL，置信度1.0。\n\n需特别注意：所有数据均为模拟值，不可直接用于真实大棚决策；且模型存在漏报风险（召回率0.448），预测正常不代表绝对无异常。此外，当前判断未接入真实天气与农艺知识库，无法评估数值对番茄的具体影响。目前没有足够依据提高关注程度。"
+    },
+    {
+      "run_id": "run_019",
+      "created_at": "2026-10-24T23:22:48",
+      "status": "success",
+      "answer_length": 270,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "mention_sentences": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "claim_sentences": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 56.0,
+      "context_sha12": "e33083033e8d",
+      "answer": "本次分析基于模拟数据，锚点为2026-10-21 16:00。当前温度32.8℃、湿度56.7%、光照39842 lux。依据近3小时数据，温度波动1.3℃（阈值2.0）、湿度变化1.5%（阈值3.0）、光照单步最大跳变4948 lux（阈值15000），均符合稳定标准。B06模型（v1版）预测状态为NORMAL，置信度1.0。目前环境稳定，没有足够依据提高关注程度。请注意：此为模拟场景结论，不可直接外推至真实大棚；且模型存在漏报风险，预测正常不代表绝对无异常。外部天气虽显示降水概率上升，但因时间不同步，仅作方向参考，不参与内部判定。"
+    },
+    {
+      "run_id": "run_021",
+      "created_at": "2026-10-24T23:47:59",
+      "status": "success",
+      "answer_length": 311,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部天气显示降水概率将大幅上升"
+      ],
+      "mention_sentences": [
+        "外部天气显示降水概率将大幅上升"
+      ],
+      "claim_sentences": [
+        "外部天气显示降水概率将大幅上升"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 52.0,
+      "context_sha12": "83ccc0be47d3",
+      "answer": "本次分析基于模拟数据，锚点为2026-10-21T16:00:00。当前大棚温度32.8℃、湿度56.7%、光照39842.0 lux。依据近3小时历史数据，温度波动1.3℃（阈值2.0℃）、湿度变化1.5%（阈值3.0%）、光照单步跳变4948 lux（阈值15000），且无持续单向趋势，环境判定为稳定。B06模型（版本b06-20261020-v1）预测关注等级为NORMAL，置信度1.0。\n\n需注意：所有数据均为模拟值，不可外推至真实大棚；模型存在漏报风险（召回率0.448）。外部天气显示降水概率将大幅上升，但属未来真实时间数据，仅作方向参考，不参与内部数值判定。目前系统内证据齐全，暂无足够依据提高关注程度。"
+    },
+    {
+      "run_id": "run_023",
+      "created_at": "2026-10-24T23:53:51",
+      "status": "success",
+      "answer_length": 268,
+      "mentions": 1,
+      "claims": 0,
+      "cited": false,
+      "cited_fragments": [],
+      "mention_sentences": [
+        "也未接入真实传感器数据"
+      ],
+      "claim_sentences": [],
+      "meta_only_sentences": [
+        "也未接入真实传感器数据"
+      ],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 52.0,
+      "context_sha12": "83ccc0be47d3",
+      "answer": "截至 2026-10-21T16:00:00，大棚内温度 32.8℃、湿度 56.7%、光照 39842.0 lux。近 3 小时环境判定为稳定：温度波动 1.3℃（阈值 2.0℃），湿度变化 1.5%（阈值 3.0%），光照单步最大跳变 4948 lux（阈值 15000）。B06 模型预测关注等级为 NORMAL，置信度 1.0。但请注意，本次数据均为模拟值，且模型存在漏报风险（召回率 0.448），预测正常不代表绝对无异常。当前判断仅针对该模拟时刻状态，无法解释具体农艺影响，也未接入真实传感器数据，暂无足够依据提高关注程度。"
+    },
+    {
+      "run_id": "run_024",
+      "created_at": "2026-10-25T00:23:43",
+      "status": "success",
+      "answer_length": 255,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "mention_sentences": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "claim_sentences": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 43.0,
+      "context_sha12": "125298fb60b7",
+      "answer": "截至2026年10月21日16时，模拟数据显示大棚环境稳定：温度32.8℃（近3小时波动1.3℃，未超2.0℃阈值），湿度56.7%（变化+1.5%，未超3.0%阈值），光照39842 lux。B06模型预测未来状态为NORMAL，置信度1.0。判断依据涵盖温度、湿度、光照三项指标的实时值与历史波动，且均通过稳定性判据。需注意，当前数据为模拟值，不可直接对应真实大棚；模型存在漏报风险（召回率0.45），预测正常不代表绝对无异常。外部天气虽显示降水概率上升，但时间轴不同步，仅作方向参考，不参与本次数值判定。"
+    },
+    {
+      "run_id": "run_025",
+      "created_at": "2026-10-25T00:23:59",
+      "status": "success",
+      "answer_length": 279,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "mention_sentences": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "claim_sentences": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 43.0,
+      "context_sha12": "125298fb60b7",
+      "answer": "本次分析基于模拟数据，描述的是2026年10月21日16:00的状态。当前大棚温度32.8℃、湿度56.7%、光照39842 lux。依据近3小时历史数据，温度波动1.3℃（阈值2.0℃）、湿度变化1.5%（阈值3.0%）、光照单步跳变4948 lux（阈值15000），且无持续单向趋势，环境判定为稳定。B06模型预测关注等级为NORMAL，置信度1.0。需注意：数据源为模拟值，不可直接外推至真实大棚；模型存在漏报风险，预测正常不代表绝对无异常；外部天气虽显示降水概率上升，但因时间轴不同，仅作方向参考，不参与内部数值判定。目前没有足够依据提高关注程度。"
+    },
+    {
+      "run_id": "run_026",
+      "created_at": "2026-10-25T00:25:03",
+      "status": "success",
+      "answer_length": 289,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部天气数据显示降水概率将从47.0%升至90.0%"
+      ],
+      "mention_sentences": [
+        "外部天气数据显示降水概率将从47.0%升至90.0%"
+      ],
+      "claim_sentences": [
+        "外部天气数据显示降水概率将从47.0%升至90.0%"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 43.0,
+      "context_sha12": "125298fb60b7",
+      "answer": "本次分析基于模拟数据，锚点为2026-10-21 16:00。当前温度32.8℃、湿度56.7%、光照39842.0 lux。近3小时环境判定稳定：温度波动1.3℃（阈值2.0℃），湿度变化+1.5%（阈值3.0%），光照单步最大跳变4948 lux（阈值15000）。B06模型（版本b06-20261020-v1）预测关注等级为NORMAL，置信度1.0。需注意的是，本结论仅适用于该模拟时间轴，且模型存在漏报风险（召回率0.448）。外部天气数据显示降水概率将从47.0%升至90.0%，但因其时间与内部模拟不匹配，仅作方向参考，不可直接比较。目前无足够依据提高关注程度。"
+    },
+    {
+      "run_id": "run_027",
+      "created_at": "2026-10-25T00:25:10",
+      "status": "success",
+      "answer_length": 303,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部真实天气虽显示降水概率上升"
+      ],
+      "mention_sentences": [
+        "外部真实天气虽显示降水概率上升"
+      ],
+      "claim_sentences": [
+        "外部真实天气虽显示降水概率上升"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 43.0,
+      "context_sha12": "125298fb60b7",
+      "answer": "本次分析基于2026年10月21日16:00的模拟数据，当前大棚内温度32.8℃、湿度56.7%、光照39842.0 lux。依据近3小时历史趋势，温度波动仅1.3℃（阈值2.0℃），湿度变化1.5%（阈值3.0%），光照单步最大跳变4948 lux（阈值15000），且无持续单向趋势，系统判定环境状态稳定。B06模型（版本b06-20261020-v1）预测未来关注等级为NORMAL，置信度1.0。但需注意，所有数据均为模拟值，且模型存在漏报风险（召回率0.448），故预测正常不代表绝对无异常。外部真实天气虽显示降水概率上升，但因时间跨度与数据来源不同，不可直接对比。目前没有足够依据提高关注程度。"
+    },
+    {
+      "run_id": "run_028",
+      "created_at": "2026-10-25T00:25:13",
+      "status": "success",
+      "answer_length": 280,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "mention_sentences": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "claim_sentences": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 43.0,
+      "context_sha12": "125298fb60b7",
+      "answer": "截至2026年10月21日16:00，模拟数据显示大棚环境稳定：温度32.8℃（近3小时波动1.3℃，未超2.0℃阈值），湿度56.7%（首尾变化+1.5%，单步最大0.7%），光照39842 lux（单步跳变4948 lux）。B06模型（b06-20261020-v1）预测状态为NORMAL，置信度1.0。本次判断依据温度、湿度、光照三项指标的稳定性及模型输出。需特别注意：所有数据均为模拟值，不可外推至真实大棚；且模型存在漏报风险（召回率0.448），预测正常不代表绝对无异常。外部天气虽显示降水概率上升，但因时间不同步且仅作参考，不参与本次内部判定。"
+    },
+    {
+      "run_id": "run_029",
+      "created_at": "2026-10-25T00:25:18",
+      "status": "success",
+      "answer_length": 319,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部天气虽显示降水概率从47%升至90%"
+      ],
+      "mention_sentences": [
+        "外部天气虽显示降水概率从47%升至90%"
+      ],
+      "claim_sentences": [
+        "外部天气虽显示降水概率从47%升至90%"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 43.0,
+      "context_sha12": "125298fb60b7",
+      "answer": "截至2026-10-21 16:00，模拟数据显示大棚环境稳定：温度32.8℃（近3小时波动1.3℃，阈值2.0℃），湿度56.7%（首尾变化+1.5%，单步最大0.7%），光照39842.0 lux（单步跳变4948 lux）。B06模型（b06-20261020-v1）预测关注等级为NORMAL，置信度1.0。\n\n本次判断依据了当前环境读数、近3小时历史稳定性指标及B06模型输出。需注意，所有数据均为模拟值，且模型存在漏报风险（召回率0.448），预测正常不代表绝对无异常。此外，外部天气虽显示降水概率从47%升至90%，但因时间轴不同（晚约3天）且为夜间数据，仅作方向参考，不可与内部数值直接比较。目前暂无足够依据提高关注程度。"
+    },
+    {
+      "run_id": "run_030",
+      "created_at": "2026-10-25T00:25:24",
+      "status": "success",
+      "answer_length": 287,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部真实天气显示降水概率将从47%升至90%"
+      ],
+      "mention_sentences": [
+        "外部真实天气显示降水概率将从47%升至90%"
+      ],
+      "claim_sentences": [
+        "外部真实天气显示降水概率将从47%升至90%"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 43.0,
+      "context_sha12": "125298fb60b7",
+      "answer": "截至2026-10-21 16:00，模拟数据显示大棚环境稳定：温度32.8℃（近3小时波动1.3℃，未超2.0℃阈值），湿度56.7%（变化+1.5%，单步最大0.7%），光照39842.0 lux（单步跳变4948 lux）。B06模型（版本b06-20261020-v1）预测关注等级为NORMAL，置信度1.0。但需注意，本次数据均为模拟值，且模型存在漏报风险（召回率0.448），预测正常不代表绝对无异常。此外，外部真实天气显示降水概率将从47%升至90%，但该数据时间较晚且不可直接与内部模拟值比较，仅作方向参考。目前依据现有模拟数据，暂无足够依据提高关注程度。"
+    },
+    {
+      "run_id": "run_031",
+      "created_at": "2026-10-25T00:25:28",
+      "status": "success",
+      "answer_length": 275,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "mention_sentences": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "claim_sentences": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 43.0,
+      "context_sha12": "125298fb60b7",
+      "answer": "本次分析基于模拟数据，描述的是2026年10月21日16:00的状态。当前大棚温度32.8℃、湿度56.7%、光照39842.0 lux。依据近3小时历史数据，温度波动仅1.3℃（阈值2.0℃），湿度变化1.5%（阈值3.0%），光照单步跳变4948 lux（阈值15000），且无持续单向趋势，系统判定环境稳定。B06模型预测未来状态为NORMAL，置信度1.0。需注意，本结论仅适用于该模拟时间轴，不可外推至真实大棚；且模型存在漏报风险，预测正常不代表绝对无异常。外部天气虽显示降水概率上升，但属于不同时间维度的真实数据，不与内部模拟值直接比较。"
+    },
+    {
+      "run_id": "run_032",
+      "created_at": "2026-10-25T00:25:32",
+      "status": "success",
+      "answer_length": 311,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "虽然外部天气显示降水概率将从 47% 升至 90%"
+      ],
+      "mention_sentences": [
+        "虽然外部天气显示降水概率将从 47% 升至 90%"
+      ],
+      "claim_sentences": [
+        "虽然外部天气显示降水概率将从 47% 升至 90%"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 43.0,
+      "context_sha12": "125298fb60b7",
+      "answer": "截至 2026-10-21 16:00，大棚模拟环境状态正常。当前温度 32.8℃、湿度 56.7%、光照 39842 lux。依据近 3 小时数据，温度波动仅 1.3℃（阈值 2.0℃），湿度首尾变化 1.5%（阈值 3.0%），光照单步最大跳变 4948 lux（阈值 15000），且无持续单向趋势，系统判定为稳定。B06 模型（版本 b06-20261020-v1）预测关注等级为 NORMAL，置信度 1.0。需注意的是，本次数据均为模拟值，且模型存在漏报风险（召回率 0.448）。虽然外部天气显示降水概率将从 47% 升至 90%，但外部时间与内部模拟时间不匹配，不可直接对比。目前暂无足够依据提高关注程度。"
+    },
+    {
+      "run_id": "run_033",
+      "created_at": "2026-10-25T00:25:39",
+      "status": "success",
+      "answer_length": 302,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部天气虽有恶化趋势"
+      ],
+      "mention_sentences": [
+        "外部天气虽有恶化趋势"
+      ],
+      "claim_sentences": [
+        "外部天气虽有恶化趋势"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 43.0,
+      "context_sha12": "125298fb60b7",
+      "answer": "本次分析基于模拟数据，描述的是2026年10月21日16:00的状态。当前大棚温度32.8℃、湿度56.7%、光照39842.0 lux。依据近3小时历史数据，温度波动1.3℃（阈值2.0℃）、湿度变化1.5%（阈值3.0%）、光照单步跳变4948 lux（阈值15000），且无持续单向趋势，环境判定为稳定。B06模型预测关注等级为NORMAL，置信度1.0。\n\n需特别注意：本结论仅适用于该模拟时间轴，不可外推至真实大棚；B06模型存在约45%的异常漏报率，预测正常不代表绝对安全；因未接入农艺知识库，无法解释数值对番茄的具体影响。外部天气虽有恶化趋势，但因时间与数据源不同，不参与本次内部状态判定。"
+    },
+    {
+      "run_id": "run_034",
+      "created_at": "2026-10-25T00:25:50",
+      "status": "success",
+      "answer_length": 286,
+      "mentions": 2,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "mention_sentences": [
+        "非真实传感器读数",
+        "外部天气虽显示降水概率上升"
+      ],
+      "claim_sentences": [
+        "外部天气虽显示降水概率上升"
+      ],
+      "meta_only_sentences": [
+        "非真实传感器读数"
+      ],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 43.0,
+      "context_sha12": "125298fb60b7",
+      "answer": "截至2026-10-21 16:00，模拟数据显示大棚环境稳定：温度32.8℃（近3小时波动1.3℃，阈值2.0℃），湿度56.7%（首尾变化+1.5%，单步最大0.7%），光照39842 lux（单步最大跳变4948 lux）。B06模型（版本b06-20261020-v1）预测关注等级为NORMAL，置信度1.0。判断依据包括温度、湿度、光照的稳定性指标及模型输出。需注意：本次数据为模拟值，非真实传感器读数；模型存在漏报风险（召回率0.448），且未接入农艺知识库，无法评估对番茄的具体影响。外部天气虽显示降水概率上升，但时间不同步，仅作方向参考，不参与内部判定。"
+    },
+    {
+      "run_id": "run_035",
+      "created_at": "2026-10-25T00:25:56",
+      "status": "success",
+      "answer_length": 275,
+      "mentions": 1,
+      "claims": 1,
+      "cited": true,
+      "cited_fragments": [
+        "外部天气虽显示降水概率将升至90%"
+      ],
+      "mention_sentences": [
+        "外部天气虽显示降水概率将升至90%"
+      ],
+      "claim_sentences": [
+        "外部天气虽显示降水概率将升至90%"
+      ],
+      "meta_only_sentences": [],
+      "wide_hint_sentences": [],
+      "external_signal": "external_deteriorating",
+      "precip_delta": 43.0,
+      "context_sha12": "125298fb60b7",
+      "answer": "本次分析基于2026年10月21日16:00的模拟数据，当前大棚温度32.8℃、湿度56.7%、光照39842.0 lux。判断依据近3小时历史趋势：温度波动1.3℃（阈值2.0℃），湿度变化1.5%（阈值3.0%），光照单步最大跳变4948 lux（阈值15000），均判定为稳定。B06模型（版本b06-20261020-v1）预测状态为NORMAL，置信度1.0。需注意本数据为模拟场景，且模型存在漏报风险（召回率0.448）。外部天气虽显示降水概率将升至90%，但因时间不同步，不可直接与内部数值比较。目前系统无异常报警，建议继续按常规监测。"
+    }
+  ],
+  "context_groups": [
+    {
+      "context_sha12": "d1cf9e568eaf",
+      "n": 1,
+      "cited": 0,
+      "run_ids": [
+        "run_017"
+      ],
+      "precip_delta": 54.0
+    },
+    {
+      "context_sha12": "e33083033e8d",
+      "n": 1,
+      "cited": 1,
+      "run_ids": [
+        "run_019"
+      ],
+      "precip_delta": 56.0
+    },
+    {
+      "context_sha12": "83ccc0be47d3",
+      "n": 2,
+      "cited": 1,
+      "run_ids": [
+        "run_021",
+        "run_023"
+      ],
+      "precip_delta": 52.0
+    },
+    {
+      "context_sha12": "125298fb60b7",
+      "n": 12,
+      "cited": 12,
+      "run_ids": [
+        "run_024",
+        "run_025",
+        "run_026",
+        "run_027",
+        "run_028",
+        "run_029",
+        "run_030",
+        "run_031",
+        "run_032",
+        "run_033",
+        "run_034",
+        "run_035"
+      ],
+      "precip_delta": 43.0
+    }
+  ]
+}

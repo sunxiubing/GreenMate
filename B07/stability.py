@@ -19,6 +19,7 @@
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import NamedTuple
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -98,13 +99,16 @@ def _is_monotone(vals: list[float]) -> tuple[bool, str]:
     return False, "无持续单向趋势"
 
 
-def judge_stability(samples: list) -> dict:
+def judge_stability(samples: list, rich_failure: bool = False) -> dict:
     """对一组样本做稳定性判定。
 
     只使用传入样本本身，不访问任何窗外数据。
 
     Args:
         samples: 窗口内的样本列表（按时间升序）
+        rich_failure: 判据未通过时，是否用"超了哪个阈值、超了多少"的
+            富化结论句（见 _rich_failure_conclusion）。
+            默认 False —— S1 的结论文本逐字保持原样，不受本参数影响。
 
     Returns:
         {
@@ -192,6 +196,15 @@ def judge_stability(samples: list) -> dict:
     hours_txt = f"{hours:g}"
     verdict = "稳定" if passed else "不稳定"
 
+    if (not passed) and rich_failure:
+        # 富化失败结论：明确写"不稳定"、写清超了哪个阈值、超了多少。
+        conclusion = _rich_failure_conclusion(temps, hums, criteria, hours_txt)
+        return {
+            "passed": passed,
+            "criteria": criteria,
+            "conclusion": conclusion,
+        }
+
     conclusion = (
         f"近 {hours_txt} 小时温度 {min(temps):.1f}~{max(temps):.1f}℃"
         f"（波动 {temp_range:.1f}℃，阈值 {TEMP_RANGE_MAX}℃）；"
@@ -206,6 +219,108 @@ def judge_stability(samples: list) -> dict:
         "criteria": criteria,
         "conclusion": conclusion,
     }
+
+
+# --------------------------------------------------------------------------
+# 富化失败结论（只用于判据未通过时；S1 默认输出不受影响）
+# --------------------------------------------------------------------------
+
+def _excess_of(c: dict) -> float | None:
+    """失败判据超出阈值的幅度；只有数值型判据才有。"""
+    th = c.get("threshold")
+    val = c.get("value")
+    if not isinstance(th, (int, float)) or isinstance(th, bool):
+        return None
+    if not isinstance(val, (int, float)) or isinstance(val, bool):
+        return None
+    if c["name"] == "湿度首尾总变化":
+        return round(abs(val) - th, 2)
+    return round(val - th, 2)
+
+
+def _attach_excess(criteria: list) -> None:
+    """给未通过的数值型判据补一个 excess 字段（超出阈值的幅度）。
+
+    这个数字同时进入结论句和判据表，LLM 复述它时不会被判成"事实越界"。
+    """
+    for c in criteria:
+        if c["passed"]:
+            continue
+        ex = _excess_of(c)
+        if ex is not None:
+            c["excess"] = ex
+
+
+def _failure_text(c: dict) -> str:
+    """单条未通过判据的文字说明。"""
+    name = c["name"]
+    v = c.get("value")
+    th = c.get("threshold")
+    ex = c.get("excess")
+
+    if name == "温度最大波动":
+        base = f"温度波动 {v:.1f}℃ 超过阈值 {th:.1f}℃"
+    elif name == "湿度首尾总变化":
+        base = f"湿度首尾变化 {v:+.1f}% 超过阈值 {th:.1f}%"
+    elif name == "湿度单步最大变化":
+        base = f"湿度单步最大变化 {v:.1f}% 超过阈值 {th:.1f}%"
+    elif name == "光照单步最大跳变":
+        base = f"光照单步最大跳变 {v:.0f} lux 超过阈值 {th:.0f} lux"
+    elif name == "湿度无持续单向趋势":
+        return f"湿度{c.get('note')}（判据禁止全程单调）"
+    else:
+        return f"{name}：实测 {v}，阈值 {th}"
+
+    if ex is not None:
+        base += f"（超出 {ex:.1f}）" if name != "光照单步最大跳变" else f"（超出 {ex:.0f} lux）"
+    return base
+
+
+def _failure_reason(criteria: list, temps: list) -> str:
+    """给"不稳定"配一个数据驱动的原因短语（不写死任何结论）。"""
+    failed = {c["name"] for c in criteria if not c["passed"]}
+    diffs = [temps[i + 1] - temps[i] for i in range(len(temps) - 1)]
+    rising = bool(diffs) and all(d > 0 for d in diffs)
+    falling = bool(diffs) and all(d < 0 for d in diffs)
+
+    if "温度最大波动" in failed and rising:
+        return "持续升温"
+    if "温度最大波动" in failed and falling:
+        return "持续降温"
+    if "湿度无持续单向趋势" in failed:
+        return "湿度持续单向变化"
+    if "湿度首尾总变化" in failed or "湿度单步最大变化" in failed:
+        return "湿度剧变"
+    if "光照单步最大跳变" in failed:
+        return "光照跳变"
+    return "多指标波动"
+
+
+def _rich_failure_conclusion(temps: list, hums: list, criteria: list,
+                             hours_txt: str) -> str:
+    """判据未通过时的富化结论句。
+
+    形如：
+      近 3 小时温度 25.3→32.8℃ 单调上升，温度波动 7.5℃ 超过阈值 2.0℃（超出 5.5）；
+      湿度首尾变化 -12.1% 超过阈值 3.0%（超出 9.1）；… → 判定为不稳定（持续升温）
+
+    只用窗口内的三列数值推导，不看 sim_scenario，也没有任何预设结论。
+    """
+    _attach_excess(criteria)
+
+    t_first, t_last = temps[0], temps[-1]
+    diffs = [temps[i + 1] - temps[i] for i in range(len(temps) - 1)]
+    if diffs and all(d > 0 for d in diffs):
+        head = f"近 {hours_txt} 小时温度 {t_first:.1f}→{t_last:.1f}℃ 单调上升"
+    elif diffs and all(d < 0 for d in diffs):
+        head = f"近 {hours_txt} 小时温度 {t_first:.1f}→{t_last:.1f}℃ 单调下降"
+    else:
+        head = f"近 {hours_txt} 小时温度 {min(temps):.1f}~{max(temps):.1f}℃"
+
+    parts = [_failure_text(c) for c in criteria if not c["passed"]]
+    reason = _failure_reason(criteria, temps)
+
+    return f"{head}，" + "；".join(parts) + f" → 判定为不稳定（{reason}）"
 
 
 # --------------------------------------------------------------------------
@@ -306,6 +421,195 @@ def pick_stable_window(all_samples: list, window_size: int = 6) -> dict:
         "candidate_count": len(stable),
         "daytime_count": len(daytime),
         "pool": pool_name,
+    }
+
+
+# --------------------------------------------------------------------------
+# 渐进漂移选窗（S2）
+# --------------------------------------------------------------------------
+
+class Row(NamedTuple):
+    """选窗时唯一允许看到的数据形状。
+
+    刻意不含 sim_scenario：字段根本不存在，选窗时想用也用不上。
+    """
+
+    timestamp: datetime
+    temperature: float
+    humidity: float
+    lux: float
+
+
+def project_rows(samples: list) -> list:
+    """把 B02 样本投影成只有 timestamp/temperature/humidity/lux 的行。
+
+    source_type / sim_scenario 在这一步被丢掉，之后的选窗与判断都拿不到它们。
+    """
+    return [
+        Row(
+            timestamp=s.timestamp,
+            temperature=s.temperature,
+            humidity=s.humidity,
+            lux=s.lux,
+        )
+        for s in samples
+    ]
+
+
+def pick_drifting_window(all_samples: list, reference: dict | None = None,
+                         window_size: int = 6,
+                         temp_tolerance: float = 0.8) -> dict:
+    """挑一个"末点与 S1 可比、且窗口内温度全程单调上升"的窗口（渐进漂移）。
+
+    候选必须同时满足：
+      a. 末点温度落在 [S1 末点温度, S1 末点温度 + 容差]
+         （单侧带：末点须已达到 S1 的水平且高出不超过容差。
+          若改成完全对称的 |差| ≤ 容差，会多出 2026-10-20 09:00→11:30
+          ——末点 32.2℃、差 0.6℃、ΔT 8.8℃——并胜出，与 S2 的验收窗口不符。）
+      b. 窗口内温度全程单调上升
+      c. judge_stability 判定为不稳定
+    候选之间取 ΔT 最大的那个。
+
+    只读 timestamp/temperature/humidity/lux 四列数值，不读 sim_scenario。
+    reference 不传时，现场用 S1 的选窗策略算出参考末点温度。
+
+    Returns:
+        {
+            "selected": {...} | None,
+            "reason": str,
+            "candidate_count": int,
+            "rejected_count": int,
+            "candidates": [...],
+            "reference": {...},
+        }
+    """
+    rows = project_rows(all_samples)
+
+    if reference is None:
+        reference = s1_reference(rows)
+
+    ref_temp = reference["end_temperature"]
+    band = (ref_temp, ref_temp + temp_tolerance)
+    band_txt = (round(band[0], 1), round(band[1], 1))
+
+    candidates = []
+    rejected = []
+
+    for start in range(0, len(rows) - window_size + 1):
+        win = rows[start:start + window_size]
+        temps = [r.temperature for r in win]
+        t_first, t_last = temps[0], temps[-1]
+        delta_t = round(max(temps) - min(temps), 2)
+        base = {
+            "window_index": start,
+            "start_time": win[0].timestamp.isoformat(),
+            "end_time": win[-1].timestamp.isoformat(),
+            "end_temperature": t_last,
+            "delta_t": delta_t,
+        }
+
+        rising = all(temps[i + 1] > temps[i] for i in range(len(temps) - 1))
+        if not rising:
+            rejected.append({**base, "reject": "温度未全程单调上升"})
+            continue
+
+        if not (band[0] - 1e-9 <= t_last <= band[1] + 1e-9):
+            gap = round(t_last - ref_temp, 2)
+            rejected.append({
+                **base,
+                "reject": (f"末点温度 {t_last}℃ 不在 S1 参考带 "
+                           f"[{band_txt[0]}, {band_txt[1]}]℃（相差 {gap:+.1f}℃）"),
+            })
+            continue
+
+        judged = judge_stability(win, rich_failure=True)
+        if judged["passed"]:
+            rejected.append({**base, "reject": "judge_stability 判定为稳定"})
+            continue
+
+        candidates.append({
+            **base,
+            "temp_range": delta_t,
+            "passed": judged["passed"],
+            "points": [
+                {
+                    "timestamp": r.timestamp.isoformat(),
+                    "temperature": r.temperature,
+                    "humidity": r.humidity,
+                    "lux": r.lux,
+                }
+                for r in win
+            ],
+            "criteria": judged["criteria"],
+            "conclusion": judged["conclusion"],
+        })
+
+    if not candidates:
+        return {
+            "selected": None,
+            "reason": ("没有满足『末点温度与 S1 可比 + 全程单调上升 + 判定不稳定』的窗口"),
+            "candidate_count": 0,
+            "rejected_count": len(rejected),
+            "candidates": [],
+            "reference": {
+                "s1_end_time": reference["end_time"],
+                "s1_end_temperature": ref_temp,
+                "temperature_band": [band_txt[0], band_txt[1]],
+                "tolerance": temp_tolerance,
+            },
+        }
+
+    selected = max(candidates, key=lambda c: (c["delta_t"], c["end_time"]))
+
+    reason = (
+        f"共 {len(rows) - window_size + 1} 个连续 {window_size} 点窗口，"
+        f"满足条件的有 {len(candidates)} 个；条件为："
+        f"(a) 末点温度落在 S1 参考带 [{band_txt[0]}, {band_txt[1]}]℃"
+        f"（S1 末点 {ref_temp}℃，容差 {temp_tolerance}℃）；"
+        f"(b) 窗口内温度全程单调上升；"
+        f"(c) judge_stability 判定为不稳定；"
+        f"最终取 ΔT 最大者 → ΔT={selected['delta_t']}℃，"
+        f"窗口 {selected['start_time']} → {selected['end_time']}"
+    )
+
+    return {
+        "selected": selected,
+        "reason": reason,
+        "candidate_count": len(candidates),
+        "rejected_count": len(rejected),
+        "candidates": [
+            {k: c[k] for k in ("start_time", "end_time", "delta_t", "end_temperature")}
+            for c in candidates
+        ],
+        "reference": {
+            "s1_end_time": reference["end_time"],
+            "s1_end_temperature": ref_temp,
+            "temperature_band": [band_txt[0], band_txt[1]],
+            "tolerance": temp_tolerance,
+        },
+    }
+
+
+def s1_reference(rows: list) -> dict:
+    """取 S1 的参考窗口与末点温度，作为"当前值相近"的基准。
+
+    基准不是写死的数值，而是现场按 S1 的选窗策略算出来，
+    S1 选窗变了 S2 的基准跟着变，两者永远可比。
+    """
+    picked = pick_stable_window(rows, window_size=6)
+    sel = picked["selected"]
+    if sel is None:
+        raise RuntimeError(f"S1 选窗失败：{picked['reason']}")
+
+    end_time = datetime.fromisoformat(sel["end_time"])
+    end_row = next(r for r in rows if r.timestamp == end_time)
+    return {
+        "start_time": sel["start_time"],
+        "end_time": sel["end_time"],
+        "end_temperature": end_row.temperature,
+        "end_humidity": end_row.humidity,
+        "end_lux": end_row.lux,
+        "reason": picked["reason"],
     }
 
 

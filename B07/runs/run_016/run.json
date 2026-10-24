@@ -1,0 +1,376 @@
+{
+  "run_id": "run_016",
+  "created_at": "2026-10-24T23:18:21",
+  "status": "success",
+  "failed_stage": null,
+  "failure_reason": null,
+  "scenario": "S3_without",
+  "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+  "analysis_time": "2026-10-21T16:00:00",
+  "location": "A区-3号温室",
+  "model_path": "D:\\GreenMate\\B06\\artifacts\\b06-20261020-v1",
+  "current_state": {
+    "timestamp": "2026-10-21T16:00:00",
+    "temperature": 32.8,
+    "humidity": 56.7,
+    "lux": 39842.0,
+    "source_type": "simulated",
+    "sim_scenario": "normal"
+  },
+  "latest_in_db": {
+    "status": "ok",
+    "source": "B02/environment_samples",
+    "data": {
+      "temperature": 17.8,
+      "humidity": 84.6,
+      "lux": 0.0,
+      "source_type": "simulated",
+      "sim_scenario": "normal"
+    },
+    "timestamp": "2026-10-22T01:30:00"
+  },
+  "hours_gap": 9.5,
+  "history": [
+    {
+      "timestamp": "2026-10-21T13:30:00",
+      "temperature": 33.9,
+      "humidity": 55.2,
+      "lux": 58315.0,
+      "source_type": "simulated",
+      "sim_scenario": "normal"
+    },
+    {
+      "timestamp": "2026-10-21T14:00:00",
+      "temperature": 34.1,
+      "humidity": 55.0,
+      "lux": 55983.0,
+      "source_type": "simulated",
+      "sim_scenario": "normal"
+    },
+    {
+      "timestamp": "2026-10-21T14:30:00",
+      "temperature": 34.0,
+      "humidity": 54.8,
+      "lux": 53208.0,
+      "source_type": "simulated",
+      "sim_scenario": "normal"
+    },
+    {
+      "timestamp": "2026-10-21T15:00:00",
+      "temperature": 33.9,
+      "humidity": 55.4,
+      "lux": 49312.0,
+      "source_type": "simulated",
+      "sim_scenario": "normal"
+    },
+    {
+      "timestamp": "2026-10-21T15:30:00",
+      "temperature": 33.3,
+      "humidity": 56.0,
+      "lux": 44790.0,
+      "source_type": "simulated",
+      "sim_scenario": "normal"
+    },
+    {
+      "timestamp": "2026-10-21T16:00:00",
+      "temperature": 32.8,
+      "humidity": 56.7,
+      "lux": 39842.0,
+      "source_type": "simulated",
+      "sim_scenario": "normal"
+    }
+  ],
+  "history_window": {
+    "start": "2026-10-21T13:30:00",
+    "end": "2026-10-21T16:00:00",
+    "count": 6,
+    "stability": {
+      "passed": true,
+      "criteria": [
+        {
+          "name": "温度最大波动",
+          "value": 1.3,
+          "threshold": 2.0,
+          "passed": true,
+          "note": "32.8~34.1℃，波动 1.3℃"
+        },
+        {
+          "name": "湿度首尾总变化",
+          "value": 1.5,
+          "threshold": 3.0,
+          "passed": true,
+          "note": "首 55.2% → 尾 56.7%，变化 +1.5%"
+        },
+        {
+          "name": "湿度单步最大变化",
+          "value": 0.7,
+          "threshold": 1.5,
+          "passed": true,
+          "note": "单步最大 0.7%"
+        },
+        {
+          "name": "光照单步最大跳变",
+          "value": 4948.0,
+          "threshold": 15000,
+          "passed": true,
+          "note": "单步最大 4948 lux"
+        },
+        {
+          "name": "湿度无持续单向趋势",
+          "value": "无持续单向趋势",
+          "threshold": "禁止全程单调",
+          "passed": true,
+          "note": "无持续单向趋势"
+        }
+      ],
+      "conclusion": "近 3 小时温度 32.8~34.1℃（波动 1.3℃，阈值 2.0℃）；湿度首尾 +1.5%（阈值 3.0%）、单步最大 0.7%；光照单步最大 4948 lux（阈值 15000）；无持续单向趋势 → 判定为稳定"
+    }
+  },
+  "model_output": {
+    "evidence_type": "MODEL_OUTPUT",
+    "window_id": "s1-live-001",
+    "predicted_attention": "NORMAL",
+    "confidence": 1.0,
+    "confidence_normal": 1.0,
+    "confidence_watch": 0.0,
+    "model_version": "b06-20261020-v1",
+    "dtw_temperature": 48.0,
+    "dtw_humidity": 131.37,
+    "dtw_lux": 206033.3,
+    "feature_count": 33,
+    "feature_contribution_method": "logistic_coefficient_ranking",
+    "coef_top5": [
+      {
+        "feature": "current_lux",
+        "coefficient": 1.114976,
+        "direction": "推向WATCH"
+      },
+      {
+        "feature": "slope_lux",
+        "coefficient": 0.742619,
+        "direction": "推向WATCH"
+      },
+      {
+        "feature": "max_lux",
+        "coefficient": -0.625809,
+        "direction": "推向NORMAL"
+      },
+      {
+        "feature": "min_lux",
+        "coefficient": -0.397984,
+        "direction": "推向NORMAL"
+      },
+      {
+        "feature": "std_lux",
+        "coefficient": -0.371169,
+        "direction": "推向NORMAL"
+      }
+    ],
+    "stability_baseline": "稳定",
+    "errors": []
+  },
+  "model_meta": {
+    "model_version": "b06-20261020-v1",
+    "label_source": "rule_v1",
+    "label_source_version": "1.0",
+    "feature_count": 33,
+    "window_size": 6,
+    "target_size": 2,
+    "saved_at": "2026-10-20T04:06:57.341158+00:00",
+    "sklearn_version": "1.9.1",
+    "metrics": {
+      "accuracy": 0.7448979591836735,
+      "precision": 0.5909090909090909,
+      "recall": 0.4482758620689655,
+      "f1": 0.5098039215686274
+    }
+  },
+  "structured_judgement": {
+    "current_environment": {
+      "temperature": 32.8,
+      "humidity": 56.7,
+      "lux": 39842.0,
+      "source_type": "simulated",
+      "sim_scenario": "normal",
+      "sampled_at": "2026-10-21T16:00:00",
+      "unit": {
+        "temperature": "℃",
+        "humidity": "%",
+        "lux": "lux"
+      }
+    },
+    "recent_trend": {
+      "window_span": "3 小时 / 6 点",
+      "window_start": "2026-10-21T13:30:00",
+      "window_end": "2026-10-21T16:00:00",
+      "stability_verdict": "稳定",
+      "conclusion": "近 3 小时温度 32.8~34.1℃（波动 1.3℃，阈值 2.0℃）；湿度首尾 +1.5%（阈值 3.0%）、单步最大 0.7%；光照单步最大 4948 lux（阈值 15000）；无持续单向趋势 → 判定为稳定",
+      "criteria": {
+        "温度最大波动": {
+          "value": 1.3,
+          "threshold": 2.0,
+          "passed": true,
+          "note": "32.8~34.1℃，波动 1.3℃"
+        },
+        "湿度首尾总变化": {
+          "value": 1.5,
+          "threshold": 3.0,
+          "passed": true,
+          "note": "首 55.2% → 尾 56.7%，变化 +1.5%"
+        },
+        "湿度单步最大变化": {
+          "value": 0.7,
+          "threshold": 1.5,
+          "passed": true,
+          "note": "单步最大 0.7%"
+        },
+        "光照单步最大跳变": {
+          "value": 4948.0,
+          "threshold": 15000,
+          "passed": true,
+          "note": "单步最大 4948 lux"
+        },
+        "湿度无持续单向趋势": {
+          "value": "无持续单向趋势",
+          "threshold": "禁止全程单调",
+          "passed": true,
+          "note": "无持续单向趋势"
+        }
+      },
+      "thresholds_used": {
+        "temp_range_max": 2.0,
+        "humi_total_max": 3.0,
+        "humi_step_max": 1.5,
+        "lux_jump_max": 15000,
+        "require_no_monotone": true
+      }
+    },
+    "predicted_attention": "NORMAL",
+    "evidence_status": {
+      "items": [
+        {
+          "module": "B02",
+          "item": "current_state",
+          "present": true,
+          "detail": "32.8℃ / 56.7% / 39842.0 lux @ 2026-10-21T16:00:00"
+        },
+        {
+          "module": "B02",
+          "item": "history",
+          "present": true,
+          "detail": "6 点，2026-10-21T13:30:00 → 2026-10-21T16:00:00"
+        },
+        {
+          "module": "B05",
+          "item": "latest_in_db",
+          "present": true,
+          "detail": "status=ok，库末点 2026-10-22T01:30:00"
+        },
+        {
+          "module": "B06",
+          "item": "model_output",
+          "present": true,
+          "detail": "model_version=b06-20261020-v1，predicted_attention=NORMAL，confidence=1.0"
+        },
+        {
+          "module": "B06",
+          "item": "dtw_similarity",
+          "present": true,
+          "detail": "dtw T=48.0 / H=131.37 / L=206033.3"
+        },
+        {
+          "module": "B01",
+          "item": "llm_explanation",
+          "present": false,
+          "detail": "不计入本环节的齐全性判定；LLM 解释在 B07/explain.py 独立环节、于本环节之后生成"
+        }
+      ],
+      "required_modules": [
+        "B02",
+        "B05",
+        "B06"
+      ],
+      "missing_modules": [],
+      "complete": true,
+      "summary": "截至判断环节证据齐全（B02 2/2、B05 1/1、B06 2/2）；B01 解释在本环节之后生成"
+    },
+    "limitations": {
+      "simulated_data": {
+        "key": "simulated_data",
+        "text": "本次全部环境数据 source_type='simulated'，为模拟数据，非真实传感器读数；所有结论只在这套模拟时间轴上成立，不可外推到真实大棚。",
+        "source_type": "simulated"
+      },
+      "model_boundary": {
+        "key": "model_boundary",
+        "text": "B06 模型（b06-20261020-v1，标签规则 rule_v1）只适用 3h → 1h 的窗口，且只覆盖温度 / 湿度 / 光照三项指标，范围取自 B02 训练数据分布；其测试集指标为 accuracy=0.745、precision=0.591、recall=0.448、f1=0.510，recall 0.45 / f1 0.51 表明对异常窗口存在明显漏报，预测为 NORMAL 不等于确认无异常。",
+        "model_version": "b06-20261020-v1",
+        "recall": 0.4482758620689655,
+        "f1": 0.5098039215686274
+      },
+      "time_anchor": {
+        "key": "time_anchor",
+        "text": "本次 analysis_time = 2026-10-21T16:00:00，库内最新状态 latest_in_db = 2026-10-22T01:30:00，两者相隔 hours_gap = 9.5 小时；锚点选在更早位置的原因：库末点所在的 3 小时窗口不满足稳定判据（实测：近 3 小时温度 17.8~20.5℃（波动 2.7℃，阈值 2.0℃）；湿度首尾 +4.2%（阈值 3.0%）、单步最大 1.4%；光照单步最大 0 lux（阈值 15000）；全程单调上升 → 判定为不稳定）。因此本次判断描述的是 2026-10-21T16:00:00 时刻的状态，不是库末点时刻的状态。",
+        "analysis_time": "2026-10-21T16:00:00",
+        "latest_in_db": "2026-10-22T01:30:00",
+        "hours_gap": 9.5,
+        "tail_window_stable": false,
+        "tail_window_conclusion": "近 3 小时温度 17.8~20.5℃（波动 2.7℃，阈值 2.0℃）；湿度首尾 +4.2%（阈值 3.0%）、单步最大 1.4%；光照单步最大 0 lux（阈值 15000）；全程单调上升 → 判定为不稳定"
+      },
+      "no_weather_no_kb": {
+        "key": "no_weather_no_kb",
+        "text": "本阶段未接入 B03 天气数据与 B04 知识库，判断只基于 B02 历史 + B06 预测；没有外部气象校正，也没有农艺知识库佐证，无法解释'为什么该数值对番茄意味着什么'。",
+        "connected_modules": [
+          "B02",
+          "B05",
+          "B06"
+        ],
+        "not_connected_modules": [
+          "B03",
+          "B04"
+        ]
+      },
+      "all_keys": [
+        "simulated_data",
+        "model_boundary",
+        "time_anchor",
+        "no_weather_no_kb"
+      ]
+    }
+  },
+  "judgement_self_check": {
+    "fields": [
+      "current_environment",
+      "recent_trend",
+      "predicted_attention",
+      "evidence_status",
+      "limitations"
+    ],
+    "field_count": 5,
+    "expected_field_count": 5,
+    "identical": true,
+    "differing_fields": [],
+    "same_order": true,
+    "passed": true
+  },
+  "llm_explanation": "截至2026-10-21 16:00，大棚环境处于稳定状态。当前温度32.8℃、湿度56.7%、光照39842 lux。依据近3小时数据判断：温度波动1.3℃（阈值2.0℃），湿度总变化1.5%（阈值3.0%），光照单步最大跳变4948 lux（阈值15000），且无持续单向趋势，各项指标均通过稳定性检测。B06模型（版本b06-20261020-v1）预测关注等级为NORMAL，置信度1.0。需注意的是，本次分析基于模拟数据，非真实传感器读数；且模型存在漏报风险，预测正常不代表绝对无异常。目前未接入天气与农艺知识库，无法提供具体作物生长建议。",
+  "llm_meta": {
+    "provider": "ws-freh8bu2gap0g6so.cn-beijing.maas.aliyuncs.com",
+    "model": "qwen3.5-27b",
+    "elapsed_ms": 5513,
+    "content_length": 275,
+    "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+    "system_prompt_sha256": "aa1400cf8568",
+    "question_sha256": "d3cc394bfcbe"
+  },
+  "llm_context": "【① 当前环境】\n采样时间戳：2026-10-21T16:00:00\n温度：32.8 ℃\n湿度：56.7 %\n光照：39842.0 lux\n数据来源 source_type：simulated\n模拟场景标签：normal\n\n【② 最近历史主要变化】\n窗口区间：2026-10-21T13:30:00 → 2026-10-21T16:00:00（3 小时 / 6 点）\n稳定性判定：稳定\n稳定判据明细：\n  - 温度最大波动：实测=1.3，阈值=2.0，通过（32.8~34.1℃，波动 1.3℃）\n  - 湿度首尾总变化：实测=1.5，阈值=3.0，通过（首 55.2% → 尾 56.7%，变化 +1.5%）\n  - 湿度单步最大变化：实测=0.7，阈值=1.5，通过（单步最大 0.7%）\n  - 光照单步最大跳变：实测=4948.0，阈值=15000，通过（单步最大 4948 lux）\n  - 湿度无持续单向趋势：实测=无持续单向趋势，阈值=禁止全程单调，通过（无持续单向趋势）\n稳定判据结论：近 3 小时温度 32.8~34.1℃（波动 1.3℃，阈值 2.0℃）；湿度首尾 +1.5%（阈值 3.0%）、单步最大 0.7%；光照单步最大 4948 lux（阈值 15000）；无持续单向趋势 → 判定为稳定\n\n【③ B06 短时预测】\npredicted_attention：NORMAL\nmodel_version：b06-20261020-v1\nconfidence：1.0（NORMAL 1.0 / WATCH 0.0）\n窗口 ID：s1-live-001\nDTW 相似度：温度 48.0，湿度 131.37，光照 206033.3\n\n【④ 结构化判断结果】\ncurrent_environment：温度 32.8℃，湿度 56.7%，光照 39842.0 lux，来源 simulated，采样于 2026-10-21T16:00:00\nrecent_trend：稳定；近 3 小时温度 32.8~34.1℃（波动 1.3℃，阈值 2.0℃）；湿度首尾 +1.5%（阈值 3.0%）、单步最大 0.7%；光照单步最大 4948 lux（阈值 15000）；无持续单向趋势 → 判定为稳定\npredicted_attention：NORMAL\nevidence_status：截至判断环节证据齐全（B02 2/2、B05 1/1、B06 2/2）；B01 解释在本环节之后生成；证据项：[B02]current_state、[B02]history、[B05]latest_in_db、[B06]model_output、[B06]dtw_similarity、[B01]llm_explanation\nlimitations：\n  - 本次全部环境数据 source_type='simulated'，为模拟数据，非真实传感器读数；所有结论只在这套模拟时间轴上成立，不可外推到真实大棚。\n  - B06 模型（b06-20261020-v1，标签规则 rule_v1）只适用 3h → 1h 的窗口，且只覆盖温度 / 湿度 / 光照三项指标，范围取自 B02 训练数据分布；其测试集指标为 accuracy=0.745、precision=0.591、recall=0.448、f1=0.510，recall 0.45 / f1 0.51 表明对异常窗口存在明显漏报，预测为 NORMAL 不等于确认无异常。\n  - 本次 analysis_time = 2026-10-21T16:00:00，库内最新状态 latest_in_db = 2026-10-22T01:30:00，两者相隔 hours_gap = 9.5 小时；锚点选在更早位置的原因：库末点所在的 3 小时窗口不满足稳定判据（实测：近 3 小时温度 17.8~20.5℃（波动 2.7℃，阈值 2.0℃）；湿度首尾 +4.2%（阈值 3.0%）、单步最大 1.4%；光照单步最大 0 lux（阈值 15000）；全程单调上升 → 判定为不稳定）。因此本次判断描述的是 2026-10-21T16:00:00 时刻的状态，不是库末点时刻的状态。\n  - 本阶段未接入 B03 天气数据与 B04 知识库，判断只基于 B02 历史 + B06 预测；没有外部气象校正，也没有农艺知识库佐证，无法解释'为什么该数值对番茄意味着什么'。\n\n【⑤ 当前限制条件（limitations 原文）】\n  - 本次全部环境数据 source_type='simulated'，为模拟数据，非真实传感器读数；所有结论只在这套模拟时间轴上成立，不可外推到真实大棚。\n  - B06 模型（b06-20261020-v1，标签规则 rule_v1）只适用 3h → 1h 的窗口，且只覆盖温度 / 湿度 / 光照三项指标，范围取自 B02 训练数据分布；其测试集指标为 accuracy=0.745、precision=0.591、recall=0.448、f1=0.510，recall 0.45 / f1 0.51 表明对异常窗口存在明显漏报，预测为 NORMAL 不等于确认无异常。\n  - 本次 analysis_time = 2026-10-21T16:00:00，库内最新状态 latest_in_db = 2026-10-22T01:30:00，两者相隔 hours_gap = 9.5 小时；锚点选在更早位置的原因：库末点所在的 3 小时窗口不满足稳定判据（实测：近 3 小时温度 17.8~20.5℃（波动 2.7℃，阈值 2.0℃）；湿度首尾 +4.2%（阈值 3.0%）、单步最大 1.4%；光照单步最大 0 lux（阈值 15000）；全程单调上升 → 判定为不稳定）。因此本次判断描述的是 2026-10-21T16:00:00 时刻的状态，不是库末点时刻的状态。\n  - 本阶段未接入 B03 天气数据与 B04 知识库，判断只基于 B02 历史 + B06 预测；没有外部气象校正，也没有农艺知识库佐证，无法解释'为什么该数值对番茄意味着什么'。",
+  "evidence_sources": {
+    "B02": "environment_samples（B02.api.history.get_environment_history，显式起止时间）",
+    "B05": "get_current_environment（B05.test_functions，记录为 latest_in_db，仅参考）",
+    "B06": "模型 b06-20261020-v1（标签规则 rule_v1），只加载不重训",
+    "B01": "LLM qwen3.5-27b（经 B01.llm.get_client，OpenAI 兼容接口）"
+  },
+  "warnings": [],
+  "window_selection": null,
+  "external_conditions": null,
+  "note": "本次尝试在【设计】上失败：Run B 收到了 ⑥ 块却完全没有引用，根因是 ⑤ 限制条件文案与 ⑥ 块自相矛盾。保留用于记录设计缺陷与修复过程"
+}

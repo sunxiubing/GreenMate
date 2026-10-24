@@ -171,22 +171,7 @@ def save_run(archive: dict) -> Path:
     _atomic_write_json(path, archive)
 
     index = _load_index()
-    try:
-        rel_path = str(path.relative_to(_PROJECT_ROOT)).replace("\\", "/")
-    except ValueError:
-        # 存档目录不在项目根之下（例如测试用临时目录），记绝对路径
-        rel_path = str(path).replace("\\", "/")
-
-    index["runs"][run_id] = {
-        "created_at": archive.get("created_at"),
-        "question": archive.get("question"),
-        "verdict": (archive.get("structured_judgement") or {}).get("predicted_attention")
-                   or (archive.get("model_output") or {}).get("predicted_attention"),
-        "model_version": (archive.get("model_output") or {}).get("model_version"),
-        "status": archive.get("status"),
-        "failed_stage": archive.get("failed_stage"),
-        "path": rel_path,
-    }
+    index["runs"][run_id] = _index_entry(run_id, archive, path)
     _save_index(index)
     return path
 
@@ -202,6 +187,86 @@ def list_runs() -> list[dict]:
     return out
 
 
+def _index_entry(run_id: str, archive: dict, path: Path) -> dict:
+    """把一份存档压缩成索引里的一条记录。
+
+    scenario 取存档里的真实值；旧存档没有这个字段 → None（显示 "(旧存档未记录)"）。
+    """
+    try:
+        rel_path = str(path.relative_to(_PROJECT_ROOT)).replace("\\", "/")
+    except ValueError:
+        rel_path = str(path).replace("\\", "/")
+
+    # S3-3：合成关注等级。存档里没有这个字段的老存档，
+    # 按 judgement.py 的规则从存档复算——这条规则本来就该能脱离 LLM 复算。
+    ca = archive.get("combined_attention") or {}
+    if not ca:
+        try:
+            from B07.judgement import build_combined_attention
+            ca = build_combined_attention(archive)
+        except Exception:
+            ca = {}
+
+    return {
+        "created_at": archive.get("created_at"),
+        "scenario": archive.get("scenario"),
+        "question": archive.get("question"),
+        "verdict": (archive.get("structured_judgement") or {}).get("predicted_attention")
+                   or (archive.get("model_output") or {}).get("predicted_attention"),
+        "model_version": (archive.get("model_output") or {}).get("model_version"),
+        "status": archive.get("status"),
+        "failed_stage": archive.get("failed_stage"),
+        # S3-3：合成关注等级（可脱离 LLM 复算）
+        "combined_attention": ca.get("value"),
+        # 存档里的备注（例如失败尝试的说明）
+        "note": archive.get("note"),
+        "path": rel_path,
+    }
+
+
+def rebuild_index() -> dict:
+    """按 B07/runs/ 下**实际存在**的存档目录重建 index.json。
+
+    做两件事：
+      1. 丢弃指向已删除 run 的索引条目（例如手工删掉调试 run 之后）
+      2. 重算 next_seq = 现有最大编号 + 1（不复用已删编号）
+
+    每条记录都带 scenario 字段；旧存档没有该字段时为 null（正常情况）。
+    """
+    runs: dict = {}
+    max_seq = 0
+
+    if RUNS_DIR.exists():
+        for d in sorted(RUNS_DIR.iterdir()):
+            if not d.is_dir() or not d.name.startswith(RUN_ID_PREFIX):
+                continue
+            p = d / "run.json"
+            if not p.exists():
+                print(f"  ⚠️  {d.name}/ 里没有 run.json，跳过", file=sys.stderr)
+                continue
+            try:
+                with open(p, encoding="utf-8") as f:
+                    archive = json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                print(f"  ⚠️  {d.name}/run.json 读不出来，跳过："
+                      f"{type(e).__name__}: {e}", file=sys.stderr)
+                continue
+
+            run_id = archive.get("run_id") or d.name
+            runs[run_id] = _index_entry(run_id, archive, p)
+            digits = run_id[len(RUN_ID_PREFIX):]
+            if digits.isdigit():
+                max_seq = max(max_seq, int(digits))
+
+    index = {
+        "version": INDEX_VERSION,
+        "next_seq": max_seq + 1,
+        "runs": runs,
+    }
+    _save_index(index)
+    return index
+
+
 # --------------------------------------------------------------------------
 # 跑一次完整分析并存档
 # --------------------------------------------------------------------------
@@ -213,18 +278,31 @@ def _provider_name() -> str:
     return host or "unknown"
 
 
+def scenario_label(archive: dict) -> str:
+    """存档的场景标签。
+
+    旧存档（run_001 / run_008 / run_009）没有 scenario 字段，属于正常情况，
+    取不到就显示 "(旧存档未记录)"，不报错。
+    """
+    return archive.get("scenario") or "(旧存档未记录)"
+
+
 def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
                  model_path: str | Path = DEFAULT_MODEL_PATH,
                  window_selection: dict | None = None,
-                 progress=None) -> dict:
+                 progress=None, scenario: str = "S1",
+                 external_conditions: dict | None = None) -> dict:
     """执行一次完整分析（S1-2 → S1-3 → S1-4），把产物拼成快照落盘。
 
     Args:
         anchor:           时间锚点
         location:         位置标识
         model_path:       B06 已存模型产物路径
-        window_selection: S1-1 选窗结果，原样存进存档（可选）
+        window_selection: 选窗结果，原样存进存档（可选）
         progress:         阶段回调 progress(stage, extra)，供上层打印进度（可选）
+        scenario:         场景 key（S1 / S2）。同一套流程，只是看哪一段历史。
+        external_conditions: 可选的外部天气条件（S3-1）。
+            传 None（默认）时行为与原来完全一致：结构化判断仍是 5 个字段。
 
     Returns: 存档 dict（已落盘）
 
@@ -234,14 +312,23 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
     """
     from B07.evidence import build_evidence
     from B07.predict import predict_for_run
-    from B07.judgement import build_judgement, self_check
+    from B07.judgement import (build_combined_attention, build_judgement,
+                               self_check)
     from B07.explain import (
         FIXED_QUESTION, explain_judgement, compare_judgement_vs_explanation,
     )
     from B07.stability import judge_stability
+    from B07.scenarios import get_scenario, rich_failure_for
 
     if isinstance(anchor, str):
         anchor = datetime.fromisoformat(anchor)
+
+    # 场景只允许改"看哪一段历史"，问题必须与 S1 一字不差
+    scenario_def = get_scenario(scenario)
+    if scenario_def["question"] != FIXED_QUESTION:
+        raise RunError(f"场景 {scenario} 的问题与固定问题不一致，已中止")
+
+    rich = rich_failure_for(scenario)
 
     run_id = _reserve_run_id()
     created_at = datetime.now().isoformat(timespec="seconds")
@@ -252,6 +339,7 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
         "status": "running",
         "failed_stage": None,
         "failure_reason": None,
+        "scenario": scenario,
         "question": FIXED_QUESTION,
         "analysis_time": anchor.isoformat(),
         "location": location,
@@ -266,19 +354,29 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
         "model_meta": {},
         "structured_judgement": None,
         "judgement_self_check": None,
+        # S3-3：合成关注等级（内部 B06 预测 × 外部天气信号，纯程序规则）
+        "combined_attention": None,
         "llm_explanation": None,
         "llm_meta": {},
+        # S3-2：存下发给 LLM 的原文上下文（用于两次运行的逐字节对比）
+        "llm_context": None,
         "evidence_sources": {},
         "warnings": [],
         "window_selection": window_selection,
+        # S3-1：外部天气条件（默认 None = 本次不接外部条件）
+        "external_conditions": external_conditions,
     }
 
     def _notify(stage_name: str, extra=None):
         if progress is not None:
             try:
                 progress(stage_name, extra)
-            except Exception:
-                pass  # 进度回调出问题不能影响主流程
+            except Exception as e:
+                # 进度回调出问题不能影响主流程，但必须留痕。
+                # 曾经这里是一句 `except: pass`，把一个 NameError 静默吞掉，
+                # 表现为某一阶段什么都不打印——查起来非常费时间。
+                print(f"[B07] 进度回调异常（stage={stage_name}）："
+                      f"{type(e).__name__}: {e}", file=sys.stderr)
 
     stage = "evidence"
     try:
@@ -291,7 +389,7 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
 
         # 历史窗口 + 稳定判定（存档一次，回溯时再算一次对照）
         samples = _samples_from_history(evidence["history"])
-        judged = judge_stability(samples)
+        judged = judge_stability(samples, rich_failure=rich)
         archive["history_window"] = {
             "start": evidence["history_window"]["start"],
             "end": evidence["history_window"]["end"],
@@ -312,6 +410,8 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
 
         # ---------------- S1-3 预测 ----------------
         stage = "predict"
+        # 场景随 bundle 传下去，判断环节据此决定用哪种失败结论句
+        evidence["scenario"] = scenario
         bundle = predict_for_run(evidence, model_path)
         mo = bundle["model_output"]
         archive["model_output"] = {
@@ -342,10 +442,16 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
 
         # ---------------- S1-4A 结构化判断 ----------------
         stage = "judgement"
+        # 有外部条件时，它是结构化判断的第 6 个字段（追加，不是替换）
+        if external_conditions is not None:
+            bundle["external_conditions"] = external_conditions
         judgement = build_judgement(bundle)
         bundle["judgement"] = judgement
         archive["structured_judgement"] = judgement
         archive["judgement_self_check"] = self_check(bundle)
+        # S3-3：合成关注等级。写死在程序里的规则（judgement.combined_attention），
+        # 不经过 LLM，回溯时用同一份存档即可复算。
+        archive["combined_attention"] = build_combined_attention(archive)
 
         _notify("judgement", {
             "judgement": judgement,
@@ -359,12 +465,18 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
         elapsed_ms = int((time.time() - t0) * 1000)
 
         archive["llm_explanation"] = explanation["answer"]
+        # S3-2：把发给 LLM 的上下文原文也存下来（对比两次运行时用来证明
+        # "只有 ⑥ 块不同，其余逐字节相同"）
+        archive["llm_context"] = explanation.get("context")
         archive["llm_meta"] = {
             "provider": _provider_name(),
             "model": explanation["model"],
             "elapsed_ms": elapsed_ms,
             "content_length": explanation["content_length"],
             "question": explanation["question"],
+            # 提示词指纹：S1 / S2 存档可直接比对"同一套提示词、同一个问题"
+            "system_prompt_sha256": explanation.get("system_prompt_sha256"),
+            "question_sha256": explanation.get("question_sha256"),
         }
 
         _notify("llm_explanation", {
@@ -398,6 +510,9 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
         archive.setdefault("warnings", []).append(
             f"[{stage}] 环节失败：{archive['failure_reason']}"
         )
+        # 失败也要在 stderr 留一行：谁在跑、卡在哪、什么原因
+        print(f"[B07] 运行失败（run_id={run_id}，stage={stage}）："
+              f"{type(e).__name__}: {e}", file=sys.stderr)
         save_run(archive)
         raise
 
@@ -426,17 +541,101 @@ def _samples_from_history(history: list) -> list:
     return samples
 
 
+def recompute_external_conditions(archive: dict) -> dict:
+    """从**存档文件**里的外部条件点位重新算一遍外部判定。
+
+    刻意不依赖任何内存状态，也不重新联网取天气：
+    只用存档里已经落盘的两个点 + 判定规则重算，
+    这样"存档的结论"和"现在按同样规则算出来的结论"必须一致。
+
+    判据来源：B07.weather.judge_external_points（与在线取数路径**同一份**）。
+    """
+    ext = archive.get("external_conditions")
+    if not isinstance(ext, dict) or not ext:
+        return {
+            "present": False,
+            "recomputed": None,
+            "checks": [],
+            "note": "本次运行没有外部条件（external_conditions 为空），无需复算",
+        }
+
+    from B07.weather import _WINDOW_TO_HOURS, judge_external_points
+
+    window = ext.get("forecast_window")
+    hours = _WINDOW_TO_HOURS.get(window, 0)
+
+    baseline_point = ext.get("baseline_point")
+    forecast_point = ext.get("forecast_point")
+
+    anchor = None
+    if archive.get("analysis_time"):
+        anchor = datetime.fromisoformat(archive["analysis_time"])
+
+    judged = judge_external_points(baseline_point, forecast_point, hours=hours,
+                                    analysis_time=anchor)
+
+    # future_ok 也重算一遍：预报时刻必须晚于存档里的 analysis_time
+    future_ok = None
+    if forecast_point and anchor is not None:
+        from B07.weather import _parse_forecast_time, _to_comparable
+
+        fore_dt = _parse_forecast_time(forecast_point.get("timestamp"))
+        if fore_dt is not None:
+            future_ok = _to_comparable(fore_dt) > _to_comparable(anchor)
+
+    recomputed = {
+        "signal": judged["signal"],
+        "judge_method": judged["judge_method"],
+        "basis": judged["basis"],
+        "precip_delta": judged["precip_delta"],
+        "temp_delta": judged["temp_delta"],
+        "cloud_delta": judged["cloud_delta"],
+        "solar_radiation": judged["solar_radiation"],
+        "future_ok": future_ok,
+    }
+
+    checks: list[dict] = []
+
+    def _add(name, archived, new, note=None):
+        checks.append({
+            "name": name,
+            "archived": archived,
+            "recomputed": new,
+            "match": (archived == new),
+            "note": note,
+        })
+
+    _add("外部判定 signal", ext.get("signal"), recomputed["signal"])
+    _add("外部判定 judge_method", ext.get("judge_method"), recomputed["judge_method"])
+    _add("外部降水概率 Δpp", ext.get("precip_delta"), recomputed["precip_delta"])
+    _add("外部温度 Δ℃", ext.get("temp_delta"), recomputed["temp_delta"])
+    _add("外部云量 Δ%", ext.get("cloud_delta"), recomputed["cloud_delta"])
+    if future_ok is not None:
+        _add("外部 future_ok", ext.get("future_ok"), recomputed["future_ok"])
+
+    return {
+        "present": True,
+        "recomputed": recomputed,
+        "checks": checks,
+        "note": "外部判定已按存档中的两个点重算",
+    }
+
+
 def recompute_from_archive(archive: dict) -> dict:
     """只用存档里的数据，把事实性内容重新算一遍。
 
     这是"事后可回溯"的核心：不是复读当初的字符串，而是重新推导。
     """
     from B07.stability import judge_stability
+    from B07.scenarios import rich_failure_for
 
     history = archive.get("history") or []
     samples = _samples_from_history(history)
 
-    judged = judge_stability(samples) if samples else {
+    # 场景决定失败结论句的写法；老存档没有 scenario 字段，按 S1 处理
+    rich = rich_failure_for(archive.get("scenario"))
+
+    judged = judge_stability(samples, rich_failure=rich) if samples else {
         "passed": False, "criteria": [],
         "conclusion": "存档内无历史点，无法复算稳定判定",
     }
@@ -499,6 +698,21 @@ def recompute_from_archive(archive: dict) -> dict:
         recomputed["predicted_attention"],
         note="需重新加载 B06 模型才可独立复算，此处为存档值",
     )
+
+    # ---- S3-2：外部条件也按存档里的点重算一遍（不依赖内存状态）----
+    ext_rc = recompute_external_conditions(archive)
+    recomputed["external_conditions"] = ext_rc["recomputed"]
+    checks.extend(ext_rc["checks"])
+
+    # ---- S3-3：合成关注等级用同一份存档复算（纯规则，不依赖 LLM）----
+    from B07.judgement import build_combined_attention
+    ca = build_combined_attention(archive)
+    recomputed["combined_attention"] = ca
+    archived_ca = archive.get("combined_attention") or {}
+    _add("合成关注等级 combined_attention",
+         archived_ca.get("value"),
+         ca["value"],
+         note=ca["reason"])
 
     return {"recomputed": recomputed, "checks": checks}
 
@@ -587,12 +801,15 @@ def explain_run(run_id: str, quiet: bool = False) -> dict:
 
     verdict = sj.get("predicted_attention") or mo.get("predicted_attention")
     stability_verdict = "稳定" if stab["passed"] else "不稳定"
+    # 旧存档（run_001 / run_008 / run_009）没有 scenario 字段，属于正常
+    scene_text = scenario_label(archive)
 
     # ---- 回答正文（事实全部取自复算结果）----
     crit = {c["name"]: c for c in stab["criteria"]}
     answer_parts = [
         f"【{run_id} 回溯】本次分析创建于 {archive.get('created_at')}，"
         f"锚点时刻 {archive.get('analysis_time')}，位置 {archive.get('location')}。",
+        f"  场景：{scene_text}",
 
         "◆ 看到了什么",
         f"  当前状态：{_fmt(cs.get('temperature'))}℃ / {_fmt(cs.get('humidity'))}% / "
@@ -604,7 +821,9 @@ def explain_run(run_id: str, quiet: bool = False) -> dict:
         f"（hours_gap={recomputed['hours_gap']} 小时）",
         f"  证据来源：{'、'.join(f'{k}={v}' for k, v in src.items())}",
 
-        "◆ 为什么说它比较稳定（从存档的原始 6 点重跑 judge_stability）",
+        ("◆ 为什么说它比较稳定（从存档的原始 6 点重跑 judge_stability）"
+         if stab.get("passed")
+         else "◆ 为什么说它不稳定（从存档的原始 6 点重跑 judge_stability）"),
     ]
     for c in stab["criteria"]:
         icon = "✅" if c["passed"] else "❌"
@@ -628,8 +847,12 @@ def explain_run(run_id: str, quiet: bool = False) -> dict:
         )
 
     answer_parts.append("◆ 结构化判断（五字段，原样展示存档内容）")
-    for name in ["current_environment", "recent_trend", "predicted_attention",
-                 "evidence_status", "limitations"]:
+    field_names = ["current_environment", "recent_trend", "predicted_attention",
+                   "evidence_status", "limitations"]
+    # S3-1：接了外部条件时多一个字段
+    if sj.get("external_conditions"):
+        field_names.append("external_conditions")
+    for name in field_names:
         value = sj.get(name)
         if name == "limitations":
             answer_parts.append(f"  {name}:")
@@ -650,8 +873,40 @@ def explain_run(run_id: str, quiet: bool = False) -> dict:
                 f"光照 {value.get('lux')} lux，来源 {value.get('source_type')}，"
                 f"采样于 {value.get('sampled_at')}"
             )
+        elif name == "external_conditions":
+            answer_parts.append(
+                f"  {name}: {value.get('signal')}（{value.get('judge_method')}）"
+            )
+            answer_parts.append(f"    依据：{value.get('basis')}")
+            answer_parts.append(
+                f"    预报点：{(value.get('forecast_point') or {}).get('timestamp')}"
+            )
         else:
             answer_parts.append(f"  {name}: {value}")
+
+    # S3-2：外部条件单独再展示一段——它是**从存档文件重读后复算**的结果，
+    # 不是复读当初内存里那份对象。
+    ext_rc = recompute_external_conditions(archive)
+    if ext_rc.get("present"):
+        ext_re = ext_rc["recomputed"] or {}
+        answer_parts.append("◆ 外部条件复算（从存档文件里的两个点重算，不依赖内存状态）")
+        answer_parts.append(f"  signal = {ext_re.get('signal')}"
+                            f"（{ext_re.get('judge_method')}）")
+        answer_parts.append(f"  降水概率 Δ {ext_re.get('precip_delta')} pp，"
+                            f"温度 Δ {ext_re.get('temp_delta')} ℃，"
+                            f"云量 Δ {ext_re.get('cloud_delta')} %，"
+                            f"太阳辐射 {ext_re.get('solar_radiation')} W/m²")
+        answer_parts.append(f"  future_ok = {ext_re.get('future_ok')}")
+        answer_parts.append(f"  依据：{ext_re.get('basis')}")
+
+    # S3-3：合成关注等级（纯程序规则，可脱离 LLM 复算）
+    ca = (recomputed or {}).get("combined_attention") or {}
+    if ca:
+        answer_parts.append("◆ 合成关注等级（程序规则，不经过 LLM）")
+        answer_parts.append(f"  combined_attention = {ca.get('value')}")
+        answer_parts.append(f"  内部 predicted_attention = {ca.get('internal_predicted_attention')}"
+                            f"，外部 signal = {ca.get('external_signal')}")
+        answer_parts.append(f"  理由：{ca.get('reason')}")
 
     answer_parts.append("◆ LLM 解释（历史记录，原样展示，不参与上面的复算）")
     answer_parts.append(f"  {archive.get('llm_explanation')}")
@@ -720,6 +975,9 @@ def main():
     p_exp.add_argument("run_id", type=str, help="如 run_001")
     p_exp.add_argument("--json", action="store_true")
 
+    p_reb = sub.add_parser("rebuild-index",
+                           help="按实际存在的存档重建 index.json（丢弃失效条目、重算 next_seq）")
+
     args = parser.parse_args()
 
     if args.cmd == "run":
@@ -752,6 +1010,7 @@ def main():
             icon = "✅" if it.get("status") == "success" else "❌"
             print(f"  {icon} {it['run_id']}  {it.get('created_at')}  "
                   f"verdict={it.get('verdict')}  model={it.get('model_version')}")
+            print(f"      scenario: {it.get('scenario') or '(旧存档未记录)'}")
             print(f"      question: {it.get('question')}")
             if it.get("failed_stage"):
                 print(f"      失败环节: {it.get('failed_stage')}")
@@ -764,6 +1023,14 @@ def main():
             sys.exit(1)
         if args.json:
             print(json.dumps(result, ensure_ascii=False, indent=2))
+
+    elif args.cmd == "rebuild-index":
+        index = rebuild_index()
+        print(f"  已重建 index.json：{len(index['runs'])} 条记录，"
+              f"next_seq={index['next_seq']}")
+        for run_id, item in index["runs"].items():
+            print(f"    {run_id}  scenario={item.get('scenario') or '(旧存档未记录)'}"
+                  f"  status={item.get('status')}")
 
 
 if __name__ == "__main__":

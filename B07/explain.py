@@ -140,7 +140,72 @@ def format_judgement_context(run_bundle: dict) -> str:
         + "\n".join(f"  - {lim[k]['text']}" for k in lim["all_keys"])
     )
 
+    # ⑥ 外部条件（S3-1；没有外部条件时这一块整个不出现）
+    ext = judgement.get("external_conditions")
+    if ext:
+        blocks.append(_format_external_block(ext))
+
     return "\n\n".join(blocks)
+
+
+def _format_external_block(ext: dict) -> str:
+    """把 external_conditions 拼成一段结构化文本（并入 state，不改提示词）。"""
+    if not ext.get("available"):
+        # 外部条件不可用：必须明说，绝不能让 LLM 凭空编造天气
+        reasons = []
+        for w in ext.get("warnings") or []:
+            reasons.append(f"  - {w}")
+        if ext.get("forecast_point") or ext.get("baseline_point"):
+            # 数据取到了，但没通过"在 analysis_time 之后"这道门槛
+            return (
+                "【⑥ 外部天气条件】\n"
+                "外部天气数据取到了，但本次不产生外部条件判定"
+                "（预报时刻未位于 analysis_time 之后，不能当作未来天气）。\n"
+                "外部天气情况：本次不可用（没有可用的外部条件结论）。\n"
+                "说明：上下文里没有可用的外部天气结论，"
+                "不要编造天气、不要提及任何具体气象数字。\n"
+                "原因：\n" + ("\n".join(reasons) if reasons else "  - （未记录原因）")
+            )
+        return (
+            "【⑥ 外部天气条件】\n"
+            "外部天气不可用：本次判断不含任何外部天气信息。\n"
+            "外部天气情况：不可用（没有取到外部天气数据，也没有兜底数值）。\n"
+            "说明：上下文里没有任何外部天气数值，不要编造天气、"
+            "不要提及任何具体气象数字。\n"
+            "原因：\n" + ("\n".join(reasons) if reasons else "  - （未记录原因）")
+        )
+
+    base = ext.get("baseline_point") or {}
+    fore = ext.get("forecast_point") or {}
+
+    def _num(v, unit=""):
+        return "未获取" if v is None else f"{v}{unit}"
+
+    lines = [
+        "【⑥ 外部天气条件（真实公开数据）】",
+        f"外部条件判定：{ext.get('signal')}",
+        f"判定方式：{ext.get('judge_method')}",
+        f"判定依据：{ext.get('basis')}",
+        f"基线点（当前实况）时刻：{base.get('timestamp')}",
+        f"  降水概率 {_num(base.get('precipitation_probability'), '%')}，"
+        f"温度 {_num(base.get('temperature'), '℃')}，"
+        f"云量 {_num(base.get('cloud_cover'), '%')}，"
+        f"天气「{base.get('weather_description')}」",
+        f"预报点（未来窗口）时刻：{fore.get('timestamp')}",
+        f"  降水概率 {_num(fore.get('precipitation_probability'), '%')}，"
+        f"温度 {_num(fore.get('temperature'), '℃')}，"
+        f"云量 {_num(fore.get('cloud_cover'), '%')}，"
+        f"太阳辐射 {_num(ext.get('solar_radiation'), ' W/m²')}，"
+        f"天气「{fore.get('weather_description')}」",
+        f"变化量：降水概率 Δ{_num(ext.get('precip_delta'), ' 个百分点')}，"
+        f"温度 Δ{_num(ext.get('temp_delta'), '℃')}，"
+        f"云量 Δ{_num(ext.get('cloud_delta'), '%')}",
+        "外部条件限制（引用外部条件时必须一并说明）：",
+    ]
+    for c in ext.get("caveats") or []:
+        lines.append(f"  - {c}")
+
+    return "\n".join(lines)
 
 
 # --------------------------------------------------------------------------
@@ -149,6 +214,12 @@ def format_judgement_context(run_bundle: dict) -> str:
 
 class ExplainError(RuntimeError):
     """LLM 解释环节失败。显式报错，不用静态文案伪装成功。"""
+
+
+def _sha12(text: str) -> str:
+    """文本的 sha256 前 12 位（提示词指纹）。"""
+    import hashlib
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
 
 
 def explain_judgement(run_bundle: dict, judgement: dict | None = None) -> dict:
@@ -207,6 +278,9 @@ def explain_judgement(run_bundle: dict, judgement: dict | None = None) -> dict:
         "preview": content[:DEBUG_PREVIEW_CHARS],
         "raw_reasoning_length": len(reasoning),
         "question": FIXED_QUESTION,
+        # 提示词指纹：S1 / S2 两次存档可以直接比对"是不是同一套提示词、同一个问题"
+        "system_prompt_sha256": _sha12(SYSTEM_PROMPT),
+        "question_sha256": _sha12(FIXED_QUESTION),
     }
 
 
@@ -224,9 +298,12 @@ def _collect_numbers(obj, acc: set[int]) -> set[int]:
         return acc
     if isinstance(obj, (int, float)):
         v = float(obj)
-        acc.add(int(round(v)))
-        acc.add(int(round(v * 100)))
-        acc.add(int(round(v * 1000)))
+        # 正负号都收：解释里写 "-12.1" 会被抽成正数 12，
+        # 只存负数会把同一个数值误判成"事实越界"
+        for x in (v, abs(v)):
+            acc.add(int(round(x)))
+            acc.add(int(round(x * 100)))
+            acc.add(int(round(x * 1000)))
         return acc
     if isinstance(obj, dict):
         for v in obj.values():
