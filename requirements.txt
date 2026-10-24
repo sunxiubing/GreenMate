@@ -6,6 +6,7 @@
 # B04 需要：scikit-learn（TF-IDF 向量检索）
 # B05 需要：requests（SoilGrids MCP HTTP 调用）
 # B06 需要：joblib（模型持久化）
+# B07 需要：scikit-learn + numpy（加载 B06 模型推理）、pytest（不变量测试）
 
 # Web 框架
 fastapi==0.115.12
@@ -27,3 +28,6 @@ joblib==1.4.2
 
 # 可视化
 matplotlib==3.9.4
+
+# 测试（B07 不变量测试）
+pytest==9.1.1

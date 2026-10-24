@@ -85,6 +85,26 @@ GreenMate/
 │       ├── inference.py   # predict_window / MODEL_OUTPUT / SHAP / DTW
 │       └── __main__.py    # CLI：infer / verify
 │
+├── B07/                   # S1 稳态基线：选窗 → 取数 → 推理 → 判断 → 解释 → 存档
+│   ├── __init__.py        # 包声明（让 python -m B07.runs 能跑）
+│   ├── __main__.py        # 入口分发：默认 S1 全流程，list/explain 透传给 runs
+│   ├── s1.py              # S1 统一入口 + 阶段报告生成
+│   ├── config.py          # 位置 / 窗口点数 / 采样间隔 / gap 阈值
+│   ├── stability.py       # 稳定窗口扫描 + 透明稳定判定规则
+│   ├── evidence.py        # 当前状态 + 最近历史 + 时间锚点（含校验）
+│   ├── predict.py         # 加载 B06 已存模型做一次预测
+│   ├── judgement.py       # 结构化判断五字段（纯程序，无 LLM）
+│   ├── explain.py         # LLM 解释 + 一致性校验（只解释，不判断）
+│   ├── runs.py            # run 存档 + index 索引 + explain_run 回溯
+│   ├── tests/             # S1 不变量测试（pytest）
+│   │   ├── conftest.py    # 路径注入 + 假 LLM 客户端
+│   │   └── test_s1_invariants.py
+│   ├── runs/              # 运行时生成的存档（gitignore *.json）
+│   │   ├── index.json     # 索引：run_id → 摘要
+│   │   └── run_XXX/run.json
+│   └── artifacts/         # 阶段报告
+│       └── s1_report.md
+│
 └── docs/                  # 项目设计文档
     ├── b01_b03_design.md  # SIMULATED/PUBLIC 数据源定义
     └── b03_weather.md     # HTTP 400 缓存策略 / Fail Loudly 设计
@@ -528,6 +548,7 @@ SoilGrids MCP（`https://gateway.pipeworx.io/soilgrids/mcp`）补齐土壤数据
 | B05 — 工具调用编排器 + SoilGrids MCP | ✅ 完成 |
 | B04 — 检索增强知识库问答 | ✅ 完成 |
 | B06 — 实时窗口推理 + SHAP 贡献 | ✅ 完成 |
+| B07 — S1 稳态基线：选窗 → 取数 → 推理 → 判断 → 解释 → 存档 | ✅ 完成 |
 
 ---
 
@@ -573,4 +594,95 @@ dtw_temperature / dtw_humidity / dtw_lux: float
 raw_features: {特征名: 值}（33 个）
 errors: [异常记录]（容错收集）
 ```
+
+---
+
+## B07 — S1 稳态基线
+
+B07 的 S1 阶段做一件事：**用「当前状态 + 最近历史 + 已保存的 B06 模型」回答一个固定问题，并且把整个过程存档，让事后能复算、能回溯。**
+
+流程严格按序，判断与解释分离：
+
+```
+选稳定窗口 → 取数（当前状态 + 最近历史 + 时间锚点） → 加载 B06 模型推理
+   → 结构化判断（纯程序，无 LLM） → LLM 解释（只解释，不判断） → 落 run 存档
+```
+
+**依赖**
+
+- Python 3.12 + `requirements.txt`（需 `scikit-learn`、`numpy`、`joblib`、`openai`、`python-dotenv`）
+- B06 模型产物必须已存在：`B06/artifacts/b06-20261020-v1/`（`b06-20261020-v1.joblib` + `.json` 清单）
+- B02 数据库 `B02/greenmate.db`（原始样本，只读）
+- 一个 OpenAI 兼容的 LLM 服务（复用 `B01/.env`；`import B01.llm` 会自动加载）
+- 测试额外需要 `pytest`：`pip install pytest`
+
+**运行命令**
+
+```cmd
+(venv) D:\GreenMate> python -m B07.s1 --question "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。"
+
+(venv) D:\GreenMate> python -m B07 list
+(venv) D:\GreenMate> python -m B07 explain run_001
+(venv) D:\GreenMate> python -m B07.runs list
+(venv) D:\GreenMate> python -m B07.runs explain run_001
+
+(venv) D:\GreenMate> python -m pytest B07/tests -v
+```
+
+> `--question` 必须是 S1-4 定的固定问题，改写会被直接拒绝（退出码 2）：LLM 解释环节用的就是这个问题，换问法会让存档里的 `question` 与实际提问不一致，事后回溯失真。
+> `python -m B07`（不带子命令）等价于 `python -m B07.s1`。
+
+**预期输出**
+
+```
+[1/6] 选稳定窗口...
+  候选稳定窗口 51 个（白天段 27 个）
+  选中窗口：2026-10-21T13:30:00 → 2026-10-21T16:00:00
+[2/6] 取数（当前状态 + 最近历史 + 时间锚点）...
+  当前状态：32.8℃ / 56.7% / 39842.0 lux @ 2026-10-21T16:00:00
+[3/6] 加载 B06 模型推理...
+  predicted_attention=NORMAL，confidence=1.0，model_version=b06-20261020-v1
+[4/6] 结构化判断（纯程序，无 LLM）...
+  复算自检：✅ 逐字段一致
+[5/6] LLM 解释（只解释，不判断）...
+[6/6] 一致性校验（只记录，不修改）...
+
+【run_id】run_005
+【结构化判断五字段】
+  ① current_environment / ② recent_trend / ③ predicted_attention
+  ④ evidence_status / ⑤ limitations
+【LLM 解释】
+  ...
+【阶段报告】D:\GreenMate\B07\artifacts\s1_report.md
+```
+
+**产物清单**
+
+| 路径 | 内容 | 是否入库 |
+|---|---|---|
+| `B07/stability.py` | 稳定窗口扫描 + 透明稳定判定（5 条判据，阈值写在模块顶部） | ✅ |
+| `B07/evidence.py` | 当前状态 + 最近历史 + 时间锚点，6 项校验不通过直接抛错 | ✅ |
+| `B07/predict.py` | 只加载 B06 已存模型做一次预测（不重训、不重切数据） | ✅ |
+| `B07/judgement.py` | 结构化判断五字段，可脱离 LLM 复算（`recompute_judgement`） | ✅ |
+| `B07/explain.py` | LLM 解释 + 结论冲突 / 事实越界一致性校验 | ✅ |
+| `B07/runs.py` | run 存档、index 索引、`explain_run` 回溯 | ✅ |
+| `B07/s1.py` | S1 统一入口 + 阶段报告生成 | ✅ |
+| `B07/tests/` | S1 不变量测试（22 条，pytest） | ✅ |
+| `B07/runs/index.json` | 索引：run_id → {created_at, question, verdict, model_version, status} | ❌ gitignore |
+| `B07/runs/<run_id>/run.json` | 单次运行完整快照 | ❌ gitignore |
+| `B07/artifacts/s1_report.md` | 阶段报告（run_id / 证据来源 / 判据 / 五字段 / coef Top5 / LLM 原文 / 回溯输出） | ✅ |
+
+> `B07/runs/*.json` 命中 `.gitignore` 的全局 `*.json` 规则，属于运行时产物，不入库；需要留档请自行备份该目录。
+
+**留下什么资产**
+
+- `B07/stability.py` — 稳定判据（温度波动 ≤2.0℃ / 湿度首尾 ≤3.0% / 湿度单步 ≤1.5% / 光照跳变 ≤15000 lux / 禁全程单调），判定结论带具体数值，可被人复述
+- `B07/evidence.py` — 时间锚点取法与 6 项证据校验（点数、间隔、末点对齐、source_type 透传、hours_gap 计算）
+- `B07/predict.py` — B06 模型的推理入口与 meta 一致性校验（不通过直接中止，不静默继续）
+- `B07/judgement.py` — 结构化判断五字段规范，含 4 条从真实数据算出的 limitations
+- `B07/explain.py` — LLM 解释环节与一致性校验（只记录 warning，不改判断）
+- `B07/runs.py` — run 存档、索引、失败留痕、`explain_run` 回溯（复算而非复读）
+- `B07/runs/` — 每次运行的完整快照与索引（本地留存）
+- `B07/artifacts/s1_report.md` — 本阶段报告
+- `B07/tests/` — 22 条不变量测试，全部离线可跑（LLM 用假客户端）
 
