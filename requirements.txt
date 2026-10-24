@@ -29,5 +29,7 @@ joblib==1.4.2
 # 可视化
 matplotlib==3.9.4
 
-# 测试（B07 不变量测试）
+# 测试
+# 说明：B07/S1 只用到已有的 fastapi / pydantic / openai / httpx / scikit-learn / joblib，
+#      没有引入新的运行时依赖；pytest 是为了跑 B07 的不变量测试。
 pytest==9.1.1

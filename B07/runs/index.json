@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "next_seq": 10,
+  "runs": {
+    "run_001": {
+      "created_at": "2026-10-24T09:26:53",
+      "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+      "verdict": "NORMAL",
+      "model_version": "b06-20261020-v1",
+      "status": "success",
+      "failed_stage": null,
+      "path": "B07/runs/run_001/run.json"
+    },
+    "run_008": {
+      "created_at": "2026-10-24T10:13:03",
+      "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+      "verdict": "NORMAL",
+      "model_version": "b06-20261020-v1",
+      "status": "success",
+      "failed_stage": null,
+      "path": "B07/runs/run_008/run.json"
+    },
+    "run_009": {
+      "created_at": "2026-10-24T10:17:13",
+      "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+      "verdict": "NORMAL",
+      "model_version": "b06-20261020-v1",
+      "status": "success",
+      "failed_stage": null,
+      "path": "B07/runs/run_009/run.json"
+    }
+  }
+}
