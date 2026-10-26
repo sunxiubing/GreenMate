@@ -54,6 +54,22 @@ REPLAY_QUESTION = "这次 GreenMate 看到了什么，最后为什么说它比�
 # 存档里禁止出现的敏感字段名（落盘前扫描）
 FORBIDDEN_KEY_HINTS = ("api_key", "apikey", "secret", "token", "password", "passwd", "credential")
 
+#: 允许出现在存档里的 **token 计数** 键名（**精确匹配**，不是子串放行）。
+#:
+#: prompt_tokens / completion_tokens / total_tokens / cached_tokens 是**计数**，
+#: 不是密钥。S4-3 要把它们存进 llm_meta，用来做"两组共享前缀逐字节相同"
+#: 的机器判定。
+#:
+#: 只精确放行这几个名字；"access_token"、"api_token"、"token" 这类
+#: 仍然是子串命中，照样拦得住。
+SAFE_TOKEN_COUNT_KEYS = frozenset({
+    "prompt_tokens",
+    "completion_tokens",
+    "total_tokens",
+    "cached_tokens",
+    "prompt_tokens_details",
+})
+
 
 class RunError(RuntimeError):
     """存档/回溯环节失败。"""
@@ -129,7 +145,8 @@ def assert_no_secrets(obj, path: str = "$") -> None:
     if isinstance(obj, dict):
         for k, v in obj.items():
             kl = str(k).lower()
-            if any(h in kl for h in FORBIDDEN_KEY_HINTS):
+            if (kl not in SAFE_TOKEN_COUNT_KEYS
+                    and any(h in kl for h in FORBIDDEN_KEY_HINTS)):
                 raise RunError(f"存档内容包含疑似敏感字段，已中止落盘：{path}.{k}")
             assert_no_secrets(v, f"{path}.{k}")
     elif isinstance(obj, (list, tuple)):
@@ -291,7 +308,9 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
                  model_path: str | Path = DEFAULT_MODEL_PATH,
                  window_selection: dict | None = None,
                  progress=None, scenario: str = "S1",
-                 external_conditions: dict | None = None) -> dict:
+                 external_conditions: dict | None = None,
+                 evidence_ledger=None,
+                 llm_context_override: str | None = None) -> dict:
     """执行一次完整分析（S1-2 → S1-3 → S1-4），把产物拼成快照落盘。
 
     Args:
@@ -303,6 +322,15 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
         scenario:         场景 key（S1 / S2）。同一套流程，只是看哪一段历史。
         external_conditions: 可选的外部天气条件（S3-1）。
             传 None（默认）时行为与原来完全一致：结构化判断仍是 5 个字段。
+        evidence_ledger:  可选的证据台账（S4-2）。可以是
+            B07.evidence_ledger.EvidenceLedger 对象、它的可序列化 dict，
+            或一个接受 run_bundle 的可调用对象（现场装配台账）。
+            不传（默认）时行为与现在**完全一致**：结构化判断仍是 5/6 个字段，
+            存档里也没有 evidence_ledger 这一项。
+        llm_context_override: **可选** —— 直接指定发给 LLM 的上下文原文。
+            不传（默认）时用 format_judgement_context(bundle)，行为与现在完全一致。
+            S4-3 的 A/B 对照实验用它注入两个"只有证据组织方式不同"的上下文。
+            注意：它只改**发给 LLM 的那串文字**，判定、存档、复算逻辑一律不动。
 
     Returns: 存档 dict（已落盘）
 
@@ -365,6 +393,8 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
         "window_selection": window_selection,
         # S3-1：外部天气条件（默认 None = 本次不接外部条件）
         "external_conditions": external_conditions,
+        # S4-2：证据台账（原样存进存档；默认 None = 本次不接台账）
+        "evidence_ledger": None,
     }
 
     def _notify(stage_name: str, extra=None):
@@ -445,10 +475,26 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
         # 有外部条件时，它是结构化判断的第 6 个字段（追加，不是替换）
         if external_conditions is not None:
             bundle["external_conditions"] = external_conditions
-        judgement = build_judgement(bundle)
+
+        # S4-2：证据台账。台账可能是一个"接受 run_bundle 的可调用对象"
+        #（现场装配：历史 / 模型 / 天气 / 知识各自取数后再登记），
+        # 也可以直接给台账对象或它的可序列化 dict。
+        ledger = evidence_ledger
+        if callable(ledger):
+            ledger = ledger(bundle)
+        if ledger is not None:
+            ledger_data = (ledger.to_dict() if hasattr(ledger, "to_dict")
+                           else dict(ledger))
+            archive["evidence_ledger"] = ledger_data
+            # S5-1：把台账挂进 bundle，让 ⑦ 块能列出"当前不可用的证据"
+            # （谁不可用、status 是什么、失败原因是什么）。
+            bundle["evidence_ledger"] = ledger
+
+        judgement = build_judgement(bundle, evidence_ledger=ledger)
         bundle["judgement"] = judgement
         archive["structured_judgement"] = judgement
-        archive["judgement_self_check"] = self_check(bundle)
+        archive["judgement_self_check"] = self_check(bundle,
+                                                     evidence_ledger=ledger)
         # S3-3：合成关注等级。写死在程序里的规则（judgement.combined_attention），
         # 不经过 LLM，回溯时用同一份存档即可复算。
         archive["combined_attention"] = build_combined_attention(archive)
@@ -461,7 +507,8 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
         # ---------------- S1-4B LLM 解释 ----------------
         stage = "llm_explanation"
         t0 = time.time()
-        explanation = explain_judgement(bundle, judgement)
+        explanation = explain_judgement(bundle, judgement,
+                                        context=llm_context_override)
         elapsed_ms = int((time.time() - t0) * 1000)
 
         archive["llm_explanation"] = explanation["answer"]
@@ -474,6 +521,9 @@ def run_analysis(anchor: datetime | str, location: str = DEFAULT_LOCATION,
             "elapsed_ms": elapsed_ms,
             "content_length": explanation["content_length"],
             "question": explanation["question"],
+            # S4-3：token 计数（prompt_tokens / cached_tokens 用来机器判定
+            # "两组共享前缀逐字节相同"）
+            "usage": explanation.get("usage") or {},
             # 提示词指纹：S1 / S2 存档可直接比对"同一套提示词、同一个问题"
             "system_prompt_sha256": explanation.get("system_prompt_sha256"),
             "question_sha256": explanation.get("question_sha256"),
@@ -714,6 +764,23 @@ def recompute_from_archive(archive: dict) -> dict:
          ca["value"],
          note=ca["reason"])
 
+    # ---- S4-2：证据分歧按存档里的台账重算（方向是规则算的，不是复读）----
+    ledger_data = archive.get("evidence_ledger")
+    archived_div = (archive.get("structured_judgement") or {}).get(
+        "evidence_divergence")
+    if ledger_data or archived_div is not None:
+        from B07.evidence_ledger import EvidenceLedger
+        from B07.judgement import build_evidence_divergence
+
+        if ledger_data:
+            rebuilt = EvidenceLedger.from_dict(ledger_data)
+            new_div = build_evidence_divergence(rebuilt)
+        else:
+            new_div = None
+        recomputed["evidence_divergence"] = new_div
+        _add("证据分歧复算", archived_div, new_div,
+             note="按存档里的证据台账重算方向与三列表（方向是程序规则算的）")
+
     return {"recomputed": recomputed, "checks": checks}
 
 
@@ -907,6 +974,44 @@ def explain_run(run_id: str, quiet: bool = False) -> dict:
         answer_parts.append(f"  内部 predicted_attention = {ca.get('internal_predicted_attention')}"
                             f"，外部 signal = {ca.get('external_signal')}")
         answer_parts.append(f"  理由：{ca.get('reason')}")
+
+    # S4-2：证据台账 + 证据分歧（同一份表，报告与回溯共用）
+    ledger_data = archive.get("evidence_ledger")
+    div = sj.get("evidence_divergence")
+    if ledger_data or div:
+        from B07.evidence_ledger import format_evidence_table
+
+        answer_parts.append("◆ 证据台账（S4-2）")
+        for row in format_evidence_table(ledger_data or {}):
+            answer_parts.append(f"  {row}")
+        adoption = (ledger_data or {}).get("adoption") or {}
+        if adoption.get("text"):
+            answer_parts.append(f"  {adoption['text']}")
+        for na in adoption.get("not_adopted_calls") or []:
+            answer_parts.append(
+                f"  未采用：{na.get('tool_name')}（status={na.get('status')}）"
+                f" —— {na.get('reason')}"
+            )
+
+    if div:
+        answer_parts.append("◆ 证据分歧（程序规则，不经过 LLM）")
+        answer_parts.append(f"  has_conflict = {div.get('has_conflict')}")
+        answer_parts.append(f"  各来源方向："
+                            + "、".join(f"{k}={v}"
+                                        for k, v in (div.get("each_source") or {}).items()))
+        answer_parts.append(f"  支持提高关注："
+                            + ("、".join(f"[{i.get('source_type')}] {i.get('summary')}"
+                                         for i in (div.get("supporting") or []))
+                               or "（无）"))
+        answer_parts.append(f"  提示可能缓解或反向："
+                            + ("、".join(f"[{i.get('source_type')}] {i.get('summary')}"
+                                         for i in (div.get("opposing") or []))
+                               or "（无）"))
+        answer_parts.append(f"  仍不足以确定："
+                            + ("、".join(f"[{i.get('source_type')}] {i.get('summary')}"
+                                         for i in (div.get("undetermined") or []))
+                               or "（无）"))
+        answer_parts.append(f"  分歧处理：{div.get('resolution')}")
 
     answer_parts.append("◆ LLM 解释（历史记录，原样展示，不参与上面的复算）")
     answer_parts.append(f"  {archive.get('llm_explanation')}")

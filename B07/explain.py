@@ -122,6 +122,10 @@ def format_judgement_context(run_bundle: dict) -> str:
     )
 
     # ④ 结构化判断结果（五字段原样列出）
+    # 注意（S5-1 撤回过一次）：④ 块**不列** external_conditions。
+    # S3 的不变量是"带/不带外部天气两次运行只有 ⑥ 块不同"，
+    # S4 的不变量是"⑦ 块是纯追加"—— ④ 块一旦带上外部条件，
+    # 这两条不变量就都被破坏了。外部条件只出现在 ⑥ 块里。
     blocks.append(
         "【④ 结构化判断结果】\n"
         f"current_environment：温度 {cs['temperature']}℃，湿度 {cs['humidity']}%，"
@@ -145,7 +149,97 @@ def format_judgement_context(run_bundle: dict) -> str:
     if ext:
         blocks.append(_format_external_block(ext))
 
+    # ⑦ 证据分歧（S4-2；没有证据台账时这一块整个不出现）
+    div = judgement.get("evidence_divergence")
+    if div:
+        blocks.append(_format_divergence_block(
+            div, run_bundle.get("evidence_ledger")))
+
     return "\n\n".join(blocks)
+
+
+def _format_divergence_block(div: dict, ledger=None) -> str:
+    """把 evidence_divergence 拼成一段结构化文本（并入 state，不改提示词）。
+
+    规矩（S4-2）：
+      - 分方向列出，每条都带来源标识（source_type + 来源 + 时间）；
+      - **不给仲裁后的单一答案** —— 不投票、不"谁多听谁"；
+      - **不写引导性措辞** —— 只做中性陈述，不出现"请务必提到分歧"
+        "请综合判断"这类指令（提示词不能改，state 里也不许用引导句）。
+    """
+    each_source = div.get("each_source") or {}
+    dist = "、".join(f"{k}={v}" for k, v in each_source.items()) or "（无）"
+
+    lines = [
+        "【⑦ 证据分歧】",
+        f"各来源方向：{dist}",
+    ]
+    if div.get("has_conflict"):
+        lines.append(
+            f"方向不一致：存在（支持 {len(div.get('supporting') or [])} 条 / "
+            f"相反 {len(div.get('opposing') or [])} 条）"
+        )
+    else:
+        lines.append("方向不一致：不存在")
+
+    def _items(title, items, key, label):
+        lines.append(f"{title}：")
+        if not items:
+            lines.append("  - （无）")
+            return
+        for it in items:
+            lines.append(
+                f"  - [{it.get('source_type')}] "
+                f"来源 {it.get('source')} ｜ 时间 {it.get('time')}"
+            )
+            lines.append(f"    摘要：{it.get('summary')}")
+            lines.append(f"    {label}：{it.get(key)}")
+
+    _items("支持提高关注的证据", div.get("supporting") or [], "basis", "依据")
+    _items("提示可能缓解或反向的证据", div.get("opposing") or [], "basis", "依据")
+    _items("当前仍不足以确定的部分", div.get("undetermined") or [], "reason",
+           "为什么仍不足以确定")
+
+    # S5-1：当前不可用的证据单独一节（来源 / status / 失败原因）。
+    # 这几条**不进**支持/相反两列 —— 不可用的证据不参与方向判定。
+    if ledger is not None:
+        lines.extend(_unavailable_evidence_lines(ledger))
+
+    lines.append(f"分歧处理：{div.get('resolution')}")
+
+    return "\n".join(lines)
+
+
+def _unavailable_evidence_lines(ledger) -> list[str]:
+    """⑦ 块里"当前不可用的证据"一节的内容。
+
+    规矩（S5-1）：
+      - 只列**被本次判断采用**、但 status != ok 的证据；
+      - 每条都带来源标识、status、失败原因；
+      - 说明这些证据不参与方向判定（不是"方向不明"，是"没取到"）。
+    """
+    from B07.evidence_ledger import adopted_ledger_entries
+
+    entries = adopted_ledger_entries(ledger)
+    bad = [e for e in entries if (e.get("status") or "") != "ok"]
+
+    lines = ["当前不可用的证据（取不到，不参与方向判定，不进上面三列）："]
+    if not bad:
+        lines.append("  - （无）")
+        return lines
+
+    for e in bad:
+        lines.append(
+            f"  - [{e.get('source_type')}] "
+            f"来源 {e.get('source')} ｜ 时间 {e.get('time')}"
+        )
+        lines.append(f"    status：{e.get('status')}")
+        lines.append(f"    失败原因：{e.get('error') or '（未记录原因）'}")
+        lines.append(
+            "    说明：该证据当前不可用，与它相关的判断受到限制；"
+            "其余证据不受影响，仍可照常判断。"
+        )
+    return lines
 
 
 def _format_external_block(ext: dict) -> str:
@@ -168,11 +262,24 @@ def _format_external_block(ext: dict) -> str:
             )
         return (
             "【⑥ 外部天气条件】\n"
-            "外部天气不可用：本次判断不含任何外部天气信息。\n"
-            "外部天气情况：不可用（没有取到外部天气数据，也没有兜底数值）。\n"
+            f"外部天气证据状态：{ext.get('status') or 'unavailable'}\n"
+            f"不可用的来源（provider）：{ext.get('provider') or '（未记录）'}\n"
+            f"外部条件判定：{ext.get('signal') or 'external_unavailable'}"
+            f"（判定方式：{ext.get('judge_method') or 'unavailable'}）\n"
+            "外部天气情况：**外部天气证据当前不可用** —— "
+            "因此与外部天气影响相关的判断受到限制。\n"
             "说明：上下文里没有任何外部天气数值，不要编造天气、"
             "不要提及任何具体气象数字。\n"
-            "原因：\n" + ("\n".join(reasons) if reasons else "  - （未记录原因）")
+            "外部天气证据“不可用”与“没有外部信息”是两件不同的事："
+            "前者是这一次取数失败（status=unavailable），后者是本次不接外部证据。\n"
+            "回答要求（必答）：必须在回答里明确说明"
+            "“外部天气证据当前不可用”，"
+            "并说明与外部天气影响相关的判断受到限制；"
+            "不要给出任何外部天气的数值或方向。\n"
+            "不受影响的部分：当前环境（①）、最近历史主要变化（②）、"
+            "B06 短时预测（③）、限制条件（⑤）仍在上下文里，"
+            "可以照常给出判断。\n"
+            "失败原因：\n" + ("\n".join(reasons) if reasons else "  - （未记录原因）")
         )
 
     base = ext.get("baseline_point") or {}
@@ -222,12 +329,47 @@ def _sha12(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
 
 
-def explain_judgement(run_bundle: dict, judgement: dict | None = None) -> dict:
+def _usage_of(resp) -> dict:
+    """把 LLM 响应的 usage 整成可存档的 dict。
+
+    S4-3 用它做"唯一变量"的机器判定：百炼的隐式上下文缓存按**前缀逐字节**
+    匹配，两组 cached_tokens 相同 ⇒ 共享前缀逐字节相同。
+
+    字段缺失就留 None，**不补零、不猜**。
+    """
+    usage = getattr(resp, "usage", None)
+    out = {
+        "prompt_tokens": None,
+        "completion_tokens": None,
+        "total_tokens": None,
+        "cached_tokens": None,
+    }
+    if usage is None:
+        return out
+    out["prompt_tokens"] = getattr(usage, "prompt_tokens", None)
+    out["completion_tokens"] = getattr(usage, "completion_tokens", None)
+    out["total_tokens"] = getattr(usage, "total_tokens", None)
+    details = getattr(usage, "prompt_tokens_details", None)
+    if details is not None:
+        out["cached_tokens"] = getattr(details, "cached_tokens", None)
+    return out
+
+
+def explain_judgement(run_bundle: dict, judgement: dict | None = None,
+                      context: str | None = None) -> dict:
     """调用 LLM 生成解释。
+
+    Args:
+        run_bundle: 运行数据包。
+        judgement: 结构化判断（默认现场算）。
+        context:   **可选** —— 直接指定发给 LLM 的上下文原文。
+                   不传时用 format_judgement_context(run_bundle)（行为不变）。
+                   S4-3 的 A/B 对照实验用它注入"证据组织方式不同、其它相同"
+                   的两个上下文；不传这个参数时本函数行为与原来完全一致。
 
     Returns:
         {"answer": str, "model": str, "context": str, "content_length": int,
-         "preview": str, "raw_reasoning_length": int}
+         "preview": str, "raw_reasoning_length": int, "usage": dict}
     """
     from B01.llm import get_client, describe_exception
 
@@ -235,7 +377,8 @@ def explain_judgement(run_bundle: dict, judgement: dict | None = None) -> dict:
         from B07.judgement import build_judgement
         judgement = build_judgement(run_bundle)
 
-    context = format_judgement_context(run_bundle)
+    if context is None:
+        context = format_judgement_context(run_bundle)
 
     try:
         resp = get_client().chat.completions.create(
@@ -278,6 +421,8 @@ def explain_judgement(run_bundle: dict, judgement: dict | None = None) -> dict:
         "preview": content[:DEBUG_PREVIEW_CHARS],
         "raw_reasoning_length": len(reasoning),
         "question": FIXED_QUESTION,
+        # S4-3：token 计数（prompt_tokens / cached_tokens 用于唯一变量校验）
+        "usage": _usage_of(resp),
         # 提示词指纹：S1 / S2 两次存档可以直接比对"是不是同一套提示词、同一个问题"
         "system_prompt_sha256": _sha12(SYSTEM_PROMPT),
         "question_sha256": _sha12(FIXED_QUESTION),

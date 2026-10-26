@@ -1,0 +1,972 @@
+{
+  "run_id": "run_084",
+  "created_at": "2026-10-26T23:02:06",
+  "status": "success",
+  "failed_stage": null,
+  "failure_reason": null,
+  "scenario": "S5",
+  "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+  "analysis_time": "2026-10-21T09:30:00",
+  "location": "A区-3号温室",
+  "model_path": "D:\\GreenMate\\B06\\artifacts\\b06-20261020-v1",
+  "current_state": {
+    "timestamp": "2026-10-21T09:30:00",
+    "temperature": 28.6,
+    "humidity": 66.9,
+    "lux": 42492.0,
+    "source_type": "simulated",
+    "sim_scenario": "flood"
+  },
+  "latest_in_db": {
+    "status": "ok",
+    "source": "B02/environment_samples",
+    "data": {
+      "temperature": 17.8,
+      "humidity": 84.6,
+      "lux": 0.0,
+      "source_type": "simulated",
+      "sim_scenario": "normal"
+    },
+    "timestamp": "2026-10-22T01:30:00"
+  },
+  "hours_gap": 16.0,
+  "history": [
+    {
+      "timestamp": "2026-10-21T07:00:00",
+      "temperature": 24.2,
+      "humidity": 92.6,
+      "lux": 0.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood"
+    },
+    {
+      "timestamp": "2026-10-21T07:30:00",
+      "temperature": 25.8,
+      "humidity": 88.1,
+      "lux": 980.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood"
+    },
+    {
+      "timestamp": "2026-10-21T08:00:00",
+      "temperature": 25.5,
+      "humidity": 82.3,
+      "lux": 12171.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood"
+    },
+    {
+      "timestamp": "2026-10-21T08:30:00",
+      "temperature": 27.7,
+      "humidity": 77.5,
+      "lux": 23240.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood"
+    },
+    {
+      "timestamp": "2026-10-21T09:00:00",
+      "temperature": 27.8,
+      "humidity": 71.3,
+      "lux": 32365.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood"
+    },
+    {
+      "timestamp": "2026-10-21T09:30:00",
+      "temperature": 28.6,
+      "humidity": 66.9,
+      "lux": 42492.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood"
+    }
+  ],
+  "history_window": {
+    "start": "2026-10-21T07:00:00",
+    "end": "2026-10-21T09:30:00",
+    "count": 6,
+    "stability": {
+      "passed": false,
+      "criteria": [
+        {
+          "name": "温度最大波动",
+          "value": 4.4,
+          "threshold": 2.0,
+          "passed": false,
+          "note": "24.2~28.6℃，波动 4.4℃",
+          "excess": 2.4
+        },
+        {
+          "name": "湿度首尾总变化",
+          "value": -25.7,
+          "threshold": 3.0,
+          "passed": false,
+          "note": "首 92.6% → 尾 66.9%，变化 -25.7%",
+          "excess": 22.7
+        },
+        {
+          "name": "湿度单步最大变化",
+          "value": 6.2,
+          "threshold": 1.5,
+          "passed": false,
+          "note": "单步最大 6.2%",
+          "excess": 4.7
+        },
+        {
+          "name": "光照单步最大跳变",
+          "value": 11191.0,
+          "threshold": 15000,
+          "passed": true,
+          "note": "单步最大 11191 lux"
+        },
+        {
+          "name": "湿度无持续单向趋势",
+          "value": "全程单调下降",
+          "threshold": "禁止全程单调",
+          "passed": false,
+          "note": "全程单调下降"
+        }
+      ],
+      "conclusion": "近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化）"
+    }
+  },
+  "model_output": {
+    "evidence_type": "MODEL_OUTPUT",
+    "window_id": "s1-live-001",
+    "predicted_attention": "WATCH",
+    "confidence": 1.0,
+    "confidence_normal": 0.0,
+    "confidence_watch": 1.0,
+    "model_version": "b06-20261020-v1",
+    "dtw_temperature": 30.928,
+    "dtw_humidity": 97.67,
+    "dtw_lux": 128373.56,
+    "feature_count": 33,
+    "feature_contribution_method": "logistic_coefficient_ranking",
+    "coef_top5": [
+      {
+        "feature": "current_lux",
+        "coefficient": 1.114976,
+        "direction": "推向WATCH"
+      },
+      {
+        "feature": "slope_lux",
+        "coefficient": 0.742619,
+        "direction": "推向WATCH"
+      },
+      {
+        "feature": "max_lux",
+        "coefficient": -0.625809,
+        "direction": "推向NORMAL"
+      },
+      {
+        "feature": "min_lux",
+        "coefficient": -0.397984,
+        "direction": "推向NORMAL"
+      },
+      {
+        "feature": "std_lux",
+        "coefficient": -0.371169,
+        "direction": "推向NORMAL"
+      }
+    ],
+    "stability_baseline": "不稳定",
+    "errors": []
+  },
+  "model_meta": {
+    "model_version": "b06-20261020-v1",
+    "label_source": "rule_v1",
+    "label_source_version": "1.0",
+    "feature_count": 33,
+    "window_size": 6,
+    "target_size": 2,
+    "saved_at": "2026-10-20T04:06:57.341158+00:00",
+    "sklearn_version": "1.9.1",
+    "metrics": {
+      "accuracy": 0.7448979591836735,
+      "precision": 0.5909090909090909,
+      "recall": 0.4482758620689655,
+      "f1": 0.5098039215686274
+    }
+  },
+  "structured_judgement": {
+    "current_environment": {
+      "temperature": 28.6,
+      "humidity": 66.9,
+      "lux": 42492.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood",
+      "sampled_at": "2026-10-21T09:30:00",
+      "unit": {
+        "temperature": "℃",
+        "humidity": "%",
+        "lux": "lux"
+      }
+    },
+    "recent_trend": {
+      "window_span": "3 小时 / 6 点",
+      "window_start": "2026-10-21T07:00:00",
+      "window_end": "2026-10-21T09:30:00",
+      "stability_verdict": "不稳定",
+      "conclusion": "近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化）",
+      "criteria": {
+        "温度最大波动": {
+          "value": 4.4,
+          "threshold": 2.0,
+          "passed": false,
+          "note": "24.2~28.6℃，波动 4.4℃",
+          "excess": 2.4
+        },
+        "湿度首尾总变化": {
+          "value": -25.7,
+          "threshold": 3.0,
+          "passed": false,
+          "note": "首 92.6% → 尾 66.9%，变化 -25.7%",
+          "excess": 22.7
+        },
+        "湿度单步最大变化": {
+          "value": 6.2,
+          "threshold": 1.5,
+          "passed": false,
+          "note": "单步最大 6.2%",
+          "excess": 4.7
+        },
+        "光照单步最大跳变": {
+          "value": 11191.0,
+          "threshold": 15000,
+          "passed": true,
+          "note": "单步最大 11191 lux"
+        },
+        "湿度无持续单向趋势": {
+          "value": "全程单调下降",
+          "threshold": "禁止全程单调",
+          "passed": false,
+          "note": "全程单调下降"
+        }
+      },
+      "thresholds_used": {
+        "temp_range_max": 2.0,
+        "humi_total_max": 3.0,
+        "humi_step_max": 1.5,
+        "lux_jump_max": 15000,
+        "require_no_monotone": true
+      }
+    },
+    "predicted_attention": "WATCH",
+    "evidence_status": {
+      "items": [
+        {
+          "module": "B02",
+          "item": "current_state",
+          "present": true,
+          "detail": "28.6℃ / 66.9% / 42492.0 lux @ 2026-10-21T09:30:00"
+        },
+        {
+          "module": "B02",
+          "item": "history",
+          "present": true,
+          "detail": "6 点，2026-10-21T07:00:00 → 2026-10-21T09:30:00"
+        },
+        {
+          "module": "B05",
+          "item": "latest_in_db",
+          "present": true,
+          "detail": "status=ok，库末点 2026-10-22T01:30:00"
+        },
+        {
+          "module": "B06",
+          "item": "model_output",
+          "present": true,
+          "detail": "model_version=b06-20261020-v1，predicted_attention=WATCH，confidence=1.0"
+        },
+        {
+          "module": "B06",
+          "item": "dtw_similarity",
+          "present": true,
+          "detail": "dtw T=30.928 / H=97.67 / L=128373.56"
+        },
+        {
+          "module": "B01",
+          "item": "llm_explanation",
+          "present": false,
+          "detail": "不计入本环节的齐全性判定；LLM 解释在 B07/explain.py 独立环节、于本环节之后生成"
+        }
+      ],
+      "required_modules": [
+        "B02",
+        "B05",
+        "B06"
+      ],
+      "missing_modules": [],
+      "complete": true,
+      "summary": "截至判断环节证据齐全（B02 2/2、B05 1/1、B06 2/2）；B01 解释在本环节之后生成"
+    },
+    "limitations": {
+      "simulated_data": {
+        "key": "simulated_data",
+        "text": "本次全部环境数据 source_type='simulated'，为模拟数据，非真实传感器读数；所有结论只在这套模拟时间轴上成立，不可外推到真实大棚。",
+        "source_type": "simulated"
+      },
+      "model_boundary": {
+        "key": "model_boundary",
+        "text": "B06 模型（b06-20261020-v1，标签规则 rule_v1）只适用 3h → 1h 的窗口，且只覆盖温度 / 湿度 / 光照三项指标，范围取自 B02 训练数据分布；其测试集指标为 accuracy=0.745、precision=0.591、recall=0.448、f1=0.510，recall 0.45 / f1 0.51 表明对异常窗口存在明显漏报，预测为 NORMAL 不等于确认无异常。",
+        "model_version": "b06-20261020-v1",
+        "recall": 0.4482758620689655,
+        "f1": 0.5098039215686274
+      },
+      "time_anchor": {
+        "key": "time_anchor",
+        "text": "本次 analysis_time = 2026-10-21T09:30:00，库内最新状态 latest_in_db = 2026-10-22T01:30:00，两者相隔 hours_gap = 16.0 小时；锚点选在更早位置的原因：库末点所在的 3 小时窗口不满足稳定判据（实测：近 3 小时温度 17.8~20.5℃（波动 2.7℃，阈值 2.0℃）；湿度首尾 +4.2%（阈值 3.0%）、单步最大 1.4%；光照单步最大 0 lux（阈值 15000）；全程单调上升 → 判定为不稳定）。因此本次判断描述的是 2026-10-21T09:30:00 时刻的状态，不是库末点时刻的状态。",
+        "analysis_time": "2026-10-21T09:30:00",
+        "latest_in_db": "2026-10-22T01:30:00",
+        "hours_gap": 16.0,
+        "tail_window_stable": false,
+        "tail_window_conclusion": "近 3 小时温度 17.8~20.5℃（波动 2.7℃，阈值 2.0℃）；湿度首尾 +4.2%（阈值 3.0%）、单步最大 1.4%；光照单步最大 0 lux（阈值 15000）；全程单调上升 → 判定为不稳定"
+      },
+      "no_weather_no_kb": {
+        "key": "no_weather_no_kb",
+        "text": "本阶段的判断以 B02 历史 + B06 预测为主；B04 农艺知识库未接入，因此无法解释『为什么该数值对番茄意味着什么』；外部信息只作方向性参考，不参与内部数值的判定，其数值也不能与内部模拟值直接比较。",
+        "connected_modules": [
+          "B02",
+          "B05",
+          "B06"
+        ],
+        "not_connected_modules": [
+          "B04"
+        ],
+        "optional_modules": [
+          "B03"
+        ]
+      },
+      "all_keys": [
+        "simulated_data",
+        "model_boundary",
+        "time_anchor",
+        "no_weather_no_kb",
+        "evidence_unavailable"
+      ],
+      "evidence_unavailable": {
+        "key": "evidence_unavailable",
+        "text": "以下证据源当前不可用，与它们相关的判断受到限制：B03（provider=Offline-Fixture） 的证据当前不可用（status=unavailable，失败原因：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求）。其余仍可用的证据（B02 历史、B06 预测等）继续参与本次判断，本次结论只在这些证据能支撑的范围内成立。回答中必须明确说明这一限制。",
+        "unavailable_sources": [
+          {
+            "source_type": "B03",
+            "source": "B03/Open-Meteo（离线构造用例）",
+            "status": "unavailable",
+            "error": "weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求"
+          }
+        ]
+      }
+    },
+    "external_conditions": {
+      "signal": "external_unavailable",
+      "baseline_point": null,
+      "forecast_point": null,
+      "precip_delta": null,
+      "temp_delta": null,
+      "cloud_delta": null,
+      "solar_radiation": null,
+      "judge_method": "unavailable",
+      "basis": "预报点不可用，未做任何判定",
+      "caveats": [
+        "外部取的是窗口末时刻的单点值，不是窗口极值——中途更高/更低的值可能被漏掉",
+        "全部实测点位于夜间，solar_radiation 恒为 0，高温分支（≥35℃）至今未被任何实测点覆盖",
+        "外部为真实 API 的真实时间（比模拟锚点晚约 3 天），数值不可与内部模拟值直接比较，只作方向性参考",
+        "温度与云量只作描述，不参与主判定：温度方向单一（既可能太热也可能太冷），云量影响光照、与降水不是同一维度"
+      ],
+      "available": false,
+      "future_ok": false,
+      "warnings": [
+        "外部天气不可用（unavailable/error）；forecast 点取数失败：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求",
+        "基线点（now）取数失败：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求",
+        "外部天气为 PUBLIC 真实数据，forecast_time 属于真实世界时间轴；B02 内部为 SIMULATED 模拟时间轴（2026-10-15T02:00:00 ~ 2026-10-22T01:30:00），两者非同一时间基准，本次仅将天气用作外部条件方向参考，不做时刻级跨源对齐。"
+      ],
+      "location": "河北固安",
+      "forecast_window": "6h",
+      "analysis_time": "2026-10-21T09:30:00",
+      "status": "unavailable",
+      "error": "weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求",
+      "provider": "Offline-Fixture",
+      "forecast_time": null
+    },
+    "evidence_divergence": {
+      "has_conflict": false,
+      "supporting": [
+        {
+          "source_type": "B02",
+          "source": "B02/environment_samples",
+          "time": "2026-10-21T09:30:00",
+          "summary": "内部状态不稳定、末段温度上升",
+          "basis": "稳定判据未通过（近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化））且末段温度上升"
+        },
+        {
+          "source_type": "B06",
+          "source": "B06/b06-20261020-v1",
+          "time": "2026-10-21T09:30:00",
+          "summary": "模型输出 WATCH（confidence=1.0, model_version=b06-20261020-v1）",
+          "basis": "B06 在该窗口上真实输出 WATCH"
+        },
+        {
+          "source_type": "B04",
+          "source": "B04/knowledge_base",
+          "time": "2026-10-26T15:02:07.231910+00:00",
+          "summary": "知识检索 '过期数据导致温室调控决策基于过时信息' 命中 5 条，主命中 CH-003-02（score=0.3626655720824688）",
+          "basis": "该条目提供『决策基于不完整信息可能导致作物受损』这一支持依据"
+        }
+      ],
+      "opposing": [],
+      "undetermined": [
+        {
+          "source_type": "B03",
+          "source": "B03/Open-Meteo（离线构造用例）",
+          "time": "2026-10-21T09:30:00",
+          "summary": "外部条件证据不可用（status=unavailable）",
+          "reason": "外部条件证据当前不可用（status=unavailable），没有外部方向可判，不改变关注判断"
+        },
+        {
+          "source_type": "B03",
+          "source": "B03/Open-Meteo（离线构造用例）",
+          "time": "2026-10-21T09:30:00",
+          "summary": "证据源不可用（status=unavailable）",
+          "reason": "weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求"
+        },
+        {
+          "source_type": "B04",
+          "source": "B04/knowledge_base",
+          "time": "2026-10-26T15:02:07.231910+00:00",
+          "summary": "知识证据只支持『需要关注』",
+          "reason": "只支持『要关注』，不能证明未来一定恶化 —— 该条目是方法论提示，不是本温室的实测结论"
+        }
+      ],
+      "each_source": {
+        "B02": "supporting",
+        "B06": "supporting",
+        "B03": "undetermined",
+        "B04": "supporting"
+      },
+      "resolution": "各证据方向一致",
+      "note": "方向由程序规则判定（B07/evidence_ledger.judge_direction），不经过 LLM；三列装的是判断项，不是原始证据；NORMAL 不等于确认无异常；系统不做投票，也不做强制合并。"
+    }
+  },
+  "judgement_self_check": {
+    "fields": [
+      "current_environment",
+      "recent_trend",
+      "predicted_attention",
+      "evidence_status",
+      "limitations",
+      "external_conditions",
+      "evidence_divergence"
+    ],
+    "field_count": 7,
+    "expected_field_count": 7,
+    "identical": true,
+    "differing_fields": [],
+    "same_order": true,
+    "passed": true
+  },
+  "combined_attention": {
+    "value": "watch_internal",
+    "internal_predicted_attention": "WATCH",
+    "external_signal": "external_unavailable",
+    "has_conflict": false,
+    "reason": "内部 B06 预测为 WATCH，按内部信号直接提升关注度；外部信号 external_unavailable 不改变这一结论"
+  },
+  "llm_explanation": "根据当前的模拟数据，2026-10-21T09:30:00 时刻的大棚环境如下：温度为 28.6℃，湿度为 66.9%，光照为 42492.0 lux。最近 3 小时内，大棚环境不稳定，具体表现为：温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4），湿度从 92.6% 下降到 66.9%，变化 -25.7% 超过阈值 3.0%（超出 22.7），且湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）。此外，湿度全程单调下降，不符合稳定判据。\n\n基于 B06 模型（版本 b06-20261020-v1）的预测结果为 WATCH，置信度为 1.0。该模型只覆盖温度、湿度和光照三项指标，并且在测试集上的召回率为 0.448，F1 分数为 0.510，表明对异常窗口存在明显漏报，因此预测为 WATCH 需要引起关注。\n\n需要注意的是，本次所有环境数据均为模拟数据，非真实传感器读数，结论只在这套模拟时间轴上成立，不可外推到真实大棚。另外，外部天气证据当前不可用，与外部天气影响相关的判断受到限制。综合以上信息，建议密切关注大棚内的温湿度变化，以防止可能对番茄生长产生的不利影响。",
+  "llm_meta": {
+    "provider": "ws-freh8bu2gap0g6so.cn-beijing.maas.aliyuncs.com",
+    "model": "qwen-max",
+    "elapsed_ms": 9293,
+    "content_length": 497,
+    "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+    "usage": {
+      "prompt_tokens": 3728,
+      "completion_tokens": 355,
+      "total_tokens": 4083,
+      "cached_tokens": 0
+    },
+    "system_prompt_sha256": "aa1400cf8568",
+    "question_sha256": "d3cc394bfcbe"
+  },
+  "llm_context": "【① 当前环境】\n采样时间戳：2026-10-21T09:30:00\n温度：28.6 ℃\n湿度：66.9 %\n光照：42492.0 lux\n数据来源 source_type：simulated\n模拟场景标签：flood\n\n【② 最近历史主要变化】\n窗口区间：2026-10-21T07:00:00 → 2026-10-21T09:30:00（3 小时 / 6 点）\n稳定性判定：不稳定\n稳定判据明细：\n  - 温度最大波动：实测=4.4，阈值=2.0，未通过（24.2~28.6℃，波动 4.4℃）\n  - 湿度首尾总变化：实测=-25.7，阈值=3.0，未通过（首 92.6% → 尾 66.9%，变化 -25.7%）\n  - 湿度单步最大变化：实测=6.2，阈值=1.5，未通过（单步最大 6.2%）\n  - 光照单步最大跳变：实测=11191.0，阈值=15000，通过（单步最大 11191 lux）\n  - 湿度无持续单向趋势：实测=全程单调下降，阈值=禁止全程单调，未通过（全程单调下降）\n稳定判据结论：近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化）\n\n【③ B06 短时预测】\npredicted_attention：WATCH\nmodel_version：b06-20261020-v1\nconfidence：1.0（NORMAL 0.0 / WATCH 1.0）\n窗口 ID：s1-live-001\nDTW 相似度：温度 30.928，湿度 97.67，光照 128373.56\n\n【④ 结构化判断结果】\ncurrent_environment：温度 28.6℃，湿度 66.9%，光照 42492.0 lux，来源 simulated，采样于 2026-10-21T09:30:00\nrecent_trend：不稳定；近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化）\npredicted_attention：WATCH\nevidence_status：截至判断环节证据齐全（B02 2/2、B05 1/1、B06 2/2）；B01 解释在本环节之后生成；证据项：[B02]current_state、[B02]history、[B05]latest_in_db、[B06]model_output、[B06]dtw_similarity、[B01]llm_explanation\nlimitations：\n  - 本次全部环境数据 source_type='simulated'，为模拟数据，非真实传感器读数；所有结论只在这套模拟时间轴上成立，不可外推到真实大棚。\n  - B06 模型（b06-20261020-v1，标签规则 rule_v1）只适用 3h → 1h 的窗口，且只覆盖温度 / 湿度 / 光照三项指标，范围取自 B02 训练数据分布；其测试集指标为 accuracy=0.745、precision=0.591、recall=0.448、f1=0.510，recall 0.45 / f1 0.51 表明对异常窗口存在明显漏报，预测为 NORMAL 不等于确认无异常。\n  - 本次 analysis_time = 2026-10-21T09:30:00，库内最新状态 latest_in_db = 2026-10-22T01:30:00，两者相隔 hours_gap = 16.0 小时；锚点选在更早位置的原因：库末点所在的 3 小时窗口不满足稳定判据（实测：近 3 小时温度 17.8~20.5℃（波动 2.7℃，阈值 2.0℃）；湿度首尾 +4.2%（阈值 3.0%）、单步最大 1.4%；光照单步最大 0 lux（阈值 15000）；全程单调上升 → 判定为不稳定）。因此本次判断描述的是 2026-10-21T09:30:00 时刻的状态，不是库末点时刻的状态。\n  - 本阶段的判断以 B02 历史 + B06 预测为主；B04 农艺知识库未接入，因此无法解释『为什么该数值对番茄意味着什么』；外部信息只作方向性参考，不参与内部数值的判定，其数值也不能与内部模拟值直接比较。\n  - 以下证据源当前不可用，与它们相关的判断受到限制：B03（provider=Offline-Fixture） 的证据当前不可用（status=unavailable，失败原因：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求）。其余仍可用的证据（B02 历史、B06 预测等）继续参与本次判断，本次结论只在这些证据能支撑的范围内成立。回答中必须明确说明这一限制。\n\n【⑤ 当前限制条件（limitations 原文）】\n  - 本次全部环境数据 source_type='simulated'，为模拟数据，非真实传感器读数；所有结论只在这套模拟时间轴上成立，不可外推到真实大棚。\n  - B06 模型（b06-20261020-v1，标签规则 rule_v1）只适用 3h → 1h 的窗口，且只覆盖温度 / 湿度 / 光照三项指标，范围取自 B02 训练数据分布；其测试集指标为 accuracy=0.745、precision=0.591、recall=0.448、f1=0.510，recall 0.45 / f1 0.51 表明对异常窗口存在明显漏报，预测为 NORMAL 不等于确认无异常。\n  - 本次 analysis_time = 2026-10-21T09:30:00，库内最新状态 latest_in_db = 2026-10-22T01:30:00，两者相隔 hours_gap = 16.0 小时；锚点选在更早位置的原因：库末点所在的 3 小时窗口不满足稳定判据（实测：近 3 小时温度 17.8~20.5℃（波动 2.7℃，阈值 2.0℃）；湿度首尾 +4.2%（阈值 3.0%）、单步最大 1.4%；光照单步最大 0 lux（阈值 15000）；全程单调上升 → 判定为不稳定）。因此本次判断描述的是 2026-10-21T09:30:00 时刻的状态，不是库末点时刻的状态。\n  - 本阶段的判断以 B02 历史 + B06 预测为主；B04 农艺知识库未接入，因此无法解释『为什么该数值对番茄意味着什么』；外部信息只作方向性参考，不参与内部数值的判定，其数值也不能与内部模拟值直接比较。\n  - 以下证据源当前不可用，与它们相关的判断受到限制：B03（provider=Offline-Fixture） 的证据当前不可用（status=unavailable，失败原因：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求）。其余仍可用的证据（B02 历史、B06 预测等）继续参与本次判断，本次结论只在这些证据能支撑的范围内成立。回答中必须明确说明这一限制。\n\n【⑥ 外部天气条件】\n外部天气证据状态：unavailable\n不可用的来源（provider）：Offline-Fixture\n外部条件判定：external_unavailable（判定方式：unavailable）\n外部天气情况：**外部天气证据当前不可用** —— 因此与外部天气影响相关的判断受到限制。\n说明：上下文里没有任何外部天气数值，不要编造天气、不要提及任何具体气象数字。\n外部天气证据“不可用”与“没有外部信息”是两件不同的事：前者是这一次取数失败（status=unavailable），后者是本次不接外部证据。\n回答要求（必答）：必须在回答里明确说明“外部天气证据当前不可用”，并说明与外部天气影响相关的判断受到限制；不要给出任何外部天气的数值或方向。\n不受影响的部分：当前环境（①）、最近历史主要变化（②）、B06 短时预测（③）、限制条件（⑤）仍在上下文里，可以照常给出判断。\n失败原因：\n  - 外部天气不可用（unavailable/error）；forecast 点取数失败：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求\n  - 基线点（now）取数失败：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求\n  - 外部天气为 PUBLIC 真实数据，forecast_time 属于真实世界时间轴；B02 内部为 SIMULATED 模拟时间轴（2026-10-15T02:00:00 ~ 2026-10-22T01:30:00），两者非同一时间基准，本次仅将天气用作外部条件方向参考，不做时刻级跨源对齐。\n\n【⑦ 证据分歧】\n各来源方向：B02=supporting、B06=supporting、B03=undetermined、B04=supporting\n方向不一致：不存在\n支持提高关注的证据：\n  - [B02] 来源 B02/environment_samples ｜ 时间 2026-10-21T09:30:00\n    摘要：内部状态不稳定、末段温度上升\n    依据：稳定判据未通过（近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化））且末段温度上升\n  - [B06] 来源 B06/b06-20261020-v1 ｜ 时间 2026-10-21T09:30:00\n    摘要：模型输出 WATCH（confidence=1.0, model_version=b06-20261020-v1）\n    依据：B06 在该窗口上真实输出 WATCH\n  - [B04] 来源 B04/knowledge_base ｜ 时间 2026-10-26T15:02:07.231910+00:00\n    摘要：知识检索 '过期数据导致温室调控决策基于过时信息' 命中 5 条，主命中 CH-003-02（score=0.3626655720824688）\n    依据：该条目提供『决策基于不完整信息可能导致作物受损』这一支持依据\n提示可能缓解或反向的证据：\n  - （无）\n当前仍不足以确定的部分：\n  - [B03] 来源 B03/Open-Meteo（离线构造用例） ｜ 时间 2026-10-21T09:30:00\n    摘要：外部条件证据不可用（status=unavailable）\n    为什么仍不足以确定：外部条件证据当前不可用（status=unavailable），没有外部方向可判，不改变关注判断\n  - [B03] 来源 B03/Open-Meteo（离线构造用例） ｜ 时间 2026-10-21T09:30:00\n    摘要：证据源不可用（status=unavailable）\n    为什么仍不足以确定：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求\n  - [B04] 来源 B04/knowledge_base ｜ 时间 2026-10-26T15:02:07.231910+00:00\n    摘要：知识证据只支持『需要关注』\n    为什么仍不足以确定：只支持『要关注』，不能证明未来一定恶化 —— 该条目是方法论提示，不是本温室的实测结论\n当前不可用的证据（取不到，不参与方向判定，不进上面三列）：\n  - [B03] 来源 B03/Open-Meteo（离线构造用例） ｜ 时间 2026-10-21T09:30:00\n    status：unavailable\n    失败原因：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求\n    说明：该证据当前不可用，与它相关的判断受到限制；其余证据不受影响，仍可照常判断。\n分歧处理：各证据方向一致",
+  "evidence_sources": {
+    "B02": "environment_samples（B02.api.history.get_environment_history，显式起止时间）",
+    "B05": "get_current_environment（B05.test_functions，记录为 latest_in_db，仅参考）",
+    "B06": "模型 b06-20261020-v1（标签规则 rule_v1），只加载不重训",
+    "B01": "LLM qwen-max（经 B01.llm.get_client，OpenAI 兼容接口）"
+  },
+  "warnings": [],
+  "window_selection": null,
+  "external_conditions": {
+    "available": false,
+    "signal": "external_unavailable",
+    "judge_method": "unavailable",
+    "basis": "预报点不可用，未做任何判定",
+    "baseline_point": null,
+    "forecast_point": null,
+    "precip_delta": null,
+    "temp_delta": null,
+    "cloud_delta": null,
+    "solar_radiation": null,
+    "future_ok": false,
+    "warnings": [
+      "外部天气不可用（unavailable/error）；forecast 点取数失败：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求",
+      "基线点（now）取数失败：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求",
+      "外部天气为 PUBLIC 真实数据，forecast_time 属于真实世界时间轴；B02 内部为 SIMULATED 模拟时间轴（2026-10-15T02:00:00 ~ 2026-10-22T01:30:00），两者非同一时间基准，本次仅将天气用作外部条件方向参考，不做时刻级跨源对齐。"
+    ],
+    "caveats": [
+      "外部取的是窗口末时刻的单点值，不是窗口极值——中途更高/更低的值可能被漏掉",
+      "全部实测点位于夜间，solar_radiation 恒为 0，高温分支（≥35℃）至今未被任何实测点覆盖",
+      "外部为真实 API 的真实时间（比模拟锚点晚约 3 天），数值不可与内部模拟值直接比较，只作方向性参考",
+      "温度与云量只作描述，不参与主判定：温度方向单一（既可能太热也可能太冷），云量影响光照、与降水不是同一维度"
+    ],
+    "analysis_time": "2026-10-21T09:30:00",
+    "location": "河北固安",
+    "forecast_window": "6h",
+    "baseline_skew_hours": null,
+    "error": "weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求"
+  },
+  "evidence_ledger": {
+    "entries": [
+      {
+        "evidence_id": "EV-B02-01",
+        "source_type": "B02",
+        "source": "B02/environment_samples",
+        "time": "2026-10-21T09:30:00",
+        "status": "ok",
+        "result": {
+          "stability_passed": false,
+          "stability_conclusion": "近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化）",
+          "temps": [
+            24.2,
+            25.8,
+            25.5,
+            27.7,
+            27.8,
+            28.6
+          ],
+          "history": [
+            {
+              "timestamp": "2026-10-21T07:00:00",
+              "temperature": 24.2,
+              "humidity": 92.6,
+              "lux": 0.0,
+              "source_type": "simulated",
+              "sim_scenario": "flood"
+            },
+            {
+              "timestamp": "2026-10-21T07:30:00",
+              "temperature": 25.8,
+              "humidity": 88.1,
+              "lux": 980.0,
+              "source_type": "simulated",
+              "sim_scenario": "flood"
+            },
+            {
+              "timestamp": "2026-10-21T08:00:00",
+              "temperature": 25.5,
+              "humidity": 82.3,
+              "lux": 12171.0,
+              "source_type": "simulated",
+              "sim_scenario": "flood"
+            },
+            {
+              "timestamp": "2026-10-21T08:30:00",
+              "temperature": 27.7,
+              "humidity": 77.5,
+              "lux": 23240.0,
+              "source_type": "simulated",
+              "sim_scenario": "flood"
+            },
+            {
+              "timestamp": "2026-10-21T09:00:00",
+              "temperature": 27.8,
+              "humidity": 71.3,
+              "lux": 32365.0,
+              "source_type": "simulated",
+              "sim_scenario": "flood"
+            },
+            {
+              "timestamp": "2026-10-21T09:30:00",
+              "temperature": 28.6,
+              "humidity": 66.9,
+              "lux": 42492.0,
+              "source_type": "simulated",
+              "sim_scenario": "flood"
+            }
+          ],
+          "current_state": {
+            "timestamp": "2026-10-21T09:30:00",
+            "temperature": 28.6,
+            "humidity": 66.9,
+            "lux": 42492.0,
+            "source_type": "simulated",
+            "sim_scenario": "flood"
+          }
+        },
+        "error": null,
+        "ext": {
+          "stability_criteria": [
+            {
+              "name": "温度最大波动",
+              "value": 4.4,
+              "threshold": 2.0,
+              "passed": false,
+              "note": "24.2~28.6℃，波动 4.4℃",
+              "excess": 2.4
+            },
+            {
+              "name": "湿度首尾总变化",
+              "value": -25.7,
+              "threshold": 3.0,
+              "passed": false,
+              "note": "首 92.6% → 尾 66.9%，变化 -25.7%",
+              "excess": 22.7
+            },
+            {
+              "name": "湿度单步最大变化",
+              "value": 6.2,
+              "threshold": 1.5,
+              "passed": false,
+              "note": "单步最大 6.2%",
+              "excess": 4.7
+            },
+            {
+              "name": "光照单步最大跳变",
+              "value": 11191.0,
+              "threshold": 15000,
+              "passed": true,
+              "note": "单步最大 11191 lux"
+            },
+            {
+              "name": "湿度无持续单向趋势",
+              "value": "全程单调下降",
+              "threshold": "禁止全程单调",
+              "passed": false,
+              "note": "全程单调下降"
+            }
+          ],
+          "point_count": 6
+        },
+        "adopted": true,
+        "direction": "supporting"
+      },
+      {
+        "evidence_id": "EV-B06-01",
+        "source_type": "B06",
+        "source": "B06/b06-20261020-v1",
+        "time": "2026-10-21T09:30:00",
+        "status": "ok",
+        "result": {
+          "evidence_type": "MODEL_OUTPUT",
+          "window_id": "s1-live-001",
+          "predicted_attention": "WATCH",
+          "confidence": 1.0,
+          "confidence_normal": 0.0,
+          "confidence_watch": 1.0,
+          "model_version": "b06-20261020-v1",
+          "dtw_temperature": 30.928,
+          "dtw_humidity": 97.67,
+          "dtw_lux": 128373.56,
+          "feature_count": 33,
+          "feature_contribution_method": "logistic_coefficient_ranking",
+          "feature_contributions_top5": [
+            {
+              "feature": "current_lux",
+              "coefficient": 1.114976,
+              "direction": "推向WATCH"
+            },
+            {
+              "feature": "slope_lux",
+              "coefficient": 0.742619,
+              "direction": "推向WATCH"
+            },
+            {
+              "feature": "max_lux",
+              "coefficient": -0.625809,
+              "direction": "推向NORMAL"
+            },
+            {
+              "feature": "min_lux",
+              "coefficient": -0.397984,
+              "direction": "推向NORMAL"
+            },
+            {
+              "feature": "std_lux",
+              "coefficient": -0.371169,
+              "direction": "推向NORMAL"
+            }
+          ],
+          "errors": [],
+          "stability_baseline": "不稳定"
+        },
+        "error": null,
+        "ext": {
+          "model_version": "b06-20261020-v1",
+          "predicted_attention": "WATCH",
+          "confidence": 1.0,
+          "window_id": "s1-live-001",
+          "feature_count": 33,
+          "metrics": {
+            "accuracy": 0.7448979591836735,
+            "precision": 0.5909090909090909,
+            "recall": 0.4482758620689655,
+            "f1": 0.5098039215686274
+          }
+        },
+        "adopted": true,
+        "direction": "supporting"
+      },
+      {
+        "evidence_id": "EV-B03-01",
+        "source_type": "B03",
+        "source": "B03/Open-Meteo（离线构造用例）",
+        "time": "2026-10-21T09:30:00",
+        "status": "unavailable",
+        "result": null,
+        "error": "weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求",
+        "ext": {
+          "provider": "Offline-Fixture",
+          "forecast_time": null,
+          "forecast_window": "6h",
+          "location": "河北固安",
+          "retrieved_at": "2026-10-24T00:00:00+00:00",
+          "case": "improving",
+          "is_constructed": true,
+          "label": "构造用例（不是实测）",
+          "status": "unavailable",
+          "error": "weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求",
+          "degraded": true,
+          "unavailable_context": {
+            "signal": "external_unavailable",
+            "judge_method": "unavailable",
+            "basis": "预报点不可用，未做任何判定",
+            "available": false,
+            "future_ok": false,
+            "warnings": [
+              "外部天气不可用（unavailable/error）；forecast 点取数失败：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求",
+              "基线点（now）取数失败：weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求",
+              "外部天气为 PUBLIC 真实数据，forecast_time 属于真实世界时间轴；B02 内部为 SIMULATED 模拟时间轴（2026-10-15T02:00:00 ~ 2026-10-22T01:30:00），两者非同一时间基准，本次仅将天气用作外部条件方向参考，不做时刻级跨源对齐。"
+            ],
+            "caveats": [
+              "外部取的是窗口末时刻的单点值，不是窗口极值——中途更高/更低的值可能被漏掉",
+              "全部实测点位于夜间，solar_radiation 恒为 0，高温分支（≥35℃）至今未被任何实测点覆盖",
+              "外部为真实 API 的真实时间（比模拟锚点晚约 3 天），数值不可与内部模拟值直接比较，只作方向性参考",
+              "温度与云量只作描述，不参与主判定：温度方向单一（既可能太热也可能太冷），云量影响光照、与降水不是同一维度"
+            ],
+            "location": "河北固安",
+            "forecast_window": "6h",
+            "analysis_time": "2026-10-21T09:30:00",
+            "status": "unavailable",
+            "error": "weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求"
+          }
+        },
+        "adopted": true,
+        "direction": "undetermined"
+      },
+      {
+        "evidence_id": "EV-B04-01",
+        "source_type": "B04",
+        "source": "B04/knowledge_base",
+        "time": "2026-10-26T15:02:07.231910+00:00",
+        "status": "ok",
+        "result": {
+          "query": "过期数据导致温室调控决策基于过时信息",
+          "top_k": 5,
+          "citations": [
+            {
+              "chunk_id": "CH-003-02",
+              "source_id": "SRC-003",
+              "section": "静默返回旧数据的危害",
+              "page": "./docs/b03_weather.md",
+              "score": 0.3626655720824688,
+              "content": "静默返回旧数据（phantom data）危害：下游系统以为拿到最新有效数据；温室调控决策基于过时信息可能导致作物受损；问题隐蔽，潜伏数天才被发现；违反 API 隐含契约：成功响应代表数据完整"
+            },
+            {
+              "chunk_id": "CH-003-01",
+              "source_id": "SRC-003",
+              "section": "HTTP 400 不返回旧缓存的原因",
+              "page": "./docs/b03_weather.md",
+              "score": 0.06655222249031584,
+              "content": "HTTP 400 不返回旧缓存：400 是请求参数错误（纬度格式错误），不是临时性故障。重新发请求（修正参数后）一定能成功，所以不需要降级到过期数据。Fail Loudly 原则要求显式失败而非静默降级"
+            },
+            {
+              "chunk_id": "CH-002-04",
+              "source_id": "SRC-002",
+              "section": "drought 扰动完整生命周期",
+              "page": "./B02/simulator/engine.py",
+              "score": 0.03422238306915283,
+              "content": "drought 扰动完整生命周期：进入阶段 6 小时（smoothstep 过渡）→ 稳定持续 12 小时（humidity_delta=-10.0 全量生效）→ 恢复阶段 6 小时（smoothstep 过渡）→ 回到正常基线"
+            },
+            {
+              "chunk_id": "CH-001-03",
+              "source_id": "SRC-001",
+              "section": "PUBLIC 不用于 A/B 实验的原因",
+              "page": "./docs/b01_b03_design.md",
+              "score": 0.01866426424378078,
+              "content": "PUBLIC 数据不用于 A/B 对照：Open-Meteo 每次返回实时预报不同，间隔内值可能变化；1分钟粒度的天气预报分辨率不是真正瞬时状态；HTTP 400/429 时 PUBLIC 返回 None，无法保证 A/B 两边有效状态"
+            },
+            {
+              "chunk_id": "CH-001-04",
+              "source_id": "SRC-001",
+              "section": "format_state 来源标注差异",
+              "page": "./docs/b01_b03_design.md",
+              "score": 0.017458747334187674,
+              "content": "format_state() 根据 data_source 参数区分：data_source='PUBLIC' 时追加 '_weather：该数据来自 Open-Meteo 实时天气 API，非模拟数据'；data_source='SIMULATED' 时不追加任何标注（默认即为模拟）"
+            }
+          ],
+          "has_relevant": true,
+          "note": "命中 5 条，最高分 0.3627（CH-003-02）；相关切片 score > 0（注意：字符级 TF-IDF 有共同字符即有非零相似度，score>0 不等于该知识库真的覆盖本主题）"
+        },
+        "error": null,
+        "ext": {
+          "citation": {
+            "chunk_id": "CH-003-02",
+            "source_id": "SRC-003",
+            "section": "静默返回旧数据的危害",
+            "page": "./docs/b03_weather.md",
+            "score": 0.3626655720824688,
+            "content": "静默返回旧数据（phantom data）危害：下游系统以为拿到最新有效数据；温室调控决策基于过时信息可能导致作物受损；问题隐蔽，潜伏数天才被发现；违反 API 隐含契约：成功响应代表数据完整"
+          },
+          "retrieved": [
+            {
+              "chunk_id": "CH-003-02",
+              "source_id": "SRC-003",
+              "score": 0.3626655720824688
+            },
+            {
+              "chunk_id": "CH-003-01",
+              "source_id": "SRC-003",
+              "score": 0.06655222249031584
+            },
+            {
+              "chunk_id": "CH-002-04",
+              "source_id": "SRC-002",
+              "score": 0.03422238306915283
+            },
+            {
+              "chunk_id": "CH-001-03",
+              "source_id": "SRC-001",
+              "score": 0.01866426424378078
+            },
+            {
+              "chunk_id": "CH-001-04",
+              "source_id": "SRC-001",
+              "score": 0.017458747334187674
+            }
+          ],
+          "question": "过期数据导致温室调控决策基于过时信息",
+          "has_relevant": true,
+          "registry_source_type": "b04_knowledge"
+        },
+        "adopted": true,
+        "direction": "supporting"
+      }
+    ],
+    "tool_calls": {
+      "records": [
+        {
+          "tool_name": "B02.get_environment_history",
+          "arguments": {
+            "start": "2026-10-21T07:00:00",
+            "end": "2026-10-21T09:30:00"
+          },
+          "status": "ok",
+          "started_at": null,
+          "finished_at": null,
+          "duration_ms": null,
+          "adopted": true,
+          "result_digest": null,
+          "error": null,
+          "purpose": "取历史窗口 6 点（结构化判断的内部依据）"
+        },
+        {
+          "tool_name": "B05.get_current_environment",
+          "arguments": {
+            "location": "A区-3号温室"
+          },
+          "status": "ok",
+          "started_at": null,
+          "finished_at": null,
+          "duration_ms": null,
+          "adopted": false,
+          "result_digest": null,
+          "error": null,
+          "purpose": "取库内最新一条（仅作 latest_in_db 参考）"
+        },
+        {
+          "tool_name": "B06.predict_window",
+          "arguments": {
+            "window_id": "s1-live-001",
+            "model_version": "b06-20261020-v1"
+          },
+          "status": "ok",
+          "started_at": null,
+          "finished_at": null,
+          "duration_ms": null,
+          "adopted": true,
+          "result_digest": null,
+          "error": null,
+          "purpose": "B06 短时预测（只加载不重训）"
+        },
+        {
+          "tool_name": "B05.get_weather_forecast",
+          "arguments": {
+            "location": "河北固安",
+            "forecast_window": "6h",
+            "note": "内部调用 now + 6h 两次，取基线点与预报点"
+          },
+          "status": "unavailable",
+          "started_at": null,
+          "finished_at": null,
+          "duration_ms": null,
+          "adopted": true,
+          "result_digest": null,
+          "error": "weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求",
+          "purpose": "取外部条件（基线点 + 未来 6h 预报点）"
+        },
+        {
+          "tool_name": "B05.search_tomato_knowledge",
+          "arguments": {
+            "query": "过期数据导致温室调控决策基于过时信息"
+          },
+          "status": "ok",
+          "started_at": null,
+          "finished_at": null,
+          "duration_ms": null,
+          "adopted": true,
+          "result_digest": null,
+          "error": null,
+          "purpose": "方法论知识检索（决策基于不完整信息的风险）"
+        }
+      ],
+      "counts": {
+        "total": 5,
+        "adopted": 4,
+        "called_but_not_adopted": 1
+      }
+    },
+    "not_adopted_reasons": {
+      "B05.get_current_environment": "仅作 latest_in_db 参考，不参与本次方向判定，未升格为证据"
+    },
+    "adoption": {
+      "total_calls": 5,
+      "adopted_calls": 4,
+      "not_adopted_calls": [
+        {
+          "tool_name": "B05.get_current_environment",
+          "status": "ok",
+          "purpose": "取库内最新一条（仅作 latest_in_db 参考）",
+          "arguments": {
+            "location": "A区-3号温室"
+          },
+          "reason": "仅作 latest_in_db 参考，不参与本次方向判定，未升格为证据"
+        }
+      ],
+      "text": "本次调用了 5 个工具，其中 4 条结果被采用为证据"
+    },
+    "counts": {
+      "entries": 4,
+      "adopted_entries": 4
+    }
+  }
+}

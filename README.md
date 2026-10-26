@@ -85,35 +85,56 @@ GreenMate/
 │       ├── inference.py   # predict_window / MODEL_OUTPUT / SHAP / DTW
 │       └── __main__.py    # CLI：infer / verify
 │
-├── B07/                   # S1 稳态基线 / S2 渐进漂移：选窗 → 取数 → 推理 → 判断 → 解释 → 存档
+├── B07/                   # S1–S5：选窗 → 取数 → 推理 → 判断 → 解释 → 存档 → 阶段报告
 │   ├── __init__.py        # 包声明（让 python -m B07.runs 能跑）
 │   ├── __main__.py        # 入口分发：默认 S1 全流程，--scenario S1/S2，list/explain 透传给 runs
+│   ├── config.py          # 位置 / 窗口点数 / 采样间隔 / gap 阈值 / 降级开关说明
 │   ├── s1.py              # S1 统一入口 + 阶段报告生成
 │   ├── s2.py              # S2 统一入口（渐进漂移）+ 阶段报告生成
 │   ├── scenarios.py       # 场景注册表（S1/S2）：哪个场景用哪个选窗策略
 │   ├── check_s2_experiment.py  # S2 实验有效性校验脚本（只读存档，9 条自检）
-│   ├── config.py          # 位置 / 窗口点数 / 采样间隔 / gap 阈值
 │   ├── stability.py       # 稳定窗口扫描 + 透明稳定判定规则
 │   ├── evidence.py        # 当前状态 + 最近历史 + 时间锚点（含校验）
 │   ├── predict.py         # 加载 B06 已存模型做一次预测
+│   ├── knowledge.py       # S4-1：走 B05 search_tomato_knowledge 接 B04 知识库
+│   ├── weather.py         # S3 天气接入层（B03 未来外部天气）+ S5 降级开关（唯一读开关处）
+│   ├── evidence_registry.py  # S4-0：证据身份层（status 三态 / data / error 硬约束）
+│   ├── evidence_ledger.py    # S4-2：台账 → 方向 → 分歧三列（supporting/opposing/undetermined）
 │   ├── judgement.py       # 结构化判断五/六字段 + 合成关注等级（纯程序，无 LLM）
 │   ├── explain.py         # LLM 解释 + 一致性校验（只解释，不判断）
 │   ├── runs.py            # run 存档 + index 索引 + explain_run 回溯 + rebuild_index
-│   ├── weather.py         # S3 天气证据接入层（B03 未来外部天气，走 B05 工具接口）
+│   │
 │   ├── s3.py              # S3-2 单变量对照实验（真实组 / 离线组 / 降级验证）
 │   ├── s3_report.py       # 从实测存档生成 s3_report.md
 │   ├── s3_citation_probe.py   # 引用率探针（冻结 ⑥ 块重复跑，只测 LLM 采样波动）
 │   ├── s3_citation_table.py   # 全部 S3_with 存档的统一判定表
-│   ├── tests/             # S1/S2/S3 不变量测试（pytest）
+│   ├── verify_s3.py       # S3 阶段验收自检（全部离线，不联网、不调 LLM）
+│   │
+│   ├── s4.py              # S4-2 分歧场景主入口（内部 WATCH × 外部转好）
+│   ├── s4_windows.py      # S4-1：扫描 B06 输出 WATCH 的窗口，挑出 S4 锚点
+│   ├── s4_offline.py      # S4-1：可复现的离线天气夹具（构造用例，非实测）
+│   ├── s4_3.py            # S4-3 负面对照（平铺组 vs 分身份组）
+│   ├── s4_3_detector.py   # S4-3 断言/归因检测器（复用 S3 判定思路）
+│   ├── s4_report.py       # 由 s4_raw_result.json 生成 s4_report.md + model_table.md
+│   │
+│   ├── s5.py              # S5 证据退化实验（基线 n 次 + 降级 n 次）
+│   ├── s5_probe.py        # S5 防伪造检验探针（A/B/C/D，复用 S3 的句子切分与元陈述判定）
+│   ├── s5_report.py       # 由 s5_raw_result.json 生成 s5_report.md
+│   ├── s5_show.py         # S5 一步到位展示（只读存档，不调 LLM）
+│   │
+│   ├── tests/             # S1–S5 不变量测试（pytest，共 169 项）
 │   │   ├── conftest.py    # 路径注入 + 假 LLM 客户端
 │   │   ├── test_s1_invariants.py
 │   │   ├── test_s2_invariants.py
 │   │   ├── test_weather_invariants.py
-│   │   └── test_s3_invariants.py
-│   ├── runs/              # 运行时生成的存档（gitignore *.json）
+│   │   ├── test_s3_invariants.py
+│   │   ├── test_s4_invariants.py      # 44 项
+│   │   ├── test_s4_3_invariants.py    # 15 项
+│   │   └── test_s5_invariants.py      # 17 项
+│   ├── runs/              # 运行时生成的 run 存档（**进版本库**：证据链的一部分）
 │   │   ├── index.json     # 索引：run_id → 摘要
 │   │   └── run_XXX/run.json
-│   └── artifacts/         # 阶段报告
+│   └── artifacts/         # 阶段报告（**进版本库**：报告数字全部来自这里的存档）
 │       ├── s1_report.md
 │       ├── s2_report.md
 │       ├── s3_report.md
@@ -122,7 +143,13 @@ GreenMate/
 │       ├── s3_citation_stats.json
 │       ├── s3_citation_table.json
 │       ├── s3_frozen_ext.json
-│       └── s3_calibration.json
+│       ├── s3_calibration.json
+│       ├── s4_report.md
+│       ├── s4_raw_result.json
+│       ├── s4_3_contrast.json
+│       ├── s5_report.md
+│       ├── s5_raw_result.json
+│       └── model_table.md  # 跨阶段 LLM 模型对照表（由 s4_report.py 生成）
 │
 └── docs/                  # 项目设计文档
     ├── b01_b03_design.md  # SIMULATED/PUBLIC 数据源定义
@@ -570,6 +597,8 @@ SoilGrids MCP（`https://gateway.pipeworx.io/soilgrids/mcp`）补齐土壤数据
 | B07 — S1 稳态基线：选窗 → 取数 → 推理 → 判断 → 解释 → 存档 | ✅ 完成 |
 | B07 — S2 渐进漂移：同一流程，只换历史窗口 | ✅ 完成 |
 | B07 — S3 天气证据接入层：接 B03 未来外部天气（走 B05 工具接口） | ✅ 完成 |
+| B07 — S4 证据身份层与证据分歧：证据有身份、方向由程序规则判定、分歧结构化 | ✅ 完成 |
+| B07 — S5 证据退化：一次只弄坏一条证据，看系统还剩什么 | ✅ 完成 |
 
 ---
 
@@ -1122,3 +1151,241 @@ LLM 上下文里写明"外部天气不可用、不要编造天气"，
 | C5 | 报告可重新生成，且含 §3.7/§3.8/§3.9/§3.10/L13 |
 | C6 | 55% 那条只能以「构造用例」出现，不得混进实测表 |
 | C7 | 存档目录与 `index.json` 一致；`run_016`/`run_017` 仍在且带说明 |
+
+---
+
+## B07 — S4 证据身份层与证据分歧（结构化）
+
+S4 分四步走完：**S4-0 接入层**（统一证据记录）→ **S4-1 三类新证据源**
+（窗口扫描 / 离线天气夹具 / 知识检索）→ **S4-2 方向与分歧**
+（证据台账 → 程序规则算方向 → 第 7 个结构化字段 → ⑦ 上下文块）→
+**S4-3/4 负面对照与报告收口**。
+
+> **S4 的硬边界**：不改 B01 / B02 / B03 / B04 / B05 / B06；
+> 不改 SYSTEM_PROMPT 与固定问题（指纹 `aa1400cf8568` / `d3cc394bfcbe` **全程未变**）；
+> 不改判据阈值、不重训模型；不改 `combined_attention` 的既有规则
+> （**只允许** `has_conflict` 新分支）；不删除任何 run 存档（失败的也留）。
+
+**完整报告：[`B07/artifacts/s4_report.md`](B07/artifacts/s4_report.md)**
+（由 `python B07/s4_report.py` 从 `B07/artifacts/s4_raw_result.json` 自动生成，
+**报告里每个数字都来自实测存档**，生成过程不联网、不调 LLM，可确定性重放）
+
+**跨阶段 LLM 模型对照：[`B07/artifacts/model_table.md`](B07/artifacts/model_table.md)**
+（S1–S3 = `qwen3.5-27b`，S4 起 = `qwen-max`；该表由同一份原始结果生成，
+本 README **不另存副本**，只引用它）
+
+### S4-0 证据身份层（`B07/evidence_registry.py`）
+
+每条证据都是同一个形状，**约束写在构造函数的校验里**（不是靠约定）：
+
+| 字段 | 含义 | 约束 |
+|---|---|---|
+| `source_type` | 证据种类 | 非空 |
+| `source` | 来自哪个工具 / 数据源 | 非空 |
+| `time` | 什么时候取得的 | — |
+| `status` | `ok` / `unavailable` / `error` | **三选一，出现第四种直接抛异常** |
+| `result` | 工具返回的原始载荷 | `status != ok` 时**必须**是 `None` |
+| `error` | 失败原因 | `status == ok` 时**必须**是 `None`；否则**必须非空** |
+| `ext` | 各源扩展信息 | 原样保留，不压平成统一业务字段 |
+
+### S4-1 三类新证据源
+
+| 模块 | 作用 | 关键约束 |
+|---|---|---|
+| `B07/s4_windows.py` | 扫描 B06 输出 WATCH 的窗口，挑出 S4 锚点 | 锚点是**扫出来的**，不是硬编码时刻 |
+| `B07/s4_offline.py` | 造可复现的离线天气夹具 | **构造用例，不是实测**（ext 里 `is_constructed=True`） |
+| `B07/knowledge.py` | 走 B05 的 `search_tomato_knowledge` 接 B04 知识库 | **知识库不含通用农业知识**（12 条全是系统设计元知识）；全部 score==0 时 status 仍是 `ok`，result 明写「无相关知识」 |
+
+### S4-2 证据台账 → 方向 → 第 7 字段
+
+`B07/evidence_ledger.py` 把本次用到的四类证据装配成一条**台账**：
+
+- **方向是程序规则**（`judge_direction()`，唯一出处，不经过 LLM）：
+  历史升温 → `supporting`；模型 `WATCH` → `supporting` / `NORMAL` → `opposing`；
+  天气 `deteriorating` → `supporting` / `improving` → `opposing` / `stable` → `undetermined`；
+  知识 → `supporting`（但它的限定进 `undetermined` 列）；
+- **工具被调用过 ≠ 结果被本次判断采用** —— `B05.get_current_environment` 被调用但未采用，
+  不进入三列表，`not_adopted_reasons` 留痕；
+- 第 7 个字段 `evidence_divergence` 是**可选追加**：不传台账时字段集合与 S1/S2/S3 完全一致；
+- 三列互斥、**不投票、不强制合并**；方向冲突时
+  `combined_attention = conflict_unresolved`（**不是错误**，是「保留分歧」的表达）。
+
+### S4-3 负面对照（平铺组 vs 分身份组）
+
+**唯一变量 = 证据的组织方式。** A 组把四类结论拼成一段连续叙述
+（**程序从台账拼出来的纯函数**，不标来源 / 时间 / 状态 / 方向，也不提「存在分歧」），
+B 组保持结构化判断并多出 ⑥ 外部条件块与 ⑦ 证据分歧块。
+
+| 结论 | 数据 |
+|---|---|
+| 两组的 ①②③⑤ 块**逐字节相同** | ✅ 指纹表 4/4 |
+| **主指标未观察到显著差异** | 断言总数 A=0 / B=0 → 归因完整率与无来源断言率**无定义（0/0）**；无断言率两组都是 5/5 |
+| 可观测差异 | 回答字数均值 A=332.4 / B=411.6；带来源词句数均值 A=12.4 / B=15.4 |
+| 冲突**没有**穿透到解释层 | B 组 5 次回答提到「分歧/冲突」的次数 = **0**（⑦ 块明写了「方向不一致：存在」） |
+
+诚实口径：**「证据揉在一起会让归因变差」这个命题本轮既没被证实也没被证伪**
+（原因见报告 §4.8 与 §8 的 L4 / L7）。
+
+### S4-4 报告与收口
+
+| 产物 | 说明 |
+|---|---|
+| `B07/artifacts/s4_report.md` | 10 章：结论 / 场景 / 身份层 / 分歧 / 负面对照 / 完成线自评 / 失败与降级 / 证据链 / **Limitations L1–L13** / 复现命令 / 下一步 |
+| `B07/artifacts/s4_raw_result.json` | 报告的**唯一输入**（S4 run + S4-3 对照 + 三条降级探针 + 存档清单） |
+| `B07/artifacts/s4_3_contrast.json` | S4-3 负面对照的原始分组结果（两组各 5 次的逐条回答与计数） |
+| `B07/artifacts/model_table.md` | 跨阶段 LLM 模型对照表（S1–S5，由 `s4_report.py` 一起生成） |
+| `B07/tests/test_s4_invariants.py` | S4 不变量测试（44 项，全离线） |
+| `B07/tests/test_s4_3_invariants.py` | S4-3 负面对照的不变量测试（15 项，全离线） |
+
+### 复现命令
+
+```bash
+./venv/Scripts/python.exe -m B07.s4           # 跑 S4，落盘 s4_raw_result.json
+./venv/Scripts/python.exe -m B07.s4_3 --n 5   # 负面对照：两组各 5 次
+./venv/Scripts/python.exe B07/s4_report.py    # 由原始结果生成报告 + model_table.md（离线、可确定性重放）
+./venv/Scripts/python.exe -m pytest B07/tests -q
+./venv/Scripts/python.exe -m B07.runs explain run_023   # S1–S3 的存档逐值不变
+```
+
+### 一句话结论
+
+**S4 证明了**：证据有了身份（来源 / 时间 / 状态 / 方向），方向由程序规则判定，
+分歧被结构化成第 7 个字段并以 `conflict_unresolved` 保留下来。
+**S4 没有证明**：证据身份能自动变成解释里的冲突陈述（0/5 次提及），
+以及「把证据揉在一起会让归因变差」（主指标无定义）。
+完整 Limitations（L1–L13）见 [`B07/artifacts/s4_report.md`](B07/artifacts/s4_report.md) §8。
+
+## B07 — S5 证据退化（一次只弄坏一条证据）
+
+S5 做的是**减法**：不加功能，只把一条已有证据主动弄坏，看系统还剩什么。
+本轮只弄坏**外部天气**（唯一同时影响 ⑥ 外部条件块、⑦ 分歧三列表、
+`combined_attention` 三处判据的证据），RAG 无命中 / 工具异常按文档要求留作扩展。
+
+**完整报告：[`B07/artifacts/s5_report.md`](B07/artifacts/s5_report.md)**
+（由 `python B07/s5_report.py` 从 `B07/artifacts/s5_raw_result.json` 生成，
+**每个数字都来自实测存档**；防伪造检验另由 `python -m B07.s5 --reprobe` 离线重算）
+
+### 怎么弄坏的
+
+环境变量开关 `B07_WEATHER_UNAVAILABLE=1`（未设置 = 正常）。开关打开时，
+天气 provider 直接返回 `status=unavailable` / `data=None` / `error` 写明原因 ——
+**不留上次成功的值、不加任何兜底**。判定逻辑只有一处：
+`B07/weather.py::weather_unavailable_reason()`。
+
+> 文档说“让天气 API 暂时不可用”，本轮用**显式开关模拟**：可复现、可回滚，
+> 且不依赖网络状态；真断网既不可复现，又会把“天气不可用”和“网络整体坏了”混在一起。
+
+### 实测结论（基线 run → 降级 run；**具体 run_id 以报告 §0 为准**，每次重跑都会变）
+
+> 本文档不写死 run_id —— `python -m B07.s5` 每跑一次都会产生新的存档。
+> 下表的结构与结论在多轮实测中一致，**逐次的 run_id 与数字见
+> [`B07/artifacts/s5_report.md`](B07/artifacts/s5_report.md) §2.3 / §3.2**。
+
+| 第六步四问 | 基线 | 降级 |
+|---|---|---|
+| 什么信息消失了 | 外部天气判定 `external_improving`（降水概率 50.0%→10.0%）、`forecast_time=2026-10-25T04:00`、⑦ 块 opposing 1 条 | `status=unavailable`、`signal=external_unavailable`、`forecast_time=None`、⑦ 块 opposing **0** 条、⑥ 块不再有任何天气数值 |
+| 哪些判断仍然存在 | ①②③ 三字段 + supporting 3 条（B02 / B06 / B04） | ①②③ **逐值相同**，supporting 仍 3 条 |
+| 哪些判断变得更保守 | `combined_attention=conflict_unresolved`、`has_conflict=True` | `combined_attention=watch_internal`、`has_conflict=False` |
+| 限制说明怎么变 | limitations 4 条 | limitations 5 条（**新增 `evidence_unavailable`**）+ ⑦ 块新增“当前不可用的证据”一节 |
+
+**这项证据原来到底有没有真正参与分析？——参与了，而且是决定性的**：
+基线里天气证据是**唯一**一条 `opposing`（`has_conflict=True` → `conflict_unresolved`
+正是在有冲突时才产生）；降级后它变成 `undetermined`、退出 opposing，
+冲突随之消失、`combined_attention` 退让为 `watch_internal`。
+**规则一个字没改** —— 是那条证据消失了，不是加了新分支。
+
+**防伪造检验**（A 伪造 / B 受限声明 / C 能力保持 / D 归因）：
+没有编造天气数值、没有把不可用证据说成有方向、仍然给出了历史与模型预测、
+并明确说明“外部天气证据当前不可用，相关判断受到限制”。
+**诚实口径**：A/B/D 在加了“必答”要求的版本上多轮实测全过
+（上一版是 2/3，见报告 §3.5）；C 的「知识/一般依据」维度**不是每次都出现**
+（逐次明细见报告 §3.2），文档完成线只写“不整体崩溃”，故不判失败，但如实记录。
+
+### 硬边界
+
+不改 SYSTEM_PROMPT（`aa1400cf8568`）/ 固定问题（`d3cc394bfcbe`）/ 判据阈值；
+不改 B01–B06；不可用证据**方向置 `undetermined`**（不伪造成 supporting/opposing）；
+⑥ 块**不整块消失**（provider 保留、`forecast_time=None`、`status=unavailable`）；
+不新增任何兜底数据（上下文里不许出现编造出来的天气数值）。
+
+### 产物与复现
+
+| 产物 | 说明 |
+|---|---|
+| `B07/artifacts/s5_report.md` | 9 章：结论 / 怎么弄坏 / 第六步对比 / 防伪造检验 / 六步自评 / 完成线自评 / **Limitations L1–L10** / 复现命令 / 与 S1–S4 的关系 |
+| `B07/artifacts/s5_raw_result.json` | 报告与防伪造检验的**唯一输入**（基线 n 次 + 降级 n 次的实测存档 + 检验结果） |
+| `B07/s5_probe.py` | 防伪造检验探针（复用 S3 的句子切分与元陈述判定，不重写一套） |
+| `B07/s5_show.py` | **一步到位展示**：把「造了什么失败 / 还能判断什么 / 前后对比 / A·B·C·D」打成一屏（只读存档，不调 LLM） |
+| `B07/tests/test_s5_invariants.py` | S5 不变量测试（17 项，全离线、含 fake_llm 端到端） |
+
+```bash
+./venv/Scripts/python.exe -m B07.s5                 # 跑实验（基线 2 次 + 降级 2 次）
+./venv/Scripts/python.exe -m B07.s5 --reprobe       # 用存档回答重跑 A/B/C/D（离线）
+./venv/Scripts/python.exe B07/s5_report.py          # 生成报告（离线、可确定性重放）
+./venv/Scripts/python.exe -m B07.s5_show            # 一步到位展示（离线、只读存档）
+./venv/Scripts/python.exe -m B07.s5_show --rerun    # 先重跑实验再展示（会调 LLM）
+./venv/Scripts/python.exe -m pytest B07/tests -q
+```
+
+> ⚠️ `python -m B07.s5` 会**覆盖** `B07/artifacts/s5_raw_result.json`（只保留最后一批，
+> run 存档本身不丢）；`--reprobe` 会重写 `probe` 段，若要保留报告 §3.5 的
+> “上一版对照”，跑完再执行一次
+> `./venv/Scripts/python.exe -m B07.s5 --probe-runs run_073,run_074,run_075`。
+
+### 一句话结论
+
+**S5 证明了**：缺一条证据时，S4 的分歧结构是**退让**而不是崩溃 ——
+不替缺失的证据编方向，不整体拒答，并明确说明受限制的部分。
+**S5 没有证明**：多类证据同时不可用时的行为、真实 API 故障形态下的行为，
+以及解释层**必然**声明受限（实测全过，但上一版是 2/3 —— 依赖模型自觉遵循上下文，
+不是提示词层面的硬保证）。
+完整 Limitations（L1–L10）见 [`B07/artifacts/s5_report.md`](B07/artifacts/s5_report.md) §6。
+
+---
+
+## B07 — S1–S5 全流程跑法（一条命令接一条）
+
+所有命令在 **项目根目录** `D:\GreenMate>` 下执行。
+`export PYTHONIOENCODING=utf-8`（Windows 控制台默认 GBK，中文会乱码）。
+
+```bash
+# ── S1 稳态基线 ─────────────────────────────────────────
+./venv/Scripts/python.exe -m B07.s1                    # 等价入口：python -m B07
+
+# ── S2 渐进漂移（对照 S1）─────────────────────────────────
+./venv/Scripts/python.exe -m B07.s2
+./venv/Scripts/python.exe -m B07.check_s2_experiment \
+    --s1 run_001 --s2 run_002                          # 两 run 逐项对照（只读存档）
+
+# ── S3 引用可核验（真实 API 组 + 离线组）──────────────────
+./venv/Scripts/python.exe -m B07.s3                    # 两组共 12 次（最贵）
+./venv/Scripts/python.exe -m B07.s3_citation_table     # 引用率对照表
+./venv/Scripts/python.exe -m B07.verify_s3             # 阶段验收自检（离线）
+./venv/Scripts/python.exe -m B07.s3_report             # 完整报告（离线读存档）
+
+# ── S4 证据身份层 + 分歧 ────────────────────────────────
+./venv/Scripts/python.exe -m B07.s4_windows            # 窗口序列
+./venv/Scripts/python.exe -m B07.s4_3                  # 负面对照（每组 n 次）
+./venv/Scripts/python.exe B07/s4_report.py             # 完整报告 + model_table.md
+
+# ── S5 证据退化 ─────────────────────────────────────────
+./venv/Scripts/python.exe -m B07.s5                    # 基线 2 次 + 降级 2 次
+./venv/Scripts/python.exe B07/s5_report.py             # 完整报告
+./venv/Scripts/python.exe -m B07.s5_show               # 一步到位展示（离线、只读）
+
+# ── 收尾 ─────────────────────────────────────────────────
+./venv/Scripts/python.exe -m B07 list                  # 列出所有 run 存档
+./venv/Scripts/python.exe -m B07 explain run_001       # 回溯任意一次（含复算一致性）
+./venv/Scripts/python.exe -m pytest B07/tests -q       # 169 项不变量测试
+```
+
+| 步骤 | 调 LLM | 落盘副作用 |
+|---|---|---|
+| S1 / S2 | 是（每次运行 1 次） | 新增 `B07/runs/run_XXX/` |
+| S3 | 是（约 12 次，最贵）+ 真实天气 API | 新增 `runs/`，写 `artifacts/s3_*.json` |
+| S4 | 是（约 10 次） | 新增 `runs/`，**覆盖** `artifacts/s4_raw_result.json` |
+| S5 | 是（4 次） | 新增 `runs/`，**覆盖** `artifacts/s5_raw_result.json` |
+| `*_report.py` / `verify_s3` / `check_s2_experiment` / `s5_show` | 否 | 只读，不改任何东西 |
+
+> `B07/runs/` 与 `B07/artifacts/` **都进版本库** —— 存档和阶段报告就是证据链本身，
+> 报告里的每个数字都来自它们，不能当临时文件清掉。

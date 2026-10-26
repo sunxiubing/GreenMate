@@ -266,8 +266,14 @@ def _evidence_status(run_bundle: dict) -> dict:
     }
 
 
-def _limitations(run_bundle: dict) -> dict:
-    """字段⑤：当前判断限制（四条，内容全部从真实数据算出来）。"""
+def _limitations(run_bundle: dict, ledger=None) -> dict:
+    """字段⑤：当前判断限制（四条基础 + 证据不可用时追加的条目）。
+
+    S5-1：基础四条**一个字不改**（S1/S2/S3 的存档必须逐字段可比）。
+    只有当证据台账里**确实有取不到的证据**时，才追加一条
+    "evidence_unavailable" 限制 —— 内容全部来自台账的真实 status/error。
+    没有台账、或台账里全部证据可用时，本函数输出与原来完全一致。
+    """
     mo = run_bundle.get("model_output") or {}
     meta = run_bundle.get("model_meta") or {}
     metrics = meta.get("metrics") or {}
@@ -355,12 +361,73 @@ def _limitations(run_bundle: dict) -> dict:
         "optional_modules": ["B03"],
     }
 
-    return {
+    out = {
         "simulated_data": sim_data,
         "model_boundary": model_boundary,
         "time_anchor": time_anchor,
         "no_weather_no_kb": no_weather_no_kb,
         "all_keys": list(LIMITATION_KEYS),
+    }
+
+    # ---- S5-1：证据不可用时的限制条目 ----
+    extra = _unavailable_evidence_limitation(ledger)
+    if extra:
+        out["evidence_unavailable"] = extra
+        out["all_keys"] = list(out["all_keys"]) + ["evidence_unavailable"]
+
+    return out
+
+
+def _unavailable_evidence_limitation(ledger) -> dict | None:
+    """台账里有取不到的证据时，给限制字段追加一条。
+
+    内容全部来自台账的真实 status / error —— 不写死文案里的数字，
+    也不把"取不到"说成"没有这项信息"。
+
+    没有台账、台账里没有不可用证据、或所有不可用证据都没被本次判断采用时，
+    返回 None（此时限制字段与原来一字不差）。
+    """
+    if ledger is None:
+        return None
+
+    from B07.evidence_ledger import adopted_ledger_entries
+
+    try:
+        entries = adopted_ledger_entries(ledger)
+    except Exception:
+        return None
+
+    bad = [e for e in entries if (e.get("status") or "") != "ok"]
+    if not bad:
+        return None
+
+    parts = []
+    for e in bad:
+        ext = e.get("ext") or {}
+        who = f"{e.get('source_type')}"
+        if ext.get("provider"):
+            who += f"（provider={ext.get('provider')}）"
+        parts.append(
+            f"{who} 的证据当前不可用（status={e.get('status')}"
+            + (f"，失败原因：{e.get('error')}" if e.get("error") else "")
+            + "）")
+
+    return {
+        "key": "evidence_unavailable",
+        "text": ("以下证据源当前不可用，与它们相关的判断受到限制："
+                 + "；".join(parts)
+                 + "。其余仍可用的证据（B02 历史、B06 预测等）继续参与本次判断，"
+                 "本次结论只在这些证据能支撑的范围内成立。"
+                 "回答中必须明确说明这一限制。"),
+        "unavailable_sources": [
+            {
+                "source_type": e.get("source_type"),
+                "source": e.get("source"),
+                "status": e.get("status"),
+                "error": e.get("error"),
+            }
+            for e in bad
+        ],
     }
 
 
@@ -386,11 +453,15 @@ EXTERNAL_FIELDS = [
 ]
 
 
-def _external_conditions(external: dict) -> dict:
+def _external_conditions(external: dict, identity: dict | None = None) -> dict:
     """把 B07.weather.build_external_context() 的结果整成稳定字段。
 
     字段名固定不变，取值来自真实数据；外部条件不可用时 signal 为
     external_unavailable、judge_method 为 unavailable，不做任何粉饰。
+
+    identity: 证据身份（S4-2）。给了就把 provider / forecast_time 一并带出，
+    它们取自**台账里那条 B03 证据的 ext**，与台账逐值相等 ——
+    这样"这份外部条件是哪一条证据"只有一处定义。
     """
     if not isinstance(external, dict):
         return {
@@ -425,10 +496,22 @@ def _external_conditions(external: dict) -> dict:
     out["location"] = external.get("location")
     out["forecast_window"] = external.get("forecast_window")
     out["analysis_time"] = external.get("analysis_time")
+    # S5-1：证据状态显式化 —— "不可用"和"没有外部信息"是两回事，
+    # 前者必须说得出是谁不可用、为什么不可用。
+    status = external.get("status")
+    if status is None:
+        status = "ok" if external.get("available") else "unavailable"
+    out["status"] = status
+    out["error"] = external.get("error")
+    if identity:
+        # S4-2：证据身份随外部条件一起带出（与台账 B03 证据的 ext 逐值相等）
+        out["provider"] = identity.get("provider")
+        out["forecast_time"] = identity.get("forecast_time")
     return out
 
 
-def build_judgement(run_bundle: dict, external_conditions=_EXTERNAL_UNSET) -> dict:
+def build_judgement(run_bundle: dict, external_conditions=_EXTERNAL_UNSET,
+                    evidence_ledger=None) -> dict:
     """由 run_bundle 生成结构化判断。
 
     Args:
@@ -437,6 +520,9 @@ def build_judgement(run_bundle: dict, external_conditions=_EXTERNAL_UNSET) -> di
             （B07.weather.build_external_context() 的返回值）。
             不传时从 run_bundle.get("external_conditions") 取；
             显式传 None 表示"确定没有外部条件"。
+        evidence_ledger: 可选的证据台账（B07.evidence_ledger.EvidenceLedger
+            或它的可序列化 dict）。给了才会追加第 7 个字段
+            evidence_divergence；不给时字段集合与 S1/S2/S3 **完全一致**。
 
     Returns:
         没有外部条件时，恰好五个顶层字段（键名、顺序、取值全不变）：
@@ -445,33 +531,59 @@ def build_judgement(run_bundle: dict, external_conditions=_EXTERNAL_UNSET) -> di
 
         有外部条件时，在上述 5 个字段之后**追加**第 6 个：
         external_conditions
+
+        有证据台账时，再**追加**第 7 个：evidence_divergence
     """
     if external_conditions is _EXTERNAL_UNSET:
         external_conditions = run_bundle.get("external_conditions")
+    if evidence_ledger is None:
+        evidence_ledger = run_bundle.get("evidence_ledger")
 
     judgement = {
         "current_environment": _current_environment(run_bundle),
         "recent_trend": _recent_trend(run_bundle),
         "predicted_attention": _predicted_attention(run_bundle),
         "evidence_status": _evidence_status(run_bundle),
-        "limitations": _limitations(run_bundle),
+        "limitations": _limitations(run_bundle, evidence_ledger),
     }
 
+    # S4-2：给了台账，外部条件**从台账里的 B03 证据派生**，
+    # 不在这里另写一套天气字段的组装逻辑（同一份证据的身份只定义一次）。
+    identity = None
+    if evidence_ledger is not None:
+        from B07.evidence_ledger import weather_context_from_ledger
+
+        weather = weather_context_from_ledger(evidence_ledger)
+        if weather is not None:
+            external_conditions = weather.get("context")
+            identity = {
+                "provider": weather.get("provider"),
+                "forecast_time": weather.get("forecast_time"),
+            }
+
     if external_conditions is not None:
-        judgement["external_conditions"] = _external_conditions(external_conditions)
+        judgement["external_conditions"] = _external_conditions(
+            external_conditions, identity)
+
+    # S4-2：第 7 个字段（可选追加）。不传台账时**根本不会出现**这个字段，
+    # 所以 S1 / S2 / S3 的存档逐字段复算结果一字不变。
+    if evidence_ledger is not None:
+        judgement["evidence_divergence"] = build_evidence_divergence(evidence_ledger)
 
     return judgement
 
 
-def recompute_judgement(run_bundle: dict, external_conditions=_EXTERNAL_UNSET) -> dict:
-    """用同样输入重新算一遍同样五个字段（用于自检）。"""
-    return build_judgement(run_bundle, external_conditions)
+def recompute_judgement(run_bundle: dict, external_conditions=_EXTERNAL_UNSET,
+                        evidence_ledger=None) -> dict:
+    """用同样输入重新算一遍同样的字段（用于自检）。"""
+    return build_judgement(run_bundle, external_conditions, evidence_ledger)
 
 
-def self_check(run_bundle: dict, external_conditions=_EXTERNAL_UNSET) -> dict:
+def self_check(run_bundle: dict, external_conditions=_EXTERNAL_UNSET,
+               evidence_ledger=None) -> dict:
     """自检：复算结果是否与 build_judgement 逐字段相等。"""
-    a = build_judgement(run_bundle, external_conditions)
-    b = recompute_judgement(run_bundle, external_conditions)
+    a = build_judgement(run_bundle, external_conditions, evidence_ledger)
+    b = recompute_judgement(run_bundle, external_conditions, evidence_ledger)
 
     fields = list(a.keys())
     diffs = []
@@ -481,8 +593,13 @@ def self_check(run_bundle: dict, external_conditions=_EXTERNAL_UNSET) -> dict:
     # 顺序也要一致
     same_order = list(a.keys()) == list(b.keys())
 
-    # 有没有第 6 个字段，取决于有没有外部条件
-    expected_count = 6 if "external_conditions" in fields else 5
+    # 有没有第 6 个字段取决于有没有外部条件；
+    # 有没有第 7 个字段取决于有没有证据台账。
+    expected_count = 5
+    if "external_conditions" in fields:
+        expected_count += 1
+    if "evidence_divergence" in fields:
+        expected_count += 1
 
     return {
         "fields": fields,
@@ -492,6 +609,119 @@ def self_check(run_bundle: dict, external_conditions=_EXTERNAL_UNSET) -> dict:
         "differing_fields": diffs,
         "same_order": same_order,
         "passed": (not diffs) and same_order and len(fields) == expected_count,
+    }
+
+
+# --------------------------------------------------------------------------
+# 证据分歧（S4-2，第 7 个结构化字段）
+# --------------------------------------------------------------------------
+#
+# 关键设计：**direction（证据属性，单值）与三列表（判断分项）分开**。
+#
+#   direction  ∈ {supporting, opposing, undetermined}
+#       —— 每条证据一个方向，由程序规则给出（B07/evidence_ledger.judge_direction），
+#          不经过 LLM。
+#   三列表    supporting / opposing / undetermined
+#       —— 装的是**判断项**，不是原始证据；每条都必须带来源归属。
+#
+# 为什么要分开：一条证据可以既"支持提高关注"（方向），
+# 又"仍不足以确定"（限定）。知识证据就是这种：
+#   方向 = supporting（它提供"决策基于不完整信息可能导致作物受损"的依据）
+#   限定 = 只支持"要关注"，不能证明未来一定恶化
+# 这条限定**不是它的 direction**，但必须出现在 undetermined 列表里。
+#
+# 三列表只装**被本次判断采用**的证据（adopted=True）。
+# 调用过但没被采用的工具结果留在台账里，不进这三张表。
+
+#: 有冲突时的结论句（固定文本，逐字不改）
+DIVERGENCE_RESOLUTION_CONFLICT = (
+    "存在方向不一致的证据，系统保留分歧，不做强制合并，也不做投票；"
+    "请按各来源分别判断"
+)
+#: 无冲突时的结论句
+DIVERGENCE_RESOLUTION_CONSISTENT = "各证据方向一致"
+
+#: note 的固定说明
+DIVERGENCE_NOTE = (
+    "方向由程序规则判定（B07/evidence_ledger.judge_direction），不经过 LLM；"
+    "三列装的是判断项，不是原始证据；"
+    "NORMAL 不等于确认无异常；系统不做投票，也不做强制合并。"
+)
+
+
+def build_evidence_divergence(ledger) -> dict:
+    """由证据台账算出第 7 个字段 evidence_divergence。
+
+    Args:
+        ledger: B07.evidence_ledger.EvidenceLedger 或其可序列化 dict。
+
+    Returns:
+        {
+          "has_conflict": bool,
+          "supporting":    [ {source_type, source, time, summary, basis}, ... ],
+          "opposing":     [ ... ],
+          "undetermined": [ {source_type, source, time, summary, reason}, ... ],
+          "each_source":  {source_type: direction},
+          "resolution":   str,
+          "note":         str,
+        }
+    """
+    from B07.evidence_ledger import (
+        DIRECTION_OPPOSING,
+        DIRECTION_SUPPORTING,
+        adopted_ledger_entries,
+        basis_of,
+        limitations_of,
+        summarize,
+        undetermined_reason,
+    )
+
+    entries = adopted_ledger_entries(ledger)
+
+    supporting: list[dict] = []
+    opposing: list[dict] = []
+    undetermined: list[dict] = []
+    each_source: dict[str, str] = {}
+
+    for entry in entries:
+        source_type = entry.get("source_type")
+        direction = entry.get("direction")
+        each_source[source_type] = direction
+
+        base = {
+            "source_type": source_type,
+            "source": entry.get("source"),
+            "time": entry.get("time"),
+            "summary": summarize(entry),
+        }
+
+        if direction == DIRECTION_SUPPORTING:
+            supporting.append({**base, "basis": basis_of(entry)})
+        elif direction == DIRECTION_OPPOSING:
+            opposing.append({**base, "basis": basis_of(entry)})
+        else:
+            undetermined.append({**base, "reason": undetermined_reason(entry)})
+
+        # 该证据自带的"仍不足以确定"的限定（与方向分开）
+        for lim in limitations_of(entry):
+            undetermined.append({
+                **base,
+                "summary": lim["summary"],
+                "reason": lim["reason"],
+            })
+
+    has_conflict = bool(supporting) and bool(opposing)
+    resolution = (DIVERGENCE_RESOLUTION_CONFLICT if has_conflict
+                  else DIVERGENCE_RESOLUTION_CONSISTENT)
+
+    return {
+        "has_conflict": has_conflict,
+        "supporting": supporting,
+        "opposing": opposing,
+        "undetermined": undetermined,
+        "each_source": each_source,
+        "resolution": resolution,
+        "note": DIVERGENCE_NOTE,
     }
 
 
@@ -512,14 +742,34 @@ COMBINED_WATCH_INTERNAL = "watch_internal"
 COMBINED_WATCH_EXTERNAL = "watch_external"
 COMBINED_INTERNAL_ONLY = "internal_only"
 
+# S4-2 新增：证据方向不一致，且系统**不强行合并**
+COMBINED_CONFLICT_UNRESOLVED = "conflict_unresolved"
+
 # 没有外部条件时，外部信号按"未知"处理
 EXTERNAL_SIGNAL_UNKNOWN = "unknown"
 
 
 def combined_attention(predicted_attention: str | None,
-                        external_signal: str | None = None) -> str:
-    """把内部 B06 预测与外部天气信号合成一个关注等级（纯程序，不经过 LLM）。"""
+                        external_signal: str | None = None,
+                        evidence_divergence: dict | None = None) -> str:
+    """把内部 B06 预测与外部天气信号合成一个关注等级（纯程序，不经过 LLM）。
+
+    S4-2 起新增一条**分支**：证据台账给出 evidence_divergence 且
+    has_conflict 为真时，返回 "conflict_unresolved"。
+
+      - 现有三条规则**一个字都没改**，只是多了一个前置分支；
+      - 触发条件依赖 evidence_divergence 的**存在** ——
+        S1 / S2 / S3 的存档里没有这个字段，输出与原来逐值相同；
+      - "conflict_unresolved" **不是错误**，它表示"证据方向不一致，
+        系统保留分歧而不强行合并"。
+
+    为什么放在最前面：冲突本身就是要传达的结论。若先按内部/外部规则出结果，
+    等于把分歧强行合并掉了 —— 那正是这个分支要避免的事。
+    """
     from B07.weather import SIGNAL_DETERIORATING
+
+    if evidence_divergence and evidence_divergence.get("has_conflict"):
+        return COMBINED_CONFLICT_UNRESOLVED
 
     if predicted_attention == "WATCH":
         return COMBINED_WATCH_INTERNAL
@@ -528,12 +778,31 @@ def combined_attention(predicted_attention: str | None,
     return COMBINED_INTERNAL_ONLY
 
 
+def _find_evidence_divergence(run_bundle: dict) -> dict | None:
+    """从 run_bundle / 存档里找到 evidence_divergence（找不到就是 None）。"""
+    if not isinstance(run_bundle, dict):
+        return None
+    div = run_bundle.get("evidence_divergence")
+    if isinstance(div, dict):
+        return div
+    for key in ("structured_judgement", "judgement"):
+        holder = run_bundle.get(key)
+        if isinstance(holder, dict):
+            div = holder.get("evidence_divergence")
+            if isinstance(div, dict):
+                return div
+    return None
+
+
 def build_combined_attention(run_bundle: dict) -> dict:
     """合成关注等级 + 判定理由。
 
     run_bundle 只需要两个键：model_output（含 predicted_attention）与
     external_conditions（可为 None / 缺省）。存档里也是这两个键，
     所以回溯时可以用同一份存档直接复算。
+
+    S4-2：若 run_bundle（含存档）里有 evidence_divergence 且
+    has_conflict 为真，走 conflict_unresolved 分支。
     """
     mo = run_bundle.get("model_output") or {}
     internal = mo.get("predicted_attention")
@@ -543,9 +812,16 @@ def build_combined_attention(run_bundle: dict) -> dict:
     if not signal:
         signal = EXTERNAL_SIGNAL_UNKNOWN
 
-    value = combined_attention(internal, signal)
+    divergence = _find_evidence_divergence(run_bundle)
 
-    if value == COMBINED_WATCH_INTERNAL:
+    value = combined_attention(internal, signal, divergence)
+
+    if value == COMBINED_CONFLICT_UNRESOLVED:
+        div = divergence or {}
+        reason = (f"证据方向不一致（支持 {len(div.get('supporting') or [])} 条 / "
+                  f"相反 {len(div.get('opposing') or [])} 条），"
+                  f"系统保留分歧，不做强制合并，也不做投票")
+    elif value == COMBINED_WATCH_INTERNAL:
         reason = (f"内部 B06 预测为 {internal}，按内部信号直接提升关注度；"
                   f"外部信号 {signal} 不改变这一结论")
     elif value == COMBINED_WATCH_EXTERNAL:
@@ -559,6 +835,7 @@ def build_combined_attention(run_bundle: dict) -> dict:
         "value": value,
         "internal_predicted_attention": internal,
         "external_signal": signal,
+        "has_conflict": bool((divergence or {}).get("has_conflict")),
         "reason": reason,
     }
 

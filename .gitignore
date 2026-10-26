@@ -24,6 +24,13 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Claude Code 本地配置（个人工具设置，不进版本库）
+.claude/
+
+# B07 排障临时文件（正式产物在 B07/artifacts/ 下，文件名不带 _tmp_ 前缀）
+B07/artifacts/_tmp_*.txt
+B07/artifacts/*.bak.json
+
 # 日志文件
 *.log
 logs/

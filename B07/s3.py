@@ -215,8 +215,13 @@ def _make_offline_weather(case: dict):
     return _fake
 
 
-def _make_unavailable_weather():
-    """天气服务完全不可用（§六 降级行为）。"""
+def _make_unavailable_weather(error: str | None = None):
+    """天气服务完全不可用（§六 降级行为）。
+
+    error 缺省用原来的固定文案；S5-1 传入降级开关给出的显式失败原因。
+    provider 身份保持 "Offline-Fixture" —— 降级前后是同一个 provider，
+    区别只在它这次返回了什么。
+    """
 
     def _fake(location, forecast_window="now", _inject=None):
         return {
@@ -224,7 +229,7 @@ def _make_unavailable_weather():
             "provider": "Offline-Fixture",
             "retrieved_at": "2026-10-24T00:00:00+00:00",
             "data": None,
-            "error": "模拟天气服务不可用",
+            "error": error or "模拟天气服务不可用",
         }
 
     return _fake

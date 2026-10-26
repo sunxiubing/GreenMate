@@ -36,6 +36,7 @@
   - 不修改 LLM 提示词与固定问题
 """
 
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -56,6 +57,51 @@ _WINDOW_TO_HOURS = {"now": 0, "1h": 1, "3h": 3, "6h": 6,
 
 DEFAULT_LOCATION = "河北固安"
 DEFAULT_FORECAST_WINDOW = "6h"
+
+# --------------------------------------------------------------------------
+# S5-1：天气不可用开关（显式模拟 API 故障）
+# --------------------------------------------------------------------------
+#
+# 文档 S5 第二节要求"让天气 API 暂时不可用"，然后**先不要修**，
+# 观察系统还剩什么。本开关就是那个"弄坏一条证据"的手柄：
+#
+#   B07_WEATHER_UNAVAILABLE=1  →  天气 provider 直接返回一个"不可用"结果
+#   未设置（默认）              →  一切照常
+#
+# 为什么用开关而不是真断网：
+#   断网不可复现（机器上还有别的进程在用网、代理状态、时区…），
+#   而且会让"到底是不是天气不可用"和"是不是网络整体坏了"混在一起。
+#   显式开关只动天气这一条证据，其它证据、其它判据、其它进程一概不受影响。
+#
+# 硬约束：
+#   - 这是**一个分支**：判定逻辑只有 weather_unavailable_reason() 一处，
+#     provider 层只调用它；
+#   - 不新建 provider、不新建模块文件、不改判据阈值；
+#   - 失败必须显式：status=unavailable、data=None、error 写明原因，
+#     **不许留上次成功的值、不许写空 error、不许静默兜底**。
+WEATHER_UNAVAILABLE_ENV = "B07_WEATHER_UNAVAILABLE"
+
+#: 开关打开时写进 error 的说明（固定文案，但 error 本身非空且指明开关）
+WEATHER_UNAVAILABLE_ERROR = (
+    "weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): "
+    "模拟天气 API 故障，未发起真实天气请求"
+)
+
+
+def weather_unavailable_reason() -> str | None:
+    """开关是否打开；打开就返回显式失败原因，没打开返回 None。
+
+    这是 S5-1 降级开关的**唯一判定出处** —— 别处只调用它，
+    不各自判断环境变量（免得两处漂移）。
+
+    Returns:
+        None（正常）或一段非空的失败原因（降级）。
+    """
+    raw = os.environ.get(WEATHER_UNAVAILABLE_ENV, "")
+    if raw.strip() == "1":
+        return WEATHER_UNAVAILABLE_ERROR
+    return None
+
 
 # ---- 固定文案（判据口径，改这里等于改判据） ----
 
@@ -202,19 +248,8 @@ def build_weather_evidence(analysis_time: datetime,
     warnings: list[str] = []
 
     # ---- 取天气：只走 B05 的稳定工具接口 ----
-    try:
-        from B05.test_functions import get_weather_forecast
-
-        raw = get_weather_forecast(location, forecast_window=forecast_window)
-    except Exception as e:
-        # 连 B05 这层都调不动（导入失败等）——显式失败，不伪装
-        raw = {
-            "status": "error",
-            "provider": "Open-Meteo",
-            "retrieved_at": "",
-            "data": None,
-            "error": f"{type(e).__name__}: {e}",
-        }
+    # S5-1：降级开关在这里同样生效（走真实 provider 时不发起请求）。
+    raw = _safe_weather_call(location, forecast_window)
 
     status = raw.get("status") or "error"
     provider = raw.get("provider")
@@ -283,10 +318,40 @@ def build_weather_evidence(analysis_time: datetime,
 # S3-1：双点基线 + 相对判定
 # --------------------------------------------------------------------------
 
+def _is_pristine_weather_tool(tool) -> bool:
+    """这个 provider 是不是 B05 里那个真实走网络的天气工具。
+
+    S5-1 的降级开关有两种落点：
+      - 真实 provider（本函数为真）→ 由本模块拦截，不发起请求；
+      - 场景自己装上去的 provider（离线夹具，provider 身份是 Offline-Fixture）
+        → 由那个 provider 自己处理开关，这样它报出来的身份和失败原因
+        都是它自己的，不会出现"ctx 说是 Open-Meteo、raw 说是 Offline-Fixture"
+        这种同一轮里自相矛盾的情况。
+    """
+    return (getattr(tool, "__module__", "") == "B05.test_functions"
+            and getattr(tool, "__name__", "") == "get_weather_forecast")
+
+
 def _safe_weather_call(location: str, forecast_window: str) -> dict:
-    """调 B05 的天气工具；连调用层都炸了就显式返回 error（不造数据）。"""
+    """调 B05 的天气工具；连调用层都炸了就显式返回 error（不造数据）。
+
+    S5-1：先看降级开关。开关打开且走的是真实 provider 时
+    **根本不发起天气请求**，直接返回 provider 层的"不可用"结果 ——
+    status=unavailable、data=None、error 写明原因，
+    不留任何上次成功的值。
+    """
     try:
         from B05.test_functions import get_weather_forecast
+
+        reason = weather_unavailable_reason()
+        if reason and _is_pristine_weather_tool(get_weather_forecast):
+            return {
+                "status": "unavailable",
+                "provider": "Open-Meteo",
+                "retrieved_at": None,
+                "data": None,
+                "error": reason,
+            }
 
         return get_weather_forecast(location, forecast_window=forecast_window)
     except Exception as e:

@@ -6,7 +6,9 @@
 # B04 需要：scikit-learn（TF-IDF 向量检索）
 # B05 需要：requests（SoilGrids MCP HTTP 调用）
 # B06 需要：joblib（模型持久化）
-# B07 需要：scikit-learn + numpy（加载 B06 模型推理）、pytest（不变量测试）
+# B07 需要：scikit-learn + numpy（加载 B06 模型推理）、pytest（S1–S5 不变量测试）
+#      其中 B07 的 S3–S5（B03 天气接入层 / S4 证据身份层与分歧 / S5 证据退化）
+#      没有引入任何新的运行时依赖，全部复用上面已列出的库。
 
 # Web 框架
 fastapi==0.115.12
@@ -31,5 +33,6 @@ matplotlib==3.9.4
 
 # 测试
 # 说明：B07/S1 只用到已有的 fastapi / pydantic / openai / httpx / scikit-learn / joblib，
-#      没有引入新的运行时依赖；pytest 是为了跑 B07 的不变量测试。
+#      没有引入新的运行时依赖；pytest 是为了跑 B07 的不变量测试
+#      （S1–S5 共 169 项：test_s1 / test_s2 / test_s3 / test_weather / test_s4 / test_s4_3 / test_s5）。
 pytest==9.1.1

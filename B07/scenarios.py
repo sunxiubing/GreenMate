@@ -81,6 +81,29 @@ SCENARIOS = {
         "external_weather": True,
         "question": FIXED_QUESTION,
     },
+    # ---- S4：证据分歧场景（内部 WATCH × 外部转好）----
+    # 锚点不是"挑一个稳定窗口"，而是 S4-1 实测选出的那个
+    # **B06 真实输出 WATCH** 的窗口（B07.s4_windows）。
+    "S4": {
+        "key": "S4",
+        "title": "S4 证据分歧：内部 WATCH × 外部转好",
+        "anchor_policy": "s4_watch_window",
+        "expect_stability": False,
+        "rich_failure": True,
+        "question": FIXED_QUESTION,
+    },
+    # ---- S5：证据退化场景 ----
+    # 场景定义与 S4 **一字不差**（同一锚点、同一窗口、同一判据、同一问题），
+    # 唯一区别是本次运行里天气证据是否可用（见 B07/weather.py 的降级开关）。
+    # 这里只是给存档一个自解释的标签，不改任何行为。
+    "S5": {
+        "key": "S5",
+        "title": "S5 证据退化：天气证据不可用（与 S4 同场景）",
+        "anchor_policy": "s4_watch_window",
+        "expect_stability": False,
+        "rich_failure": True,
+        "question": FIXED_QUESTION,
+    },
 }
 
 
@@ -160,6 +183,25 @@ def select_window(scenario_key: str, samples: list | None = None,
         result["data_range"] = [rows[0].timestamp.isoformat(),
                                 rows[-1].timestamp.isoformat()]
         return result
+
+    if scenario["anchor_policy"] == "s4_watch_window":
+        # S4 的锚点由 S4-1 的窗口扫描给出：B06 **真实输出 WATCH** 的窗口，
+        # 内部状态本身不稳定，且两套 DTW 参考集判定一致。
+        from B07.s4_windows import pick_watch_window, scan_watch_windows
+
+        picked = pick_watch_window(scan_watch_windows())
+        sel = picked.get("selected")
+        if not sel:
+            raise RuntimeError(
+                f"S4 没有选出 WATCH 窗口：{picked.get('reason')}"
+            )
+        return {
+            "anchor_time": datetime.fromisoformat(sel["end_time"]),
+            "selected": sel,
+            "reason": picked.get("reason"),
+            "notes": picked.get("notes") or [],
+            "fallback_to_s2": picked.get("fallback_to_s2"),
+        }
 
     raise ValueError(f"未实现的 anchor_policy：{scenario['anchor_policy']}")
 
