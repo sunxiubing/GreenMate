@@ -93,7 +93,8 @@ OFFLINE_CASE_LABEL = "构造用例（不是实测）"
 
 def build_offline_cooling_context(anchor: datetime | str | None = None,
                                   location: str = WEATHER_LOCATION,
-                                  forecast_window: str = WEATHER_WINDOW) -> dict:
+                                  forecast_window: str = WEATHER_WINDOW,
+                                  case: str = OFFLINE_CASE) -> dict:
     """用 S3 的离线夹具构造"未来降温 / 外部转好"的外部条件上下文。
 
     夹具数值不在本模块，全部来自 B07.s3.OFFLINE_CASES。
@@ -102,11 +103,17 @@ def build_offline_cooling_context(anchor: datetime | str | None = None,
         anchor:        分析时刻（默认 S4 选出的 WATCH 窗口末点）。
         location:      取数地点。
         forecast_window: 未来窗口。
+        case:          用 S3 夹具里的哪一个构造用例。
+                       **默认值 = OFFLINE_CASE（"improving"）**，
+                       所以不传时的行为与改动前逐字节一致。
+                       其它可选值就是 B07.s3.OFFLINE_CASES 里已有的那几个
+                       （"deteriorating" / "stable" / "improving"）——
+                       本模块**不新增任何夹具数据**，只是把已有的分支接出来。
 
     Returns:
         {"context": <build_external_context 的原样返回>,
          "raw_forecast": <同一次假实现下的原始天气返回（S4-2 取 provider 用）>,
-         "case": "improving",
+         "case": <实际使用的构造用例名>,
          "is_constructed": True,
          "label": "构造用例（不是实测）",
          "note": <说明文字>}
@@ -120,7 +127,11 @@ def build_offline_cooling_context(anchor: datetime | str | None = None,
     if isinstance(anchor, str):
         anchor = datetime.fromisoformat(anchor)
 
-    case = OFFLINE_CASES[OFFLINE_CASE]
+    if case not in OFFLINE_CASES:
+        raise KeyError(
+            f"未知构造用例 {case!r}，B07.s3.OFFLINE_CASES 现有："
+            f"{sorted(OFFLINE_CASES)}")
+    case_def = OFFLINE_CASES[case]
 
     # S5-1：降级开关打开时，provider 层直接返回"不可用"。
     # 判定逻辑只有 B07.weather.weather_unavailable_reason() 一处；
@@ -130,7 +141,7 @@ def build_offline_cooling_context(anchor: datetime | str | None = None,
     if reason:
         provider_impl = _make_unavailable_weather(reason)
     else:
-        provider_impl = _make_offline_weather(case)
+        provider_impl = _make_offline_weather(case_def)
 
     restore = _install_fake_weather(None, provider_impl)
     try:
@@ -145,12 +156,12 @@ def build_offline_cooling_context(anchor: datetime | str | None = None,
     return {
         "context": ctx,
         "raw_forecast": raw_forecast,
-        "case": OFFLINE_CASE,
+        "case": case,
         "is_constructed": True,
         "label": OFFLINE_CASE_LABEL,
         "degraded": bool(reason),
         "note": (
-            f"外部条件来自 S3 的离线夹具（case={OFFLINE_CASE}），"
+            f"外部条件来自 S3 的离线夹具（case={case}），"
             f"**{OFFLINE_CASE_LABEL}**。夹具数值定义在 B07/s3.py 的 "
             f"OFFLINE_CASES 里，本模块不含任何天气数值字面量。"
             f"signal 由 B07.weather.build_external_context 算出，"

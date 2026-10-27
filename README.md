@@ -122,7 +122,12 @@ GreenMate/
 │   ├── s5_report.py       # 由 s5_raw_result.json 生成 s5_report.md
 │   ├── s5_show.py         # S5 一步到位展示（只读存档，不调 LLM）
 │   │
-│   ├── tests/             # S1–S5 不变量测试（pytest，共 169 项）
+│   ├── innovation1.py     # 创新点 1：连续时间认知消融（2 锚点 × 3 档 = 6 次 LLM）
+│   ├── innovation2.py     # 创新点 2：可追溯证据的自动溯源器（只读 run 存档，0 次 LLM）
+│   ├── innovation3.py     # 创新点 3：第二遍走查器（C1–C5 机器检查 + 12 节走查）
+│   ├── verify_innovation2.py  # 创新点 2 的独立复核脚本（只读，不修改任何文件）
+│   │
+│   ├── tests/             # 不变量测试（pytest，共 259 项：S1–S5 169 + 创新点 1/2/3 90）
 │   │   ├── conftest.py    # 路径注入 + 假 LLM 客户端
 │   │   ├── test_s1_invariants.py
 │   │   ├── test_s2_invariants.py
@@ -130,7 +135,10 @@ GreenMate/
 │   │   ├── test_s3_invariants.py
 │   │   ├── test_s4_invariants.py      # 44 项
 │   │   ├── test_s4_3_invariants.py    # 15 项
-│   │   └── test_s5_invariants.py      # 17 项
+│   │   ├── test_s5_invariants.py      # 17 项
+│   │   ├── test_innovation1_invariants.py   # 28 项（连续时间认知消融不变量）
+│   │   ├── test_innovation2_invariants.py   # 45 项（溯源形状 / 红线 / 台账自洽）
+│   │   └── test_innovation3_invariants.py   # 17 项（词表多字 / C2 / C4 豁免 / 确定性）
 │   ├── runs/              # 运行时生成的 run 存档（**进版本库**：证据链的一部分）
 │   │   ├── index.json     # 索引：run_id → 摘要
 │   │   └── run_XXX/run.json
@@ -149,7 +157,16 @@ GreenMate/
 │       ├── s4_3_contrast.json
 │       ├── s5_report.md
 │       ├── s5_raw_result.json
-│       └── model_table.md  # 跨阶段 LLM 模型对照表（由 s4_report.py 生成）
+│       ├── model_table.md  # 跨阶段 LLM 模型对照表（由 s4_report.py 生成）
+│       │
+│       ├── innovation1_report.md            # 创新点 1 报告（消融结论 + 泄露判据）
+│       ├── innovation1_runs.json            # 创新点 1 原始结果（6 次回答 + 量化指标）
+│       ├── innovation1_baseline_contexts.json  # 创新点 1 回归基线（默认上下文逐字节对照）
+│       ├── innovation2_report.md            # 创新点 2 报告（溯源链实录 + V1–V6 判定）
+│       ├── innovation2_trace.json           # 创新点 2 溯源结果（规格固定格式）
+│       ├── innovation2_trace_detail.json    # 创新点 2 溯源详版（判定依据 / 匹配信号）
+│       ├── innovation3_report.md            # 创新点 3 走查报告（12 节 + C1–C5）
+│       └── innovation3_runs.json            # 创新点 3 三次运行结构化结果 + 检查项
 │
 └── docs/                  # 项目设计文档
     ├── b01_b03_design.md  # SIMULATED/PUBLIC 数据源定义
@@ -599,6 +616,9 @@ SoilGrids MCP（`https://gateway.pipeworx.io/soilgrids/mcp`）补齐土壤数据
 | B07 — S3 天气证据接入层：接 B03 未来外部天气（走 B05 工具接口） | ✅ 完成 |
 | B07 — S4 证据身份层与证据分歧：证据有身份、方向由程序规则判定、分歧结构化 | ✅ 完成 |
 | B07 — S5 证据退化：一次只弄坏一条证据，看系统还剩什么 | ✅ 完成 |
+| B07 — 创新点 1：连续时间认知消融（拿掉 → 恢复 → 比较） | ✅ 完成 |
+| B07 — 创新点 2：可追溯证据的自动溯源器（结论句反查工具调用） | ✅ 完成 |
+| B07 — 创新点 3：让系统学会"有些话现在不能说"（C1–C5 机器检查 + 12 节走查） | ✅ 完成 |
 
 ---
 
@@ -1376,7 +1396,7 @@ S5 做的是**减法**：不加功能，只把一条已有证据主动弄坏，�
 # ── 收尾 ─────────────────────────────────────────────────
 ./venv/Scripts/python.exe -m B07 list                  # 列出所有 run 存档
 ./venv/Scripts/python.exe -m B07 explain run_001       # 回溯任意一次（含复算一致性）
-./venv/Scripts/python.exe -m pytest B07/tests -q       # 169 项不变量测试
+./venv/Scripts/python.exe -m pytest B07/tests -q       # 259 项不变量测试
 ```
 
 | 步骤 | 调 LLM | 落盘副作用 |
@@ -1389,3 +1409,192 @@ S5 做的是**减法**：不加功能，只把一条已有证据主动弄坏，�
 
 > `B07/runs/` 与 `B07/artifacts/` **都进版本库** —— 存档和阶段报告就是证据链本身，
 > 报告里的每个数字都来自它们，不能当临时文件清掉。
+
+---
+
+## B07 — 第二遍走查：创新点 1 / 2 / 3（证明轮）
+
+S1–S5 是**把系统做出来**；创新点 1/2/3 是**证明它做到了什么、没做到什么**。
+
+三者的共同硬约束（本轮全部遵守）：
+
+- 只新增模块与产物，**不改 S1–S5 已有逻辑**，不改 `SYSTEM_PROMPT` / 固定问题 / 任何判据阈值；
+- 不碰 B01–B06；
+- 报告里的每个数字都来自实测输出（`B07/runs/` 里的存档或创新点自己落盘的原始结果），**不手工编**；
+- 失败必须显式暴露，不许用静态文案伪装成功。
+
+| 创新点 | 模块 | 性质 | LLM 调用 | 主要产物 |
+|---|---|---|---|---|
+| **1** 连续时间认知消融 | `B07/innovation1.py` | 实验（2 锚点 × 3 档 = 6 次） | **6 次** | `innovation1_runs.json` / `innovation1_report.md` / `innovation1_baseline_contexts.json` |
+| **2** 可追溯证据的自动溯源器 | `B07/innovation2.py`（+ `B07/verify_innovation2.py`） | 审计（只读 run 存档） | **0 次** | `innovation2_trace.json` / `innovation2_trace_detail.json` / `innovation2_report.md` |
+| **3** 让系统学会"有些话现在不能说" | `B07/innovation3.py` | 走查 + 机器检查（C1–C5） | **1 次**（只新跑 run_agree） | `innovation3_runs.json` / `innovation3_report.md` |
+
+### 创新点 1 —— 连续时间驱动的状态演化认知与趋势预测
+
+**问的问题**：LLM 到底是因为"看到了历史"才懂，还是本来就懂？把给 LLM 看的东西按档位
+拿掉 → 恢复 → 比较，看结论层与措辞层怎么变。
+
+**设计**（`B07/innovation1.py`）：2 个锚点 × 3 个信息档位 = 6 次回答。
+
+| 档位 | include（渲染哪些块） | 给 LLM 看什么 |
+|---|---|---|
+| `current` | ① ④ ⑤ | 只有当前温度 / 湿度 / 光照 |
+| `current_history` | ① ② ④ ⑤ | 再加最近 3 小时历史过程 |
+| `current_history_prediction` | ① ② ③ ④ ⑤ | 再加 B06 短时预测 |
+
+- 锚点 A = `run_012`（S1 代表）、锚点 B = `run_014`（S2 代表），两锚点都取自已落盘存档；
+- 固定问题与 `SYSTEM_PROMPT` 指纹：`question=d3cc394bfcbe`、`system_prompt=aa1400cf8568`；
+- 每次回答都做**泄露检查**（档 1 上下文里不允许出现历史数值或 B06 的量）。
+
+**实测结论**（以 `B07/artifacts/innovation1_report.md` 为准，下面数字取自
+`innovation1_runs.json`）：
+
+- **泄露判据（红线）：通过。** 档 1 两个锚点的回答引用历史温度均为 **0 处**
+  （`history_temp_citations = []`），上下文零泄露标记 —— 不是"上下文里偷偷塞了历史"。
+- **结论层分叉：成立。** 档 2 里 A 判"稳定"、B 判"不稳定"，且 B 的档 2 回答引用了
+  历史温度 `[25.3]`（档 1 同一锚点为 0 处）—— 这是"历史过程给了额外认知"的直接证据。
+- **措辞层分叉：成立。** 跨锚点 4-gram jaccard 0.1620 → 0.0960（档 3 为 0.1547），
+  数值 jaccard 0.5000 → 0.2500（档 3 为 0.3500）。
+- **趋势 ≠ 预测：成立。** 档 2 的 B06 数值引用为 **0 处**，档 3 为 **4 处**
+  （`confidence` / `confidence_normal`）；档 2 在谈过去，档 3 才开始谈下一窗口。
+
+**没证明的**：只验证了"改变给 LLM 看什么会改变认知"，**没有**证明这种认知在真实大棚里成立。
+
+```bash
+# 完整实验（6 次 LLM 调用）+ 报告
+./venv/Scripts/python.exe -m B07.innovation1
+# 只重建报告（不调 LLM）
+./venv/Scripts/python.exe -m B07.innovation1 --report-only
+# 按当前指标算法离线刷新 runs.json 里的量化指标（不改回答）
+./venv/Scripts/python.exe -m B07.innovation1 --refresh-metrics
+```
+
+> ⚠ `innovation1.py` **不认 `--help`**：任何参数都会被忽略并直接跑完整实验（6 次 LLM 调用）。
+> 上面的模式必须原样写。
+
+### 创新点 2 —— 把"多源信息"真正变成"可追溯证据"
+
+**问的问题**：LLM 回答里的每一句结论，能不能反着追回到"哪次真实发生的工具调用"？
+四类信息（历史 / 天气 / 知识 / 模型）是不是各自带身份、各自起作用？
+
+**性质：审计 + 证明，不是开发。** 0 次 LLM 调用，全部基于 S4/S5 已落盘的 run 存档。
+
+- 溯源链：结论句 → `structured_judgement.<字段>` → `evidence_ledger.entries[i]`
+  → 那次**真实发生**的工具调用（工具名 + arguments + status）；
+- 台账条目自报身份：`source_type` / `source` / `time` / `status` / `result` / `error`
+  / `direction` / `adopted` / `ext`（**没有** `role` 字段 —— 角色由 `source_type` 决定，报告里已写明）；
+- V1–V6 判定：`run_082` / `run_084` / `run_057` 三个 run 全部 ✅ 通过；
+  全库 **63 个**带台账 run 的系统级扫描同样是 V1–V6 **63 / 63 全通过、异常 0 个**
+  （`run_036` / `run_037` 是 `status=failed` 的失败留痕，V1 属于"空真"）；
+- 匹配强弱**如实分档**：`strong` = 数值命中或命中有区分度的特征词，
+  `weak` = 只命中「温度 / 湿度 / 模型」这类通用词 —— 弱匹配只等于"这句话谈的是这一类东西"；
+- **红线**：谈天气必须有天气工具调用记录（V3）、谈知识必须真检索（V4）。
+
+**没证明的**：① "四类作用不可互换"是语义判断，机器只能验证"有没有分别标注"；
+② 黑盒 A/B 对照沿用 S4-3 的旧数据，**那组数据本身分不出高下**，本轮没有重跑，只能如实记录。
+
+**终端输出（12 节走查，不是"一堆 PASS"）**：
+`python -m B07.innovation2` 直接在终端打印 12 节 —— 审计对象 / 溯源链实录 /
+原始回答 / 四类证据身份表 / 工具调用总账 / V1–V6 逐项判定与依据 / 匹配强弱分档 /
+降级证据 / 限制陈述溯源 / 全库系统扫描 / 结论 / 复现命令。
+每一节都是**真实内容**：结论句原文、`structured_judgement` 字段路径、
+`evidence_ledger.entries[i]` 的 source/time/status、真实工具调用名 + arguments +
+认领依据、V6 的 `total_calls=5 / adopted_calls=4 / not_adopted=1` 这类实数。
+每项 V 判定后面都跟着它的依据行（如 V2 会逐条列出
+`evidence_ledger.entries[0] → B02.get_environment_history（status=ok）✔ 找到｜认领依据: [...]`），
+不是光一个 `PASS`。
+
+```bash
+# 全部溯源 + 重新生成报告（不联网、不调 LLM）
+./venv/Scripts/python.exe -m B07.innovation2
+# 只重建报告（读已落盘的 trace）
+./venv/Scripts/python.exe -m B07.innovation2 --report-only
+# 指定 run
+./venv/Scripts/python.exe -m B07.innovation2 --run run_082
+# —— 复核入口：老师任意指出一句 ——
+./venv/Scripts/python.exe -m B07.innovation2 --run run_082 --list-claims
+./venv/Scripts/python.exe -m B07.innovation2 --run run_082 --claim-index 6 --show
+./venv/Scripts/python.exe -m B07.innovation2 --run run_082 --claim "综上所述，……" --show
+```
+
+> ⚠ 已知问题（**本轮只做文档，未改代码**）：`B07/verify_innovation2.py` 目前解析不到记录 ——
+> 它按 `runs` / `records` / `claims` 三个键找记录，而 `innovation2_trace.json` 的实际顶层键是
+> `traces` / `system_scan`，所以脚本会打印"所有候选文件里都没解析出记录"。
+> 该脚本的输出 `B07/artifacts/verify_innovation2.txt` 是可再生的调试日志，已在 `.gitignore` 里排除。
+
+### 创新点 3 —— 让系统学会"有些话现在不能说"
+
+**问的问题**：证据条件变了（方向一致 / 出现分歧 / 暂时缺失），系统的判断是不是跟着变？
+证据不支持的话，它会不会硬说？缺证据时，它会不会偷偷补齐？
+
+**性质：走查 + 机器检查。** 只新跑 **1 次** LLM（run_agree），另外两次复用已落盘存档：
+
+| 运行 | 来源 | 外部条件 | `combined_attention` |
+|---|---|---|---|
+| `run_agree` | **本轮新跑**（`run_106`） | `external_deteriorating`（与内部同向） | `watch_internal` |
+| `run_conflict` | 复用 `run_082` | `external_improving`（与内部反向） | `conflict_unresolved` |
+| `run_missing_weather` | 复用 `run_084` | `external_unavailable` | `watch_internal` |
+
+**唯一变量 = 天气条件**：anchor（`2026-10-21T09:30:00`）、历史窗口（`s1-live-001`）、
+B06 窗口、知识 query、固定问题（`d3cc394bfcbe`）、system prompt（`aa1400cf8568`）全部一致，
+报告里用指纹逐条打印自证。run_agree 的天气用 S3 **已有**的离线夹具构造用例
+`deteriorating`（`B07/s3.py::OFFLINE_CASES`）—— **不新建夹具数据、不真调天气 API**。
+
+**检查项 C1–C5（全部基于实际 run 存档，不许编）**
+
+| 检查项 | 含义 | 判定 |
+|---|---|---|
+| C1 | 分歧保留（第二步） | **PASS** —— `conflict_unresolved`、has_conflict=True、支持 3 / 相反 1 都非空、回答两侧表达都命中 |
+| C2 | 不该出现的确定话（第三步，**红线**） | **PASS** —— 9 项多字词表命中 **0** 处 |
+| C3 | 判断范围收缩（第四步） | **PASS** —— 变化字段 `external_signal` / `reason`，回答明说"不可用"，历史 / 模型 / 结论三项仍在 |
+| C4 | 没有偷偷补齐（第五步，**红线**） | **PASS** —— 8 句逐句扫描，违规 **0** 句（含免责词的合规声明整句豁免且已标出） |
+| C5 | 三次对照成立（第六步） | **PASS** —— 五维齐全，核心三维三档互不相同 |
+
+**必须一起读的两条诚实结论**（报告里同样写出来了）：
+
+1. `run_106` 与 `run_084` 的 `combined_attention.value` **同为 `watch_internal`** ——
+   根因是 `combined_attention()` 的分支顺序（`predicted=WATCH` 分支先于外部信号分支命中）。
+   所以 C3 判定的是**记录层**（external_signal / reason / 证据构成）发生变化，
+   而不是档位字符串发生变化。
+2. C5 的"确定性断言数"三档全为 0（这一维本轮没有变化）—— 已按"如实写出来"处理。
+
+```bash
+# 完整走查（跑 run_agree，1 次 LLM 调用 + 全部检查 + 写产物）
+./venv/Scripts/python.exe -m B07.innovation3
+# 离线重生成走查（不调 LLM，只读 innovation3_runs.json）
+./venv/Scripts/python.exe -m B07.innovation3 --report-only
+# 只看某一节（1..12）
+./venv/Scripts/python.exe -m B07.innovation3 --section 3
+```
+
+**确定性重放自检**：连续两次 `--report-only` 后报告文件内容不变，
+`git diff --stat B07/artifacts/innovation3_report.md` 无输出。
+
+### 创新点 1/2/3 复现命令汇总
+
+```bash
+# ── 创新点 1 ────────────────────────────────────────────
+./venv/Scripts/python.exe -m B07.innovation1                # 6 次 LLM + 报告
+./venv/Scripts/python.exe -m B07.innovation1 --report-only  # 只重建报告
+
+# ── 创新点 2 ────────────────────────────────────────────
+./venv/Scripts/python.exe -m B07.innovation2                # 溯源 + 报告 + 终端 12 节走查（0 次 LLM）
+./venv/Scripts/python.exe -m B07.innovation2 --report-only  # 只重建报告
+./venv/Scripts/python.exe B07/verify_innovation2.py         # 独立复核（只读；见上面的已知问题）
+
+# ── 创新点 3 ────────────────────────────────────────────
+./venv/Scripts/python.exe -m B07.innovation3                # 1 次 LLM + C1–C5 + 12 节走查
+./venv/Scripts/python.exe -m B07.innovation3 --report-only  # 离线重生成走查
+./venv/Scripts/python.exe -m B07.innovation3 --section 3    # 只看某一节
+
+# ── 收尾 ─────────────────────────────────────────────────
+./venv/Scripts/python.exe -m pytest B07/tests -q            # 259 项不变量测试
+```
+
+| 创新点 | 调 LLM | 落盘副作用 |
+|---|---|---|
+| 创新点 1 | 是（6 次） | 新增 `B07/runs/run_XXX/`，**覆盖** `innovation1_runs.json` / `innovation1_report.md` |
+| 创新点 2 | 否 | **覆盖** `innovation2_trace.json` / `innovation2_trace_detail.json` / `innovation2_report.md` |
+| 创新点 3 | 是（1 次） | 新增 `B07/runs/run_XXX/`，**覆盖** `innovation3_runs.json` / `innovation3_report.md` |
+| `--report-only` / `--show` / `--refresh-metrics` | 否 | 只读或只重写报告，不产生新的 run |
+

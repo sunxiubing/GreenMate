@@ -1,0 +1,1134 @@
+{
+  "schema": "innovation3/v1",
+  "generated_at": "2026-10-27T16:04:43.392966+00:00",
+  "runs": {
+    "run_agree": {
+      "run_id": "run_109",
+      "created_at": "2026-10-28T00:04:22",
+      "status": "success",
+      "scenario": "S5",
+      "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+      "analysis_time": "2026-10-21T09:30:00",
+      "location": "A区-3号温室",
+      "model_path": "D:\\GreenMate\\B06\\artifacts\\b06-20261020-v1",
+      "history_window": {
+        "start": "2026-10-21T07:00:00",
+        "end": "2026-10-21T09:30:00",
+        "count": 6,
+        "stability_passed": false
+      },
+      "model": {
+        "window_id": "s1-live-001",
+        "predicted_attention": "WATCH",
+        "confidence": 1.0,
+        "model_version": "b06-20261020-v1",
+        "label_source": "rule_v1"
+      },
+      "combined_attention": {
+        "value": "watch_internal",
+        "internal_predicted_attention": "WATCH",
+        "external_signal": "external_deteriorating",
+        "has_conflict": false,
+        "reason": "内部 B06 预测为 WATCH，按内部信号直接提升关注度；外部信号 external_deteriorating 不改变这一结论"
+      },
+      "divergence": {
+        "has_conflict": false,
+        "supporting": [
+          {
+            "source_type": "B02",
+            "source": "B02/environment_samples",
+            "time": "2026-10-21T09:30:00",
+            "summary": "内部状态不稳定、末段温度上升",
+            "basis": "稳定判据未通过（近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化））且末段温度上升"
+          },
+          {
+            "source_type": "B06",
+            "source": "B06/b06-20261020-v1",
+            "time": "2026-10-21T09:30:00",
+            "summary": "模型输出 WATCH（confidence=1.0, model_version=b06-20261020-v1）",
+            "basis": "B06 在该窗口上真实输出 WATCH"
+          },
+          {
+            "source_type": "B03",
+            "source": "B03/Open-Meteo（离线构造用例）",
+            "time": "2026-10-21T09:30:00",
+            "summary": "外部条件判定 external_deteriorating（relative_delta）",
+            "basis": "外部条件判定为 external_deteriorating：相对基线差分（主判定）：降水概率 20.0% → 60.0%（Δ=40.0 个百分点，阈值 ±30.0 个百分点） → external_deteriorating；温度 Δ-1.0℃、云量 Δ50.0%（只作描述，不参与判定）"
+          },
+          {
+            "source_type": "B04",
+            "source": "B04/knowledge_base",
+            "time": "2026-10-27T16:04:22.989085+00:00",
+            "summary": "知识检索 '过期数据导致温室调控决策基于过时信息' 命中 5 条，主命中 CH-003-02（score=0.3626655720824688）",
+            "basis": "该条目提供『决策基于不完整信息可能导致作物受损』这一支持依据"
+          }
+        ],
+        "opposing": [],
+        "undetermined": [
+          {
+            "source_type": "B03",
+            "source": "B03/Open-Meteo（离线构造用例）",
+            "time": "2026-10-21T09:30:00",
+            "summary": "外部天气取的是窗口末时刻单点值",
+            "reason": "取的是窗口末时刻单点值而非窗口极值，窗口内出现过的更高/更低值可能被漏掉"
+          },
+          {
+            "source_type": "B04",
+            "source": "B04/knowledge_base",
+            "time": "2026-10-27T16:04:22.989085+00:00",
+            "summary": "知识证据只支持『需要关注』",
+            "reason": "只支持『要关注』，不能证明未来一定恶化 —— 该条目是方法论提示，不是本温室的实测结论"
+          }
+        ],
+        "each_source": {
+          "B02": "supporting",
+          "B06": "supporting",
+          "B03": "supporting",
+          "B04": "supporting"
+        },
+        "resolution": "各证据方向一致",
+        "note": "方向由程序规则判定（B07/evidence_ledger.judge_direction），不经过 LLM；三列装的是判断项，不是原始证据；NORMAL 不等于确认无异常；系统不做投票，也不做强制合并。"
+      },
+      "external": {
+        "available": true,
+        "signal": "external_deteriorating",
+        "judge_method": "relative_delta",
+        "basis": "相对基线差分（主判定）：降水概率 20.0% → 60.0%（Δ=40.0 个百分点，阈值 ±30.0 个百分点） → external_deteriorating；温度 Δ-1.0℃、云量 Δ50.0%（只作描述，不参与判定）",
+        "precip_delta": 40.0,
+        "temp_delta": -1.0,
+        "cloud_delta": 50.0,
+        "error": null,
+        "baseline_point": {
+          "timestamp": "2026-10-24T22:00",
+          "temperature": 15.0,
+          "humidity": 70.0,
+          "precipitation_probability": 20.0,
+          "cloud_cover": 30.0,
+          "solar_radiation": 0.0,
+          "weather_code": 0,
+          "weather_description": "多云"
+        },
+        "forecast_point": {
+          "timestamp": "2026-10-25T04:00",
+          "temperature": 14.0,
+          "humidity": 70.0,
+          "precipitation_probability": 60.0,
+          "cloud_cover": 80.0,
+          "solar_radiation": 0.0,
+          "weather_code": 0,
+          "weather_description": "小雨"
+        }
+      },
+      "entries": [
+        {
+          "evidence_id": "EV-B02-01",
+          "source_type": "B02",
+          "source": "B02/environment_samples",
+          "time": "2026-10-21T09:30:00",
+          "status": "ok",
+          "error": null,
+          "adopted": true,
+          "direction": "supporting",
+          "case": null,
+          "provider": null,
+          "degraded": null,
+          "knowledge_query": null,
+          "result_signal": null,
+          "stability_conclusion": "近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化）"
+        },
+        {
+          "evidence_id": "EV-B06-01",
+          "source_type": "B06",
+          "source": "B06/b06-20261020-v1",
+          "time": "2026-10-21T09:30:00",
+          "status": "ok",
+          "error": null,
+          "adopted": true,
+          "direction": "supporting",
+          "case": null,
+          "provider": null,
+          "degraded": null,
+          "knowledge_query": null,
+          "result_signal": null,
+          "stability_conclusion": null
+        },
+        {
+          "evidence_id": "EV-B03-01",
+          "source_type": "B03",
+          "source": "B03/Open-Meteo（离线构造用例）",
+          "time": "2026-10-21T09:30:00",
+          "status": "ok",
+          "error": null,
+          "adopted": true,
+          "direction": "supporting",
+          "case": "deteriorating",
+          "provider": "Offline-Fixture",
+          "degraded": false,
+          "knowledge_query": null,
+          "result_signal": "external_deteriorating",
+          "stability_conclusion": null
+        },
+        {
+          "evidence_id": "EV-B04-01",
+          "source_type": "B04",
+          "source": "B04/knowledge_base",
+          "time": "2026-10-27T16:04:22.989085+00:00",
+          "status": "ok",
+          "error": null,
+          "adopted": true,
+          "direction": "supporting",
+          "case": null,
+          "provider": null,
+          "degraded": null,
+          "knowledge_query": "过期数据导致温室调控决策基于过时信息",
+          "result_signal": null,
+          "stability_conclusion": null
+        }
+      ],
+      "tool_calls": [
+        {
+          "tool_name": "B02.get_environment_history",
+          "status": "ok",
+          "adopted": true,
+          "purpose": "取历史窗口 6 点（结构化判断的内部依据）"
+        },
+        {
+          "tool_name": "B05.get_current_environment",
+          "status": "ok",
+          "adopted": false,
+          "purpose": "取库内最新一条（仅作 latest_in_db 参考）"
+        },
+        {
+          "tool_name": "B06.predict_window",
+          "status": "ok",
+          "adopted": true,
+          "purpose": "B06 短时预测（只加载不重训）"
+        },
+        {
+          "tool_name": "B05.get_weather_forecast",
+          "status": "ok",
+          "adopted": true,
+          "purpose": "取外部条件（基线点 + 未来 6h 预报点）"
+        },
+        {
+          "tool_name": "B05.search_tomato_knowledge",
+          "status": "ok",
+          "adopted": true,
+          "purpose": "方法论知识检索（决策基于不完整信息的风险）"
+        }
+      ],
+      "answer": "根据当前的监测数据和预测模型，番茄生长环境状态需要提高关注。以下是具体分析：\n\n1. **当前环境**：2026-10-21T09:30:00 时刻，大棚内的温度为 28.6℃，湿度为 66.9%，光照为 42492.0 lux。这些数据是模拟数据，非真实传感器读数。\n\n2. **最近历史变化**：在过去的 3 小时内（2026-10-21T07:00:00 至 2026-10-21T09:30:00），环境状态不稳定。温度波动 4.4℃ 超过了阈值 2.0℃；湿度从 92.6% 下降到 66.9%，变化 -25.7% 超过了阈值 3.0%；湿度单步最大变化 6.2% 超过了阈值 1.5%。湿度全程单调下降，违反了稳定判据。\n\n3. **短时预测**：B06 模型（版本 b06-20261020-v1）预测接下来的关注程度为 WATCH，置信度为 1.0。该模型只覆盖温度、湿度和光照三项指标，测试集指标显示存在漏报风险。\n\n4. **外部天气条件**：未来窗口（2026-10-25T04:00）的降水概率从 20.0% 增加到 60.0%，增加了 40.0 个百分点，超过了阈值 ±30.0 个百分点，判定为 external_deteriorating。但需注意，这是窗口末时刻的单点值，中途可能有更高或更低的值被漏掉。\n\n综上所述，当前环境不稳定，且未来有恶化的趋势，建议密切关注并采取相应措施。",
+      "answer_len": 607,
+      "llm_meta": {
+        "model": "qwen-max",
+        "provider": "ws-freh8bu2gap0g6so.cn-beijing.maas.aliyuncs.com",
+        "system_prompt_sha256": "aa1400cf8568",
+        "question_sha256": "d3cc394bfcbe",
+        "prompt_tokens": 3446,
+        "completion_tokens": 435,
+        "elapsed_ms": 20363
+      },
+      "expression": {
+        "certainty_hits": [],
+        "support_hits": [
+          "提高关注程度",
+          "WATCH",
+          "密切关注"
+        ],
+        "opposing_hits": [],
+        "limitation_hits": [],
+        "scope_limit_hits": []
+      }
+    },
+    "run_conflict": {
+      "run_id": "run_082",
+      "created_at": "2026-10-26T23:01:45",
+      "status": "success",
+      "scenario": "S5",
+      "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+      "analysis_time": "2026-10-21T09:30:00",
+      "location": "A区-3号温室",
+      "model_path": "D:\\GreenMate\\B06\\artifacts\\b06-20261020-v1",
+      "history_window": {
+        "start": "2026-10-21T07:00:00",
+        "end": "2026-10-21T09:30:00",
+        "count": 6,
+        "stability_passed": false
+      },
+      "model": {
+        "window_id": "s1-live-001",
+        "predicted_attention": "WATCH",
+        "confidence": 1.0,
+        "model_version": "b06-20261020-v1",
+        "label_source": "rule_v1"
+      },
+      "combined_attention": {
+        "value": "conflict_unresolved",
+        "internal_predicted_attention": "WATCH",
+        "external_signal": "external_improving",
+        "has_conflict": true,
+        "reason": "证据方向不一致（支持 3 条 / 相反 1 条），系统保留分歧，不做强制合并，也不做投票"
+      },
+      "divergence": {
+        "has_conflict": true,
+        "supporting": [
+          {
+            "source_type": "B02",
+            "source": "B02/environment_samples",
+            "time": "2026-10-21T09:30:00",
+            "summary": "内部状态不稳定、末段温度上升",
+            "basis": "稳定判据未通过（近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化））且末段温度上升"
+          },
+          {
+            "source_type": "B06",
+            "source": "B06/b06-20261020-v1",
+            "time": "2026-10-21T09:30:00",
+            "summary": "模型输出 WATCH（confidence=1.0, model_version=b06-20261020-v1）",
+            "basis": "B06 在该窗口上真实输出 WATCH"
+          },
+          {
+            "source_type": "B04",
+            "source": "B04/knowledge_base",
+            "time": "2026-10-26T15:01:45.681881+00:00",
+            "summary": "知识检索 '过期数据导致温室调控决策基于过时信息' 命中 5 条，主命中 CH-003-02（score=0.3626655720824688）",
+            "basis": "该条目提供『决策基于不完整信息可能导致作物受损』这一支持依据"
+          }
+        ],
+        "opposing": [
+          {
+            "source_type": "B03",
+            "source": "B03/Open-Meteo（离线构造用例）",
+            "time": "2026-10-21T09:30:00",
+            "summary": "外部条件判定 external_improving（relative_delta）",
+            "basis": "外部条件判定为 external_improving：相对基线差分（主判定）：降水概率 50.0% → 10.0%（Δ=-40.0 个百分点，阈值 ±30.0 个百分点） → external_improving；温度 Δ-1.0℃、云量 Δ-70.0%（只作描述，不参与判定）"
+          }
+        ],
+        "undetermined": [
+          {
+            "source_type": "B03",
+            "source": "B03/Open-Meteo（离线构造用例）",
+            "time": "2026-10-21T09:30:00",
+            "summary": "外部天气取的是窗口末时刻单点值",
+            "reason": "取的是窗口末时刻单点值而非窗口极值，窗口内出现过的更高/更低值可能被漏掉"
+          },
+          {
+            "source_type": "B04",
+            "source": "B04/knowledge_base",
+            "time": "2026-10-26T15:01:45.681881+00:00",
+            "summary": "知识证据只支持『需要关注』",
+            "reason": "只支持『要关注』，不能证明未来一定恶化 —— 该条目是方法论提示，不是本温室的实测结论"
+          }
+        ],
+        "each_source": {
+          "B02": "supporting",
+          "B06": "supporting",
+          "B03": "opposing",
+          "B04": "supporting"
+        },
+        "resolution": "存在方向不一致的证据，系统保留分歧，不做强制合并，也不做投票；请按各来源分别判断",
+        "note": "方向由程序规则判定（B07/evidence_ledger.judge_direction），不经过 LLM；三列装的是判断项，不是原始证据；NORMAL 不等于确认无异常；系统不做投票，也不做强制合并。"
+      },
+      "external": {
+        "available": true,
+        "signal": "external_improving",
+        "judge_method": "relative_delta",
+        "basis": "相对基线差分（主判定）：降水概率 50.0% → 10.0%（Δ=-40.0 个百分点，阈值 ±30.0 个百分点） → external_improving；温度 Δ-1.0℃、云量 Δ-70.0%（只作描述，不参与判定）",
+        "precip_delta": -40.0,
+        "temp_delta": -1.0,
+        "cloud_delta": -70.0,
+        "error": null,
+        "baseline_point": {
+          "timestamp": "2026-10-24T22:00",
+          "temperature": 15.0,
+          "humidity": 70.0,
+          "precipitation_probability": 50.0,
+          "cloud_cover": 90.0,
+          "solar_radiation": 0.0,
+          "weather_code": 0,
+          "weather_description": "小雨"
+        },
+        "forecast_point": {
+          "timestamp": "2026-10-25T04:00",
+          "temperature": 14.0,
+          "humidity": 70.0,
+          "precipitation_probability": 10.0,
+          "cloud_cover": 20.0,
+          "solar_radiation": 0.0,
+          "weather_code": 0,
+          "weather_description": "晴朗"
+        }
+      },
+      "entries": [
+        {
+          "evidence_id": "EV-B02-01",
+          "source_type": "B02",
+          "source": "B02/environment_samples",
+          "time": "2026-10-21T09:30:00",
+          "status": "ok",
+          "error": null,
+          "adopted": true,
+          "direction": "supporting",
+          "case": null,
+          "provider": null,
+          "degraded": null,
+          "knowledge_query": null,
+          "result_signal": null,
+          "stability_conclusion": "近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化）"
+        },
+        {
+          "evidence_id": "EV-B06-01",
+          "source_type": "B06",
+          "source": "B06/b06-20261020-v1",
+          "time": "2026-10-21T09:30:00",
+          "status": "ok",
+          "error": null,
+          "adopted": true,
+          "direction": "supporting",
+          "case": null,
+          "provider": null,
+          "degraded": null,
+          "knowledge_query": null,
+          "result_signal": null,
+          "stability_conclusion": null
+        },
+        {
+          "evidence_id": "EV-B03-01",
+          "source_type": "B03",
+          "source": "B03/Open-Meteo（离线构造用例）",
+          "time": "2026-10-21T09:30:00",
+          "status": "ok",
+          "error": null,
+          "adopted": true,
+          "direction": "opposing",
+          "case": "improving",
+          "provider": "Offline-Fixture",
+          "degraded": false,
+          "knowledge_query": null,
+          "result_signal": "external_improving",
+          "stability_conclusion": null
+        },
+        {
+          "evidence_id": "EV-B04-01",
+          "source_type": "B04",
+          "source": "B04/knowledge_base",
+          "time": "2026-10-26T15:01:45.681881+00:00",
+          "status": "ok",
+          "error": null,
+          "adopted": true,
+          "direction": "supporting",
+          "case": null,
+          "provider": null,
+          "degraded": null,
+          "knowledge_query": "过期数据导致温室调控决策基于过时信息",
+          "result_signal": null,
+          "stability_conclusion": null
+        }
+      ],
+      "tool_calls": [
+        {
+          "tool_name": "B02.get_environment_history",
+          "status": "ok",
+          "adopted": true,
+          "purpose": "取历史窗口 6 点（结构化判断的内部依据）"
+        },
+        {
+          "tool_name": "B05.get_current_environment",
+          "status": "ok",
+          "adopted": false,
+          "purpose": "取库内最新一条（仅作 latest_in_db 参考）"
+        },
+        {
+          "tool_name": "B06.predict_window",
+          "status": "ok",
+          "adopted": true,
+          "purpose": "B06 短时预测（只加载不重训）"
+        },
+        {
+          "tool_name": "B05.get_weather_forecast",
+          "status": "ok",
+          "adopted": true,
+          "purpose": "取外部条件（基线点 + 未来 6h 预报点）"
+        },
+        {
+          "tool_name": "B05.search_tomato_knowledge",
+          "status": "ok",
+          "adopted": true,
+          "purpose": "方法论知识检索（决策基于不完整信息的风险）"
+        }
+      ],
+      "answer": "根据当前的监测数据，2026年10月21日9:30时，大棚内的温度为28.6℃，湿度为66.9%，光照强度为42492.0 lux。这些数据来源于模拟场景，标签为“flood”。\n\n在过去的3小时内，环境状态被判定为不稳定。具体表现为：温度从24.2℃上升到28.6℃，波动幅度为4.4℃，超过了设定的阈值2.0℃；湿度从92.6%下降到66.9%，变化量为-25.7%，远超阈值3.0%；湿度单步最大变化为6.2%，也超过了阈值1.5%；并且湿度呈现全程单调下降趋势。\n\n基于B06模型（版本b06-20261020-v1）的预测，系统建议提高关注程度至WATCH级别，置信度为1.0。该模型仅适用于3小时至1小时的窗口，并且只覆盖温度、湿度和光照三项指标。\n\n需要注意的是，本次分析基于模拟数据，不涉及真实传感器读数。外部天气条件显示未来降水概率降低，但这些信息仅供方向性参考，不参与内部数值的直接比较与判断。\n\n综上所述，由于温度和湿度的显著波动，建议您密切关注大棚内环境的变化，以确保番茄生长的适宜条件。",
+      "answer_len": 456,
+      "llm_meta": {
+        "model": "qwen-max",
+        "provider": "ws-freh8bu2gap0g6so.cn-beijing.maas.aliyuncs.com",
+        "system_prompt_sha256": "aa1400cf8568",
+        "question_sha256": "d3cc394bfcbe",
+        "prompt_tokens": 3476,
+        "completion_tokens": 307,
+        "elapsed_ms": 10424
+      },
+      "expression": {
+        "certainty_hits": [],
+        "support_hits": [
+          "提高关注程度",
+          "WATCH",
+          "密切关注"
+        ],
+        "opposing_hits": [
+          "降水概率降低",
+          "仅供方向性参考",
+          "不参与内部判断"
+        ],
+        "limitation_hits": [],
+        "scope_limit_hits": [
+          "仅供方向性参考",
+          "方向性参考",
+          "不参与内部"
+        ]
+      }
+    },
+    "run_missing_weather": {
+      "run_id": "run_084",
+      "created_at": "2026-10-26T23:02:06",
+      "status": "success",
+      "scenario": "S5",
+      "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+      "analysis_time": "2026-10-21T09:30:00",
+      "location": "A区-3号温室",
+      "model_path": "D:\\GreenMate\\B06\\artifacts\\b06-20261020-v1",
+      "history_window": {
+        "start": "2026-10-21T07:00:00",
+        "end": "2026-10-21T09:30:00",
+        "count": 6,
+        "stability_passed": false
+      },
+      "model": {
+        "window_id": "s1-live-001",
+        "predicted_attention": "WATCH",
+        "confidence": 1.0,
+        "model_version": "b06-20261020-v1",
+        "label_source": "rule_v1"
+      },
+      "combined_attention": {
+        "value": "watch_internal",
+        "internal_predicted_attention": "WATCH",
+        "external_signal": "external_unavailable",
+        "has_conflict": false,
+        "reason": "内部 B06 预测为 WATCH，按内部信号直接提升关注度；外部信号 external_unavailable 不改变这一结论"
+      },
+      "divergence": {
+        "has_conflict": false,
+        "supporting": [
+          {
+            "source_type": "B02",
+            "source": "B02/environment_samples",
+            "time": "2026-10-21T09:30:00",
+            "summary": "内部状态不稳定、末段温度上升",
+            "basis": "稳定判据未通过（近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化））且末段温度上升"
+          },
+          {
+            "source_type": "B06",
+            "source": "B06/b06-20261020-v1",
+            "time": "2026-10-21T09:30:00",
+            "summary": "模型输出 WATCH（confidence=1.0, model_version=b06-20261020-v1）",
+            "basis": "B06 在该窗口上真实输出 WATCH"
+          },
+          {
+            "source_type": "B04",
+            "source": "B04/knowledge_base",
+            "time": "2026-10-26T15:02:07.231910+00:00",
+            "summary": "知识检索 '过期数据导致温室调控决策基于过时信息' 命中 5 条，主命中 CH-003-02（score=0.3626655720824688）",
+            "basis": "该条目提供『决策基于不完整信息可能导致作物受损』这一支持依据"
+          }
+        ],
+        "opposing": [],
+        "undetermined": [
+          {
+            "source_type": "B03",
+            "source": "B03/Open-Meteo（离线构造用例）",
+            "time": "2026-10-21T09:30:00",
+            "summary": "外部条件证据不可用（status=unavailable）",
+            "reason": "外部条件证据当前不可用（status=unavailable），没有外部方向可判，不改变关注判断"
+          },
+          {
+            "source_type": "B03",
+            "source": "B03/Open-Meteo（离线构造用例）",
+            "time": "2026-10-21T09:30:00",
+            "summary": "证据源不可用（status=unavailable）",
+            "reason": "weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求"
+          },
+          {
+            "source_type": "B04",
+            "source": "B04/knowledge_base",
+            "time": "2026-10-26T15:02:07.231910+00:00",
+            "summary": "知识证据只支持『需要关注』",
+            "reason": "只支持『要关注』，不能证明未来一定恶化 —— 该条目是方法论提示，不是本温室的实测结论"
+          }
+        ],
+        "each_source": {
+          "B02": "supporting",
+          "B06": "supporting",
+          "B03": "undetermined",
+          "B04": "supporting"
+        },
+        "resolution": "各证据方向一致",
+        "note": "方向由程序规则判定（B07/evidence_ledger.judge_direction），不经过 LLM；三列装的是判断项，不是原始证据；NORMAL 不等于确认无异常；系统不做投票，也不做强制合并。"
+      },
+      "external": {
+        "available": false,
+        "signal": "external_unavailable",
+        "judge_method": "unavailable",
+        "basis": "预报点不可用，未做任何判定",
+        "precip_delta": null,
+        "temp_delta": null,
+        "cloud_delta": null,
+        "error": "weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求",
+        "baseline_point": null,
+        "forecast_point": null
+      },
+      "entries": [
+        {
+          "evidence_id": "EV-B02-01",
+          "source_type": "B02",
+          "source": "B02/environment_samples",
+          "time": "2026-10-21T09:30:00",
+          "status": "ok",
+          "error": null,
+          "adopted": true,
+          "direction": "supporting",
+          "case": null,
+          "provider": null,
+          "degraded": null,
+          "knowledge_query": null,
+          "result_signal": null,
+          "stability_conclusion": "近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化）"
+        },
+        {
+          "evidence_id": "EV-B06-01",
+          "source_type": "B06",
+          "source": "B06/b06-20261020-v1",
+          "time": "2026-10-21T09:30:00",
+          "status": "ok",
+          "error": null,
+          "adopted": true,
+          "direction": "supporting",
+          "case": null,
+          "provider": null,
+          "degraded": null,
+          "knowledge_query": null,
+          "result_signal": null,
+          "stability_conclusion": null
+        },
+        {
+          "evidence_id": "EV-B03-01",
+          "source_type": "B03",
+          "source": "B03/Open-Meteo（离线构造用例）",
+          "time": "2026-10-21T09:30:00",
+          "status": "unavailable",
+          "error": "weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故障，未发起真实天气请求",
+          "adopted": true,
+          "direction": "undetermined",
+          "case": "improving",
+          "provider": "Offline-Fixture",
+          "degraded": true,
+          "knowledge_query": null,
+          "result_signal": null,
+          "stability_conclusion": null
+        },
+        {
+          "evidence_id": "EV-B04-01",
+          "source_type": "B04",
+          "source": "B04/knowledge_base",
+          "time": "2026-10-26T15:02:07.231910+00:00",
+          "status": "ok",
+          "error": null,
+          "adopted": true,
+          "direction": "supporting",
+          "case": null,
+          "provider": null,
+          "degraded": null,
+          "knowledge_query": "过期数据导致温室调控决策基于过时信息",
+          "result_signal": null,
+          "stability_conclusion": null
+        }
+      ],
+      "tool_calls": [
+        {
+          "tool_name": "B02.get_environment_history",
+          "status": "ok",
+          "adopted": true,
+          "purpose": "取历史窗口 6 点（结构化判断的内部依据）"
+        },
+        {
+          "tool_name": "B05.get_current_environment",
+          "status": "ok",
+          "adopted": false,
+          "purpose": "取库内最新一条（仅作 latest_in_db 参考）"
+        },
+        {
+          "tool_name": "B06.predict_window",
+          "status": "ok",
+          "adopted": true,
+          "purpose": "B06 短时预测（只加载不重训）"
+        },
+        {
+          "tool_name": "B05.get_weather_forecast",
+          "status": "unavailable",
+          "adopted": true,
+          "purpose": "取外部条件（基线点 + 未来 6h 预报点）"
+        },
+        {
+          "tool_name": "B05.search_tomato_knowledge",
+          "status": "ok",
+          "adopted": true,
+          "purpose": "方法论知识检索（决策基于不完整信息的风险）"
+        }
+      ],
+      "answer": "根据当前的模拟数据，2026-10-21T09:30:00 时刻的大棚环境如下：温度为 28.6℃，湿度为 66.9%，光照为 42492.0 lux。最近 3 小时内，大棚环境不稳定，具体表现为：温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4），湿度从 92.6% 下降到 66.9%，变化 -25.7% 超过阈值 3.0%（超出 22.7），且湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）。此外，湿度全程单调下降，不符合稳定判据。\n\n基于 B06 模型（版本 b06-20261020-v1）的预测结果为 WATCH，置信度为 1.0。该模型只覆盖温度、湿度和光照三项指标，并且在测试集上的召回率为 0.448，F1 分数为 0.510，表明对异常窗口存在明显漏报，因此预测为 WATCH 需要引起关注。\n\n需要注意的是，本次所有环境数据均为模拟数据，非真实传感器读数，结论只在这套模拟时间轴上成立，不可外推到真实大棚。另外，外部天气证据当前不可用，与外部天气影响相关的判断受到限制。综合以上信息，建议密切关注大棚内的温湿度变化，以防止可能对番茄生长产生的不利影响。",
+      "answer_len": 497,
+      "llm_meta": {
+        "model": "qwen-max",
+        "provider": "ws-freh8bu2gap0g6so.cn-beijing.maas.aliyuncs.com",
+        "system_prompt_sha256": "aa1400cf8568",
+        "question_sha256": "d3cc394bfcbe",
+        "prompt_tokens": 3728,
+        "completion_tokens": 355,
+        "elapsed_ms": 9293
+      },
+      "expression": {
+        "certainty_hits": [],
+        "support_hits": [
+          "WATCH",
+          "引起关注",
+          "密切关注"
+        ],
+        "opposing_hits": [],
+        "limitation_hits": [
+          "不可用"
+        ],
+        "scope_limit_hits": [
+          "不可用",
+          "不可外推"
+        ]
+      }
+    }
+  },
+  "checks": {
+    "C1": {
+      "name": "分歧保留",
+      "step": "第二步",
+      "passed": true,
+      "items": [
+        {
+          "check": "combined_attention == conflict_unresolved",
+          "ok": true,
+          "detail": "conflict_unresolved"
+        },
+        {
+          "check": "evidence_divergence.has_conflict == True",
+          "ok": true,
+          "detail": true
+        },
+        {
+          "check": "支持侧证据非空",
+          "ok": true,
+          "detail": "3 条"
+        },
+        {
+          "check": "反向侧证据非空",
+          "ok": true,
+          "detail": "1 条"
+        },
+        {
+          "check": "回答表达了『支持提高关注』",
+          "ok": true,
+          "detail": "提高关注程度、WATCH、密切关注"
+        },
+        {
+          "check": "回答表达了『提示可能缓解 / 反向』",
+          "ok": true,
+          "detail": "降水概率降低、仅供方向性参考、不参与内部判断"
+        }
+      ],
+      "detail": {
+        "run_id": "run_082",
+        "combined_attention": {
+          "value": "conflict_unresolved",
+          "internal_predicted_attention": "WATCH",
+          "external_signal": "external_improving",
+          "has_conflict": true,
+          "reason": "证据方向不一致（支持 3 条 / 相反 1 条），系统保留分歧，不做强制合并，也不做投票"
+        },
+        "supporting": [
+          {
+            "source_type": "B02",
+            "summary": "内部状态不稳定、末段温度上升"
+          },
+          {
+            "source_type": "B06",
+            "summary": "模型输出 WATCH（confidence=1.0, model_version=b06-20261020-v1）"
+          },
+          {
+            "source_type": "B04",
+            "summary": "知识检索 '过期数据导致温室调控决策基于过时信息' 命中 5 条，主命中 CH-003-02（score=0.3626655720824688）"
+          }
+        ],
+        "opposing": [
+          {
+            "source_type": "B03",
+            "summary": "外部条件判定 external_improving（relative_delta）"
+          }
+        ],
+        "support_hits": [
+          "提高关注程度",
+          "WATCH",
+          "密切关注"
+        ],
+        "opposing_hits": [
+          "降水概率降低",
+          "仅供方向性参考",
+          "不参与内部判断"
+        ],
+        "resolution": "存在方向不一致的证据，系统保留分歧，不做强制合并，也不做投票；请按各来源分别判断"
+      }
+    },
+    "C2": {
+      "name": "不该出现的确定话",
+      "step": "第三步",
+      "passed": true,
+      "items": [
+        {
+          "check": "确定性词表命中数 == 0",
+          "ok": true,
+          "detail": "0 处"
+        }
+      ],
+      "detail": {
+        "run_id": "run_082",
+        "wordlist": [
+          "一定会",
+          "可以确定",
+          "肯定会",
+          "毫无疑问",
+          "必然",
+          "一定",
+          "无疑",
+          "将必",
+          "注定"
+        ],
+        "hits": [],
+        "hit_count": 0,
+        "strength_assessment": "现有证据：支持侧 3 条 / 反向侧 1 条，**存在方向冲突**（系统自己都没有合并），因此不支持任何『一定 / 必然 / 可以确定』式的断言。",
+        "advice": ""
+      }
+    },
+    "C3": {
+      "name": "判断范围收缩",
+      "step": "第四步",
+      "passed": true,
+      "items": [
+        {
+          "check": "降级后 combined_attention 记录与基线不同（字段级）",
+          "ok": true,
+          "detail": "变化字段：external_signal、reason"
+        },
+        {
+          "check": "降级后回答明确说明天气不可用 / 判断受限",
+          "ok": true,
+          "detail": "不可用"
+        },
+        {
+          "check": "降级后回答仍然给出历史判断",
+          "ok": true,
+          "detail": "最近、近 3 小时、温度、湿度、阈值、不稳定、波动"
+        },
+        {
+          "check": "降级后回答仍然给出模型判断",
+          "ok": true,
+          "detail": "B06、模型、预测、置信度、b06-20261020-v1"
+        },
+        {
+          "check": "降级后回答仍然给出结论",
+          "ok": true,
+          "detail": "建议、因此、综合、结论、密切关注、防止"
+        }
+      ],
+      "detail": {
+        "baseline_run": "run_109",
+        "degraded_run": "run_084",
+        "diff": [
+          {
+            "field": "value",
+            "baseline": "watch_internal",
+            "degraded": "watch_internal",
+            "changed": false
+          },
+          {
+            "field": "internal_predicted_attention",
+            "baseline": "WATCH",
+            "degraded": "WATCH",
+            "changed": false
+          },
+          {
+            "field": "external_signal",
+            "baseline": "external_deteriorating",
+            "degraded": "external_unavailable",
+            "changed": true
+          },
+          {
+            "field": "has_conflict",
+            "baseline": false,
+            "degraded": false,
+            "changed": false
+          },
+          {
+            "field": "reason",
+            "baseline": "内部 B06 预测为 WATCH，按内部信号直接提升关注度；外部信号 external_deteriorating 不改变这一结论",
+            "degraded": "内部 B06 预测为 WATCH，按内部信号直接提升关注度；外部信号 external_unavailable 不改变这一结论",
+            "changed": true
+          }
+        ],
+        "value_changed": false,
+        "value_same_note": "value 字段两边相同（watch_internal = watch_internal）—— **如实写出来，不掩盖**。这不是『证据没变』：external_signal / reason / 证据构成都变了，变的是 combined_attention() 的分支优先级（predicted=WATCH 分支先于外部信号分支命中）。",
+        "limitation_hits": [
+          "不可用"
+        ],
+        "history_hits": [
+          "最近",
+          "近 3 小时",
+          "温度",
+          "湿度",
+          "阈值",
+          "不稳定",
+          "波动"
+        ],
+        "model_hits": [
+          "B06",
+          "模型",
+          "预测",
+          "置信度",
+          "b06-20261020-v1"
+        ],
+        "conclusion_hits": [
+          "建议",
+          "因此",
+          "综合",
+          "结论",
+          "密切关注",
+          "防止"
+        ]
+      }
+    },
+    "C4": {
+      "name": "没有偷偷补齐",
+      "step": "第五步",
+      "passed": true,
+      "items": [
+        {
+          "check": "回答中外部天气内容命中数 == 0",
+          "ok": true,
+          "detail": "0 句"
+        }
+      ],
+      "detail": {
+        "run_id": "run_084",
+        "term_phrases": [
+          "外部天气",
+          "外部条件",
+          "天气条件",
+          "降水概率",
+          "下雨",
+          "阴雨",
+          "转差",
+          "变差",
+          "external_deteriorating",
+          "external_improving",
+          "external_stable"
+        ],
+        "value_patterns": [
+          {
+            "label": "降水概率 50.0%",
+            "pattern": "50\\.0\\s*%"
+          },
+          {
+            "label": "降水概率 10.0%",
+            "pattern": "10\\.0\\s*%"
+          },
+          {
+            "label": "Δ=-40.0",
+            "pattern": "-40\\.0(?!\\d)"
+          },
+          {
+            "label": "阈值 ±30.0",
+            "pattern": "±\\s*30\\.0|30\\.0\\s*个百分点"
+          },
+          {
+            "label": "温度 Δ=-1.0",
+            "pattern": "-1\\.0\\s*(?:℃|°C)"
+          },
+          {
+            "label": "云量 Δ=-70.0",
+            "pattern": "-70\\.0\\s*%"
+          }
+        ],
+        "exempt_phrases": [
+          "不可用",
+          "未能获取",
+          "无法获取",
+          "受限制",
+          "受到影响",
+          "未纳入",
+          "无法判断",
+          "不再能判断"
+        ],
+        "rows": [
+          {
+            "sentence": "根据当前的模拟数据，2026-10-21T09:30:00 时刻的大棚环境如下：温度为 28.6℃，湿度为 66.9%，光照为 42492.0 lux。",
+            "terms": [],
+            "values": [],
+            "exempt": false,
+            "exempt_reason": [],
+            "violation": false,
+            "exempt_but_has_value": false
+          },
+          {
+            "sentence": "最近 3 小时内，大棚环境不稳定，具体表现为：温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4），湿度从 92.6% 下降到 66.9%，变化 -25.7% 超过阈值 3.0%（超出 22.7），且湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）。",
+            "terms": [],
+            "values": [],
+            "exempt": false,
+            "exempt_reason": [],
+            "violation": false,
+            "exempt_but_has_value": false
+          },
+          {
+            "sentence": "此外，湿度全程单调下降，不符合稳定判据。",
+            "terms": [],
+            "values": [],
+            "exempt": false,
+            "exempt_reason": [],
+            "violation": false,
+            "exempt_but_has_value": false
+          },
+          {
+            "sentence": "基于 B06 模型（版本 b06-20261020-v1）的预测结果为 WATCH，置信度为 1.0。",
+            "terms": [],
+            "values": [],
+            "exempt": false,
+            "exempt_reason": [],
+            "violation": false,
+            "exempt_but_has_value": false
+          },
+          {
+            "sentence": "该模型只覆盖温度、湿度和光照三项指标，并且在测试集上的召回率为 0.448，F1 分数为 0.510，表明对异常窗口存在明显漏报，因此预测为 WATCH 需要引起关注。",
+            "terms": [],
+            "values": [],
+            "exempt": false,
+            "exempt_reason": [],
+            "violation": false,
+            "exempt_but_has_value": false
+          },
+          {
+            "sentence": "需要注意的是，本次所有环境数据均为模拟数据，非真实传感器读数，结论只在这套模拟时间轴上成立，不可外推到真实大棚。",
+            "terms": [],
+            "values": [],
+            "exempt": false,
+            "exempt_reason": [],
+            "violation": false,
+            "exempt_but_has_value": false
+          },
+          {
+            "sentence": "另外，外部天气证据当前不可用，与外部天气影响相关的判断受到限制。",
+            "terms": [
+              "外部天气",
+              "外部天气"
+            ],
+            "values": [],
+            "exempt": true,
+            "exempt_reason": [
+              "不可用"
+            ],
+            "violation": false,
+            "exempt_but_has_value": false
+          },
+          {
+            "sentence": "综合以上信息，建议密切关注大棚内的温湿度变化，以防止可能对番茄生长产生的不利影响。",
+            "terms": [],
+            "values": [],
+            "exempt": false,
+            "exempt_reason": [],
+            "violation": false,
+            "exempt_but_has_value": false
+          }
+        ],
+        "violations": [],
+        "violation_count": 0,
+        "exempt_but_has_value": []
+      }
+    },
+    "C5": {
+      "name": "三次对照成立",
+      "step": "第六步",
+      "passed": true,
+      "items": [
+        {
+          "check": "对照表五维齐全且每格都有实测值",
+          "ok": true,
+          "detail": "combined_attention、确定性断言数、是否表达分歧、是否说明受限、判断范围"
+        },
+        {
+          "check": "核心三维（结论档位 / 是否表达分歧 / 判断范围）三档互不相同",
+          "ok": true,
+          "detail": "三维均随证据条件变化"
+        }
+      ],
+      "detail": {
+        "rows": [
+          [
+            "combined_attention",
+            "watch_internal",
+            "conflict_unresolved",
+            "watch_internal"
+          ],
+          [
+            "确定性断言数",
+            "0",
+            "0",
+            "0"
+          ],
+          [
+            "是否表达分歧",
+            "否（仅支持侧）",
+            "是（支持侧+反向侧）",
+            "否（仅支持侧）"
+          ],
+          [
+            "是否说明受限",
+            "否",
+            "是",
+            "是"
+          ],
+          [
+            "判断范围",
+            "内部历史+模型+外部（方向同向）",
+            "内部历史+模型+外部（方向相反，保留分歧）",
+            "内部历史+模型（外部不可用，相关判断受限）"
+          ]
+        ],
+        "constant_dims": [
+          "确定性断言数"
+        ],
+        "constant_note": "    · 确定性断言数：三档全为 0 —— 本轮三种证据条件下系统都没有说出『一定 / 必然 / 可以确定』这类话（C2 词表 0 命中）—— 这一维在本轮没有变化。",
+        "core_dims": [
+          "combined_attention",
+          "是否表达分歧",
+          "判断范围"
+        ]
+      }
+    }
+  },
+  "sources": {
+    "run_agree": "本轮新跑（1 次 LLM 调用）",
+    "run_conflict": "复用已落盘存档 run_082",
+    "run_missing_weather": "复用已落盘存档 run_084"
+  }
+}

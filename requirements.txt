@@ -9,6 +9,14 @@
 # B07 需要：scikit-learn + numpy（加载 B06 模型推理）、pytest（S1–S5 不变量测试）
 #      其中 B07 的 S3–S5（B03 天气接入层 / S4 证据身份层与分歧 / S5 证据退化）
 #      没有引入任何新的运行时依赖，全部复用上面已列出的库。
+#
+# B07 创新点 1（连续时间认知消融，6 次 LLM 调用）：只用已有的 openai / scikit-learn / numpy，
+#      没有引入任何新的运行时依赖。
+# B07 创新点 2（可追溯证据的自动溯源器）：纯标准库（json / pathlib / re）+ 复用 B07.runs，
+#      0 次 LLM 调用，没有引入任何新的运行时依赖。
+# B07 创新点 3（"有些话现在不能说"走查器，C1–C5 机器检查）：只用标准库 + 复用 B07.runs，
+#      只新跑 1 次 LLM，没有引入任何新的运行时依赖。
+#      三个创新点的不变量测试同样用 pytest（见下）。
 
 # Web 框架
 fastapi==0.115.12
@@ -34,5 +42,7 @@ matplotlib==3.9.4
 # 测试
 # 说明：B07/S1 只用到已有的 fastapi / pydantic / openai / httpx / scikit-learn / joblib，
 #      没有引入新的运行时依赖；pytest 是为了跑 B07 的不变量测试
-#      （S1–S5 共 169 项：test_s1 / test_s2 / test_s3 / test_weather / test_s4 / test_s4_3 / test_s5）。
+#      （S1–S5 共 169 项：test_s1 / test_s2 / test_s3 / test_weather / test_s4 / test_s4_3 / test_s5；
+#        创新点 1/2/3 共 90 项：test_innovation1 / test_innovation2 / test_innovation3，
+#        合计 259 项）。
 pytest==9.1.1

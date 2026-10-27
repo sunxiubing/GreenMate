@@ -243,7 +243,7 @@ def build_ledger(bundle: dict, offline: dict, anchor: str) -> EvidenceLedger:
             "forecast_window": ctx.get("forecast_window"),
             "location": ctx.get("location"),
             "retrieved_at": raw.get("retrieved_at"),
-            "case": OFFLINE_CASE,
+            "case": offline.get("case", OFFLINE_CASE),
             "is_constructed": True,
             "label": OFFLINE_CASE_LABEL,
             # S5-1：证据状态与失败原因如实带出（不可用时 forecast_time=None）

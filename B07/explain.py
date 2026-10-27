@@ -65,11 +65,134 @@ SYSTEM_PROMPT = """你是 GreenMate 大棚监测系统的助手。你的任务�
 # 上下文拼装
 # --------------------------------------------------------------------------
 
-def format_judgement_context(run_bundle: dict) -> str:
+#: 块标记（include 参数的取值集合）
+BLOCK_MARKERS = ("①", "②", "③", "④", "⑤", "⑥", "⑦")
+
+#: limitation key → 依赖哪一类证据（**按 key 判定，不做整句文本匹配**）
+#:
+#: 依赖集为空 = 与三类证据都无关，始终保留。
+#: 未登记的 key 走 UNKNOWN 路径：保留，但会在裁剪报告里显式列出，
+#: 让人能人工核对（不静默处理）。
+LIMITATION_DEPENDENCY = {
+    # 数据来源性质（source_type='simulated'）—— 与历史 / 预测都无关
+    "simulated_data": frozenset(),
+    # 模型适用边界：提到 B06 / recall / f1 / 标签规则 → 依赖 prediction
+    "model_boundary": frozenset({"prediction"}),
+    # 时间锚点：提到 hours_gap / analysis_time / 选窗原因 / 稳定判据 → 依赖 history
+    "time_anchor": frozenset({"history"}),
+    # 模块边界：写明"以 B02 历史 + B06 预测为主" → 两类都依赖
+    "no_weather_no_kb": frozenset({"history", "prediction"}),
+    # S5 才有的条目：依赖外部证据（创新点 1 不涉及）
+    "evidence_unavailable": frozenset({"external"}),
+}
+
+#: evidence_status 的 (module, item) → 依赖哪一类证据
+EVIDENCE_ITEM_DEPENDENCY = {
+    ("B02", "current_state"): frozenset(),
+    ("B02", "history"): frozenset({"history"}),
+    ("B05", "latest_in_db"): frozenset(),
+    ("B06", "model_output"): frozenset({"prediction"}),
+    ("B06", "dtw_similarity"): frozenset({"prediction"}),
+    ("B01", "llm_explanation"): frozenset(),
+}
+
+
+def _available_categories(want: set[str]) -> set[str]:
+    """由 include 集合推出"LLM 能看到哪几类证据"。"""
+    cats: set[str] = set()
+    if "②" in want:
+        cats.add("history")
+    if "③" in want:
+        cats.add("prediction")
+    if "⑥" in want or "⑦" in want:
+        cats.add("external")
+    return cats
+
+
+def _filter_limitations(lim: dict, cats: set[str]) -> tuple[list[str], list[str], list[str]]:
+    """按依赖裁剪 limitations。
+
+    Returns:
+        (保留的 key, 被裁掉的 key, 未能判定依赖的 key)
+    """
+    kept: list[str] = []
+    dropped: list[str] = []
+    unknown: list[str] = []
+    for k in lim.get("all_keys") or []:
+        dep = LIMITATION_DEPENDENCY.get(k)
+        if dep is None:
+            unknown.append(k)
+            kept.append(k)
+            continue
+        if dep <= cats:
+            kept.append(k)
+        else:
+            dropped.append(k)
+    return kept, dropped, unknown
+
+
+def _filter_evidence_items(es: dict, cats: set[str]):
+    """按依赖裁剪 evidence_status.items，并给出与裁剪结果一致的 summary。
+
+    Returns:
+        (保留的 items, 被裁掉的 item 描述, summary 原文, 未能判定依赖的 item 描述)
+    """
+    kept: list[dict] = []
+    dropped: list[str] = []
+    unknown: list[str] = []
+    for i in es.get("items") or []:
+        key = (i.get("module"), i.get("item"))
+        dep = EVIDENCE_ITEM_DEPENDENCY.get(key)
+        if dep is None:
+            unknown.append(f"{key[0]}.{key[1]}")
+            kept.append(i)
+            continue
+        if dep <= cats:
+            kept.append(i)
+        else:
+            dropped.append(f"{key[0]}.{key[1]}")
+
+    if not dropped:
+        return kept, dropped, es.get("summary", ""), unknown
+
+    # 有裁剪 ⇒ summary 必须重算：
+    # 原 summary 里带着 "B06 2/2" 这类计数，直接沿用会把被裁掉的证据
+    # 泄露给 LLM（消融就失效了）。
+    required = [i for i in kept if i.get("module") != "B01"]
+    complete = all(i.get("present") for i in required)
+    counts = []
+    for m in ("B02", "B05", "B06"):
+        got = [i for i in required if i.get("module") == m]
+        if got:
+            counts.append(f"{m} {len(got)}/{len(got)}")
+    if complete:
+        summary = (f"截至判断环节证据齐全（{'、'.join(counts)}）；"
+                   f"B01 解释在本环节之后生成")
+    else:
+        summary = ("截至判断环节证据不齐全：" + "、".join(
+            f"{i['module']}.{i['item']}" for i in required if not i.get("present"))
+            + "；B01 解释在本环节之后生成")
+    return kept, dropped, summary, unknown
+
+
+def format_judgement_context(run_bundle: dict,
+                             include: tuple[str, ...] | list[str] | None = None
+                             ) -> str:
     """把五块内容拼成 LLM 上下文，顺序固定。
 
     ① 当前环境   ② 最近历史主要变化   ③ B06 短时预测
     ④ 结构化判断结果   ⑤ 当前限制条件
+
+    Args:
+        run_bundle: 运行数据包。
+        include:   **可选** —— 要渲染哪些块（取值是块标记，如 ("①","④","⑤")）。
+                   **默认 None ⇒ 输出与改动前逐字节一致**（S1–S5 的行为不变）。
+                   裁剪时 ④ 块内部也跟着裁（②/③ 的行、evidence_status 的
+                   items 与 summary、⑤/④ 里的 limitations 都按依赖裁），
+                   避免"块没了但摘要还在"这种泄露。
+
+    Returns:
+        上下文全文。
     """
     from B07.judgement import build_judgement
 
@@ -81,77 +204,94 @@ def format_judgement_context(run_bundle: dict) -> str:
     es = judgement["evidence_status"]
     lim = judgement["limitations"]
 
+    want = set(BLOCK_MARKERS) if include is None else set(include)
+    cats = _available_categories(want)
+
+    lim_kept, lim_dropped, lim_unknown = _filter_limitations(lim, cats)
+    es_kept, es_dropped, es_summary, es_unknown = _filter_evidence_items(es, cats)
+
     blocks: list[str] = []
 
     # ① 当前环境
-    blocks.append(
-        "【① 当前环境】\n"
-        f"采样时间戳：{cs['sampled_at']}\n"
-        f"温度：{cs['temperature']} {cs['unit']['temperature']}\n"
-        f"湿度：{cs['humidity']} {cs['unit']['humidity']}\n"
-        f"光照：{cs['lux']} {cs['unit']['lux']}\n"
-        f"数据来源 source_type：{cs['source_type']}\n"
-        f"模拟场景标签：{cs['sim_scenario']}"
-    )
+    if "①" in want:
+        blocks.append(
+            "【① 当前环境】\n"
+            f"采样时间戳：{cs['sampled_at']}\n"
+            f"温度：{cs['temperature']} {cs['unit']['temperature']}\n"
+            f"湿度：{cs['humidity']} {cs['unit']['humidity']}\n"
+            f"光照：{cs['lux']} {cs['unit']['lux']}\n"
+            f"数据来源 source_type：{cs['source_type']}\n"
+            f"模拟场景标签：{cs['sim_scenario']}"
+        )
 
     # ② 最近历史主要变化（引用稳定判据里的具体数值）
-    crit_lines = "\n".join(
-        f"  - {name}：实测={c['value']}，阈值={c['threshold']}，"
-        f"{'通过' if c['passed'] else '未通过'}（{c['note']}）"
-        for name, c in rt["criteria"].items()
-    )
-    blocks.append(
-        "【② 最近历史主要变化】\n"
-        f"窗口区间：{rt['window_start']} → {rt['window_end']}"
-        f"（{rt['window_span']}）\n"
-        f"稳定性判定：{rt['stability_verdict']}\n"
-        f"稳定判据明细：\n{crit_lines}\n"
-        f"稳定判据结论：{rt['conclusion']}"
-    )
+    if "②" in want:
+        crit_lines = "\n".join(
+            f"  - {name}：实测={c['value']}，阈值={c['threshold']}，"
+            f"{'通过' if c['passed'] else '未通过'}（{c['note']}）"
+            for name, c in rt["criteria"].items()
+        )
+        blocks.append(
+            "【② 最近历史主要变化】\n"
+            f"窗口区间：{rt['window_start']} → {rt['window_end']}"
+            f"（{rt['window_span']}）\n"
+            f"稳定性判定：{rt['stability_verdict']}\n"
+            f"稳定判据明细：\n{crit_lines}\n"
+            f"稳定判据结论：{rt['conclusion']}"
+        )
 
     # ③ B06 短时预测
-    blocks.append(
-        "【③ B06 短时预测】\n"
-        f"predicted_attention：{mo.get('predicted_attention')}\n"
-        f"model_version：{mo.get('model_version')}\n"
-        f"confidence：{mo.get('confidence')}"
-        f"（NORMAL {mo.get('confidence_normal')} / WATCH {mo.get('confidence_watch')}）\n"
-        f"窗口 ID：{mo.get('window_id')}\n"
-        f"DTW 相似度：温度 {mo.get('dtw_temperature')}，"
-        f"湿度 {mo.get('dtw_humidity')}，光照 {mo.get('dtw_lux')}"
-    )
+    if "③" in want:
+        blocks.append(
+            "【③ B06 短时预测】\n"
+            f"predicted_attention：{mo.get('predicted_attention')}\n"
+            f"model_version：{mo.get('model_version')}\n"
+            f"confidence：{mo.get('confidence')}"
+            f"（NORMAL {mo.get('confidence_normal')} / WATCH {mo.get('confidence_watch')}）\n"
+            f"窗口 ID：{mo.get('window_id')}\n"
+            f"DTW 相似度：温度 {mo.get('dtw_temperature')}，"
+            f"湿度 {mo.get('dtw_humidity')}，光照 {mo.get('dtw_lux')}"
+        )
 
     # ④ 结构化判断结果（五字段原样列出）
     # 注意（S5-1 撤回过一次）：④ 块**不列** external_conditions。
     # S3 的不变量是"带/不带外部天气两次运行只有 ⑥ 块不同"，
     # S4 的不变量是"⑦ 块是纯追加"—— ④ 块一旦带上外部条件，
     # 这两条不变量就都被破坏了。外部条件只出现在 ⑥ 块里。
-    blocks.append(
-        "【④ 结构化判断结果】\n"
-        f"current_environment：温度 {cs['temperature']}℃，湿度 {cs['humidity']}%，"
-        f"光照 {cs['lux']} lux，来源 {cs['source_type']}，采样于 {cs['sampled_at']}\n"
-        f"recent_trend：{rt['stability_verdict']}；{rt['conclusion']}\n"
-        f"predicted_attention：{judgement['predicted_attention']}\n"
-        f"evidence_status：{es['summary']}；证据项："
-        + "、".join(f"[{i['module']}]{i['item']}" for i in es["items"]) + "\n"
-        f"limitations：\n"
-        + "\n".join(f"  - {lim[k]['text']}" for k in lim["all_keys"])
-    )
+    if "④" in want:
+        lines = [
+            f"current_environment：温度 {cs['temperature']}℃，湿度 {cs['humidity']}%，"
+            f"光照 {cs['lux']} lux，来源 {cs['source_type']}，采样于 {cs['sampled_at']}"
+        ]
+        if "②" in want:
+            lines.append(f"recent_trend：{rt['stability_verdict']}；{rt['conclusion']}")
+        if "③" in want:
+            lines.append(f"predicted_attention：{judgement['predicted_attention']}")
+        lines.append(
+            f"evidence_status：{es_summary}；证据项："
+            + "、".join(f"[{i['module']}]{i['item']}" for i in es_kept)
+        )
+        lines.append(
+            "limitations：\n"
+            + "\n".join(f"  - {lim[k]['text']}" for k in lim_kept)
+        )
+        blocks.append("【④ 结构化判断结果】\n" + "\n".join(lines))
 
     # ⑤ 当前限制条件（原文）
-    blocks.append(
-        "【⑤ 当前限制条件（limitations 原文）】\n"
-        + "\n".join(f"  - {lim[k]['text']}" for k in lim["all_keys"])
-    )
+    if "⑤" in want:
+        blocks.append(
+            "【⑤ 当前限制条件（limitations 原文）】\n"
+            + "\n".join(f"  - {lim[k]['text']}" for k in lim_kept)
+        )
 
     # ⑥ 外部条件（S3-1；没有外部条件时这一块整个不出现）
     ext = judgement.get("external_conditions")
-    if ext:
+    if ext and "⑥" in want:
         blocks.append(_format_external_block(ext))
 
     # ⑦ 证据分歧（S4-2；没有证据台账时这一块整个不出现）
     div = judgement.get("evidence_divergence")
-    if div:
+    if div and "⑦" in want:
         blocks.append(_format_divergence_block(
             div, run_bundle.get("evidence_ledger")))
 

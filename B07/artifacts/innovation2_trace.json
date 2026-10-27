@@ -1,0 +1,494 @@
+{
+  "traces": {
+    "run_082": {
+      "source_run_id": "run_082",
+      "source_run_path": "B07/runs/run_082/run.json",
+      "claims": [
+        {
+          "claim_text": "在过去的3小时内，环境状态被判定为不稳定。",
+          "claim_index": 2,
+          "evidence": [
+            {
+              "role": "history",
+              "source": "B02/environment_samples",
+              "time": "2026-10-21T09:30:00",
+              "status": "ok",
+              "result_summary": "内部状态不稳定、末段温度上升",
+              "basis": "稳定判据未通过（近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化））且末段温度上升",
+              "tool_call": {
+                "tool_name": "B02.get_environment_history",
+                "arguments": {
+                  "start": "2026-10-21T07:00:00",
+                  "end": "2026-10-21T09:30:00"
+                },
+                "status": "ok"
+              },
+              "adopted": true,
+              "ledger_path": "evidence_ledger.entries[0]"
+            }
+          ],
+          "missing_roles": [
+            "weather",
+            "knowledge",
+            "model"
+          ],
+          "chain_ok": true
+        },
+        {
+          "claim_text": "基于B06模型（版本b06-20261020-v1）的预测，系统建议提高关注程度至WATCH级别，置信度为1.0。",
+          "claim_index": 4,
+          "evidence": [
+            {
+              "role": "model",
+              "source": "B06/b06-20261020-v1",
+              "time": "2026-10-21T09:30:00",
+              "status": "ok",
+              "result_summary": "模型输出 WATCH（confidence=1.0, model_version=b06-20261020-v1）",
+              "basis": "B06 在该窗口上真实输出 WATCH",
+              "tool_call": {
+                "tool_name": "B06.predict_window",
+                "arguments": {
+                  "window_id": "s1-live-001",
+                  "model_version": "b06-20261020-v1"
+                },
+                "status": "ok"
+              },
+              "adopted": true,
+              "ledger_path": "evidence_ledger.entries[1]"
+            }
+          ],
+          "missing_roles": [
+            "history",
+            "weather",
+            "knowledge"
+          ],
+          "chain_ok": true
+        },
+        {
+          "claim_text": "综上所述，由于温度和湿度的显著波动，建议您密切关注大棚内环境的变化，以确保番茄生长的适宜条件。",
+          "claim_index": 8,
+          "evidence": [
+            {
+              "role": "history",
+              "source": "B02/environment_samples",
+              "time": "2026-10-21T09:30:00",
+              "status": "ok",
+              "result_summary": "内部状态不稳定、末段温度上升",
+              "basis": "稳定判据未通过（近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化））且末段温度上升",
+              "tool_call": {
+                "tool_name": "B02.get_environment_history",
+                "arguments": {
+                  "start": "2026-10-21T07:00:00",
+                  "end": "2026-10-21T09:30:00"
+                },
+                "status": "ok"
+              },
+              "adopted": true,
+              "ledger_path": "evidence_ledger.entries[0]"
+            }
+          ],
+          "missing_roles": [
+            "weather",
+            "knowledge",
+            "model"
+          ],
+          "chain_ok": true
+        }
+      ],
+      "tool_calls": [
+        {
+          "tool_name": "B02.get_environment_history",
+          "status": "ok",
+          "arguments": {
+            "start": "2026-10-21T07:00:00",
+            "end": "2026-10-21T09:30:00"
+          },
+          "adopted": true
+        },
+        {
+          "tool_name": "B05.get_current_environment",
+          "status": "ok",
+          "arguments": {
+            "location": "A区-3号温室"
+          },
+          "adopted": false
+        },
+        {
+          "tool_name": "B06.predict_window",
+          "status": "ok",
+          "arguments": {
+            "window_id": "s1-live-001",
+            "model_version": "b06-20261020-v1"
+          },
+          "adopted": true
+        },
+        {
+          "tool_name": "B05.get_weather_forecast",
+          "status": "ok",
+          "arguments": {
+            "location": "河北固安",
+            "forecast_window": "6h",
+            "note": "内部调用 now + 6h 两次，取基线点与预报点"
+          },
+          "adopted": true
+        },
+        {
+          "tool_name": "B05.search_tomato_knowledge",
+          "status": "ok",
+          "arguments": {
+            "query": "过期数据导致温室调控决策基于过时信息"
+          },
+          "adopted": true
+        }
+      ],
+      "checks": {
+        "V1": true,
+        "V2": true,
+        "V3": true,
+        "V4": true,
+        "V5": true,
+        "V6": true
+      }
+    },
+    "run_084": {
+      "source_run_id": "run_084",
+      "source_run_path": "B07/runs/run_084/run.json",
+      "claims": [
+        {
+          "claim_text": "基于 B06 模型（版本 b06-20261020-v1）的预测结果为 WATCH，置信度为 1.0。",
+          "claim_index": 3,
+          "evidence": [
+            {
+              "role": "model",
+              "source": "B06/b06-20261020-v1",
+              "time": "2026-10-21T09:30:00",
+              "status": "ok",
+              "result_summary": "模型输出 WATCH（confidence=1.0, model_version=b06-20261020-v1）",
+              "basis": "B06 在该窗口上真实输出 WATCH",
+              "tool_call": {
+                "tool_name": "B06.predict_window",
+                "arguments": {
+                  "window_id": "s1-live-001",
+                  "model_version": "b06-20261020-v1"
+                },
+                "status": "ok"
+              },
+              "adopted": true,
+              "ledger_path": "evidence_ledger.entries[1]"
+            }
+          ],
+          "missing_roles": [
+            "history",
+            "weather",
+            "knowledge"
+          ],
+          "chain_ok": true
+        },
+        {
+          "claim_text": "综合以上信息，建议密切关注大棚内的温湿度变化，以防止可能对番茄生长产生的不利影响。",
+          "claim_index": 7,
+          "evidence": [
+            {
+              "role": "history",
+              "source": "B02/environment_samples",
+              "time": "2026-10-21T09:30:00",
+              "status": "ok",
+              "result_summary": "内部状态不稳定、末段温度上升",
+              "basis": "稳定判据未通过（近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化））且末段温度上升",
+              "tool_call": {
+                "tool_name": "B02.get_environment_history",
+                "arguments": {
+                  "start": "2026-10-21T07:00:00",
+                  "end": "2026-10-21T09:30:00"
+                },
+                "status": "ok"
+              },
+              "adopted": true,
+              "ledger_path": "evidence_ledger.entries[0]"
+            }
+          ],
+          "missing_roles": [
+            "weather",
+            "knowledge",
+            "model"
+          ],
+          "chain_ok": true
+        }
+      ],
+      "tool_calls": [
+        {
+          "tool_name": "B02.get_environment_history",
+          "status": "ok",
+          "arguments": {
+            "start": "2026-10-21T07:00:00",
+            "end": "2026-10-21T09:30:00"
+          },
+          "adopted": true
+        },
+        {
+          "tool_name": "B05.get_current_environment",
+          "status": "ok",
+          "arguments": {
+            "location": "A区-3号温室"
+          },
+          "adopted": false
+        },
+        {
+          "tool_name": "B06.predict_window",
+          "status": "ok",
+          "arguments": {
+            "window_id": "s1-live-001",
+            "model_version": "b06-20261020-v1"
+          },
+          "adopted": true
+        },
+        {
+          "tool_name": "B05.get_weather_forecast",
+          "status": "unavailable",
+          "arguments": {
+            "location": "河北固安",
+            "forecast_window": "6h",
+            "note": "内部调用 now + 6h 两次，取基线点与预报点"
+          },
+          "adopted": true
+        },
+        {
+          "tool_name": "B05.search_tomato_knowledge",
+          "status": "ok",
+          "arguments": {
+            "query": "过期数据导致温室调控决策基于过时信息"
+          },
+          "adopted": true
+        }
+      ],
+      "checks": {
+        "V1": true,
+        "V2": true,
+        "V3": true,
+        "V4": true,
+        "V5": true,
+        "V6": true
+      }
+    },
+    "run_057": {
+      "source_run_id": "run_057",
+      "source_run_path": "B07/runs/run_057/run.json",
+      "claims": [
+        {
+          "claim_text": "最近3小时内的环境变化被判定为不稳定，主要依据是温度波动达到4.4℃（超出阈值2.0℃），湿度从92.6%降至66.9%（变化-25.7%，超出阈值3.0%），且湿度全程单调下降。",
+          "claim_index": 1,
+          "evidence": [
+            {
+              "role": "history",
+              "source": "B02/environment_samples",
+              "time": "2026-10-21T09:30:00",
+              "status": "ok",
+              "result_summary": "内部状态不稳定、末段温度上升",
+              "basis": "稳定判据未通过（近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化））且末段温度上升",
+              "tool_call": {
+                "tool_name": "B02.get_environment_history",
+                "arguments": {
+                  "start": "2026-10-21T07:00:00",
+                  "end": "2026-10-21T09:30:00"
+                },
+                "status": "ok"
+              },
+              "adopted": true,
+              "ledger_path": "evidence_ledger.entries[0]"
+            }
+          ],
+          "missing_roles": [
+            "weather",
+            "knowledge",
+            "model"
+          ],
+          "chain_ok": true
+        },
+        {
+          "claim_text": "B06模型（版本b06-20261020-v1）预测接下来1小时内需要关注（WATCH，置信度1.0）。",
+          "claim_index": 2,
+          "evidence": [
+            {
+              "role": "model",
+              "source": "B06/b06-20261020-v1",
+              "time": "2026-10-21T09:30:00",
+              "status": "ok",
+              "result_summary": "模型输出 WATCH（confidence=1.0, model_version=b06-20261020-v1）",
+              "basis": "B06 在该窗口上真实输出 WATCH",
+              "tool_call": {
+                "tool_name": "B06.predict_window",
+                "arguments": {
+                  "window_id": "s1-live-001",
+                  "model_version": "b06-20261020-v1"
+                },
+                "status": "ok"
+              },
+              "adopted": true,
+              "ledger_path": "evidence_ledger.entries[1]"
+            }
+          ],
+          "missing_roles": [
+            "history",
+            "weather",
+            "knowledge"
+          ],
+          "chain_ok": true
+        },
+        {
+          "claim_text": "综合来看，目前建议提高对大棚内环境的关注程度，特别是温度和湿度的变化。",
+          "claim_index": 5,
+          "evidence": [
+            {
+              "role": "history",
+              "source": "B02/environment_samples",
+              "time": "2026-10-21T09:30:00",
+              "status": "ok",
+              "result_summary": "内部状态不稳定、末段温度上升",
+              "basis": "稳定判据未通过（近 3 小时温度 24.2~28.6℃，温度波动 4.4℃ 超过阈值 2.0℃（超出 2.4）；湿度首尾变化 -25.7% 超过阈值 3.0%（超出 22.7）；湿度单步最大变化 6.2% 超过阈值 1.5%（超出 4.7）；湿度全程单调下降（判据禁止全程单调） → 判定为不稳定（湿度持续单向变化））且末段温度上升",
+              "tool_call": {
+                "tool_name": "B02.get_environment_history",
+                "arguments": {
+                  "start": "2026-10-21T07:00:00",
+                  "end": "2026-10-21T09:30:00"
+                },
+                "status": "ok"
+              },
+              "adopted": true,
+              "ledger_path": "evidence_ledger.entries[0]"
+            },
+            {
+              "role": "model",
+              "source": "B06/b06-20261020-v1",
+              "time": "2026-10-21T09:30:00",
+              "status": "ok",
+              "result_summary": "模型输出 WATCH（confidence=1.0, model_version=b06-20261020-v1）",
+              "basis": "B06 在该窗口上真实输出 WATCH",
+              "tool_call": {
+                "tool_name": "B06.predict_window",
+                "arguments": {
+                  "window_id": "s1-live-001",
+                  "model_version": "b06-20261020-v1"
+                },
+                "status": "ok"
+              },
+              "adopted": true,
+              "ledger_path": "evidence_ledger.entries[1]"
+            }
+          ],
+          "missing_roles": [
+            "weather",
+            "knowledge"
+          ],
+          "chain_ok": true
+        }
+      ],
+      "tool_calls": [
+        {
+          "tool_name": "B02.get_environment_history",
+          "status": "ok",
+          "arguments": {
+            "start": "2026-10-21T07:00:00",
+            "end": "2026-10-21T09:30:00"
+          },
+          "adopted": true
+        },
+        {
+          "tool_name": "B05.get_current_environment",
+          "status": "ok",
+          "arguments": {
+            "location": "A区-3号温室"
+          },
+          "adopted": false
+        },
+        {
+          "tool_name": "B06.predict_window",
+          "status": "ok",
+          "arguments": {
+            "window_id": "s1-live-001",
+            "model_version": "b06-20261020-v1"
+          },
+          "adopted": true
+        },
+        {
+          "tool_name": "B05.get_weather_forecast",
+          "status": "ok",
+          "arguments": {
+            "location": "河北固安",
+            "forecast_window": "6h",
+            "note": "内部调用 now + 6h 两次，取基线点与预报点"
+          },
+          "adopted": true
+        },
+        {
+          "tool_name": "B05.search_tomato_knowledge",
+          "status": "ok",
+          "arguments": {
+            "query": "过期数据导致温室调控决策基于过时信息"
+          },
+          "adopted": true
+        }
+      ],
+      "checks": {
+        "V1": true,
+        "V2": true,
+        "V3": true,
+        "V4": true,
+        "V5": true,
+        "V6": true
+      }
+    }
+  },
+  "system_scan": {
+    "runs_total": 63,
+    "runs_traced": 63,
+    "errors": {},
+    "checks": {
+      "V1": {
+        "passed": 63,
+        "total": 63,
+        "failed_runs": []
+      },
+      "V2": {
+        "passed": 63,
+        "total": 63,
+        "failed_runs": []
+      },
+      "V3": {
+        "passed": 63,
+        "total": 63,
+        "failed_runs": []
+      },
+      "V4": {
+        "passed": 63,
+        "total": 63,
+        "failed_runs": []
+      },
+      "V5": {
+        "passed": 63,
+        "total": 63,
+        "failed_runs": []
+      },
+      "V6": {
+        "passed": 63,
+        "total": 63,
+        "failed_runs": []
+      }
+    },
+    "v1_vacuous": [
+      "run_036",
+      "run_037"
+    ],
+    "non_success_runs": [
+      {
+        "run_id": "run_036",
+        "status": "failed",
+        "answer_length": 0
+      },
+      {
+        "run_id": "run_037",
+        "status": "failed",
+        "answer_length": 0
+      }
+    ]
+  }
+}
