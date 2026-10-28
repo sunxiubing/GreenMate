@@ -1,0 +1,2 @@
+{"ts": "2026-10-28T22:39:15", "scenario": "S1", "run_id": "run_110", "offline": true, "base_run_id": "run_110", "notes": "S1 不接入外部天气，本次回放的输入只有内部历史与 B06 模型。"}
+{"ts": "2026-10-28T22:43:35", "scenario": "S5", "run_id": "run_111", "offline": true, "base_run_id": "run_111", "notes": "本次回放使用离线构造的天气用例（is_constructed=true），不是实时天气；实时天气会随真实时间变化，回放结果不可跨时间比较。；S5 的外部条件用 B07.s4_offline 的离线构造夹具，不联网。；本次是**基线变体**（一切正常）。"}

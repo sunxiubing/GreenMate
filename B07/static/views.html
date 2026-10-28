@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>GreenMate · 视图一 状态总览 / 视图二 状态演化 / 视图三 证据空间 / 视图四 场景回放与对比</title>
+<!-- 离线可开：不引任何 CDN 外链 -->
+<style>
+  :root{
+    --bg:#0f1416; --panel:#161d20; --line:#2a3539; --fg:#e6edef; --dim:#8b9a9f;
+    --raw:#3b2f18; --rawfg:#e0b872; --und:#14301f; --undfg:#7fd1a0;
+    --warn:#e0796b; --t:#e0796b; --h:#7fd1a0; --l:#e0b872;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font-family:"Microsoft YaHei",Consolas,monospace;line-height:1.6}
+  header{position:sticky;top:0;z-index:5;background:var(--panel);
+         border-bottom:1px solid var(--line);padding:14px 22px}
+  h1{margin:0 0 8px;font-size:19px}
+  .fp{font-size:13px;color:var(--dim)}
+  .fp b{color:var(--fg);font-weight:600}
+  .bar{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  select,button{background:#1e272a;color:var(--fg);border:1px solid var(--line);
+                border-radius:5px;padding:6px 10px;font-size:13px;font-family:inherit}
+  button{cursor:pointer}
+  button:hover{border-color:#4b6066}
+  .tabs{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .tab{background:#12181a;color:var(--dim);border:1px solid var(--line);
+       border-radius:5px;padding:6px 14px;font-size:13px;cursor:pointer;
+       font-family:inherit}
+  .tab.on{background:#1e272a;color:var(--fg);border-color:#4b6066}
+  main{padding:16px 20px 52px;max-width:1460px;margin:0 auto}
+  /* ★ 版面规则：所有视图一律**单列自上而下**，
+     按【一】【二】【三】【四】的编号顺序读下来；
+     并排只发生在"一个面板内部的并列小块"上，不再左右分栏。 */
+  .cols{display:flex;flex-direction:column;gap:13px;align-items:stretch}
+  .col{display:flex;flex-direction:column;gap:13px;min-width:0}
+  .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  @media (min-width:1080px){
+    .cards{grid-template-columns:repeat(4,minmax(0,1fr))}
+  }
+  .card{background:#1e272a;border:1px solid var(--line);border-radius:6px;
+        padding:9px 12px;min-width:0}
+  .card.wide{grid-column:1/-1}
+  .card.half{grid-column:1/-1}
+  @media (min-width:1080px){ .card.half{grid-column:span 2} }
+  .qgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));
+         gap:9px}
+  .duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));
+       gap:14px;align-items:start}
+  .qgrid .card .k{color:var(--h);font-size:13px;letter-spacing:.2px;
+                   line-height:1.5}
+  .card .k{color:var(--dim);font-size:12px;letter-spacing:.4px}
+  .card .v{font-size:14px;margin-top:4px;white-space:pre-wrap;
+           word-break:break-word}
+  .card .v b{color:var(--undfg)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+         overflow:hidden;min-width:0}
+  .panel>h2{margin:0;padding:11px 18px;font-size:15px;
+            border-bottom:1px solid var(--line);letter-spacing:.5px}
+  .panel.raw>h2{background:var(--raw);color:var(--rawfg)}
+  .panel.und>h2{background:var(--und);color:var(--undfg)}
+  .body{padding:14px 18px}
+  table{border-collapse:collapse;width:100%;font-size:13px;table-layout:fixed}
+  th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);
+        vertical-align:top;word-break:break-word}
+  th{color:var(--dim);font-weight:600;width:118px}
+  table.data th{width:auto}
+  table.data td.num{text-align:right;font-variant-numeric:tabular-nums}
+  pre{white-space:pre-wrap;word-break:break-word;margin:0;font-size:13px;
+      font-family:Consolas,monospace}
+  .q{margin-bottom:10px}
+  .q .qt{color:var(--undfg);font-weight:600}
+  .warn{color:var(--warn)}
+  .dim{color:var(--dim)}
+  .err{color:var(--warn);padding:20px;font-size:14px}
+  ol{margin:0;padding-left:22px}
+  li{margin-bottom:8px}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:6px}
+  .meta span{background:#1e272a;border:1px solid var(--line);border-radius:5px;
+             padding:3px 9px;font-size:12px;color:var(--dim)}
+  .meta span b{color:var(--fg);font-weight:600}
+  /* ---- 视图二 ---- */
+  .chart{display:block;width:100%;height:auto;background:#111719;
+         border:1px solid var(--line);border-radius:6px;margin:4px 0 10px}
+  .mk{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+      gap:8px}
+  .mkitem{background:#1e272a;border:1px solid var(--line);border-radius:6px;
+          padding:8px 11px;font-size:13px;min-width:0}
+  .mkitem .when{font-size:12px;color:var(--dim)}
+  .mkitem .kind{color:var(--warn);font-weight:600}
+  .mkitem .src{font-size:12px;color:var(--dim);margin-top:4px}
+  .pill{display:inline-block;border-radius:4px;padding:1px 7px;font-size:12px;
+        border:1px solid var(--line);margin-right:6px}
+  .ok{color:#7fd1a0}
+  .bad{color:#e0796b}
+  .tline{position:relative;padding-left:18px}
+  .tline:before{content:"";position:absolute;left:5px;top:6px;bottom:6px;
+                width:2px;background:#2a3539}
+  .tline>div{position:relative;margin-bottom:10px}
+  .tline>div:before{content:"";position:absolute;left:-16px;top:6px;
+                     width:9px;height:9px;border-radius:50%;
+                     background:var(--warn)}
+  .chartwrap{overflow-x:auto}
+  /* ---- 视图三 | 证据空间 ---- */
+  .evgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
+          gap:12px}
+  .evcard{background:#1e272a;border:1px solid var(--line);border-radius:8px;
+          overflow:hidden;min-width:0}
+  .evcard.bad{border-color:#e0796b;box-shadow:0 0 0 1px rgba(224,121,107,.25)}
+  .evcard.absent{border-style:dashed;opacity:.85}
+  .evcard>summary{list-style:none;cursor:pointer;padding:10px 14px;
+      display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+      border-bottom:1px solid var(--line)}
+  .evcard>summary::-webkit-details-marker{display:none}
+  .evcard>summary:hover{background:#232d31}
+  .evcard .ttl{font-size:14px;font-weight:600}
+  .evcard .id{font-size:12px;color:var(--dim)}
+  .badge{display:inline-block;border-radius:4px;padding:1px 9px;font-size:12px;
+         border:1px solid;letter-spacing:.5px}
+  .badge.supporting{color:#7fd1a0;border-color:#7fd1a0;
+                     background:rgba(127,209,160,.10)}
+  .badge.opposing{color:#e0796b;border-color:#e0796b;
+                   background:rgba(224,121,107,.12)}
+  .badge.undetermined{color:#8b9a9f;border-color:#8b9a9f;
+                       background:rgba(139,154,159,.10)}
+  .st{font-size:12px;padding:1px 8px;border-radius:4px;
+      border:1px solid var(--line);color:var(--dim)}
+  .st.bad{color:#e0796b;border-color:#e0796b}
+  .qa{padding:10px 14px;border-top:1px solid var(--line)}
+  .qa>div{margin-bottom:10px}
+  .qa .q{font-size:12px;color:var(--dim);letter-spacing:.5px;margin-bottom:3px}
+  .qa ul{margin:0;padding-left:20px}
+  .qa li{margin-bottom:4px;font-size:13px}
+  .impact{border-left:3px solid var(--l);padding-left:9px}
+  .impact.bad{border-left-color:#e0796b}
+  .toolrow{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;
+           padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .toolrow .mark{font-size:12px;white-space:nowrap}
+  .toolrow .mark.yes{color:#7fd1a0}
+  .toolrow .mark.no{color:#e0796b}
+  .toolrow .nm{font-weight:600}
+  .toolrow .full{grid-column:1/-1}
+  .toolrow .why{color:#e0b872;font-size:12px}
+  /* ---- 视图四 | 场景回放与对比 ---- */
+  .diff2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  @media (max-width:960px){ .diff2{grid-template-columns:1fr} }
+  .side{border:1px solid var(--line);border-radius:8px;overflow:hidden;
+        background:#1e272a}
+  .side>header{position:static;background:#232d31;border-bottom:1px solid var(--line);
+               padding:10px 14px;display:flex;gap:10px;align-items:center;
+               flex-wrap:wrap}
+  .side>header .who{font-size:14px;font-weight:600}
+  .side .five{padding:4px 0}
+  .side .fitem{padding:9px 14px;border-bottom:1px solid var(--line)}
+  .side .fitem:last-child{border-bottom:none}
+  .side .fitem .k{color:var(--dim);font-size:12px;letter-spacing:.4px}
+  .side .fitem .v{font-size:14px;margin-top:3px;white-space:pre-wrap;
+                  word-break:break-word}
+  .layer{margin-bottom:14px}
+  .layer h3{font-size:13px;color:var(--dim);margin:0 0 6px;letter-spacing:.4px}
+  .chg{color:var(--warn)}
+  .nochg{color:var(--dim)}
+  .attrib{border-left:3px solid var(--h);padding:10px 14px;background:#141b1d;
+          border-radius:0 6px 6px 0}
+  .attrib.bad{border-left-color:var(--warn)}
+  .attrib .rule{font-size:15px;font-weight:600;margin-bottom:6px}
+  .attrib .chain{font-size:14px;margin:6px 0}
+  .attrib ul{margin:6px 0 0;padding-left:22px}
+</style>
+</head>
+<body>
+<header>
+  <h1>B07 · 视图一 状态总览　/　视图二 状态演化　/　视图三 证据空间　/　视图四 场景回放与对比</h1>
+  <div class="fp" id="fp">正在读取…</div>
+  <div class="tabs">
+    <button class="tab on" data-tab="overview">视图一 | 状态总览</button>
+    <button class="tab" data-tab="evolution">视图二 | 状态演化</button>
+    <button class="tab" data-tab="compare">视图二 | S1↔S2 对比</button>
+    <button class="tab" data-tab="evidence">视图三 | 证据空间</button>
+    <button class="tab" data-tab="view4">视图四 | 场景回放与对比</button>
+  </div>
+  <div class="bar">
+    <label class="fp">run：</label>
+    <select id="runs"></select>
+    <span class="fp" id="comparebar" style="display:none">
+      对比对象：
+      <select id="runA"></select> vs <select id="runB"></select>
+    </span>
+    <button onclick="refresh()">刷新</button>
+    <span class="fp">（本页只读 run 存档，绝不重新计算；刷新不会改变已保存的运行结果）</span>
+  </div>
+</header>
+<main id="main"><div class="dim">加载中…</div></main>
+
+<script>
+const $ = s => document.querySelector(s);
+let TAB = "overview";
+let RUNS = [];
+function esc(s){
+  return String(s===undefined||s===null?"—":s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function rows(obj){
+  return "<table>" + obj.map(r =>
+    "<tr><th>"+esc(r[0])+"</th><td>"+esc(r[1])+"</td></tr>").join("") + "</table>";
+}
+function dataTable(headers, body, aligns){
+  aligns = aligns || headers.map(()=>"left");
+  let h = "<tr>"+headers.map((x,i)=>
+    "<th style='text-align:"+aligns[i]+"'>"+esc(x)+"</th>").join("")+"</tr>";
+  let b = body.map(r=>"<tr>"+r.map((x,i)=>
+    "<td class='num' style='text-align:"+aligns[i]+"'>"+esc(x)+"</td>").join("")+"</tr>").join("");
+  return "<table class='data'>"+h+b+"</table>";
+}
+function fpHtml(d){
+  const fp = d.fingerprint;
+  return "本次分析 = <b>"+esc(d.run_id)+"</b>"+
+    "<div class='meta'>"+
+    "<span>created_at <b>"+esc(d.created_at)+"</b></span>"+
+    "<span>analysis_time <b>"+esc(d.analysis_time)+"</b></span>"+
+    "<span>model <b>"+esc(fp.model)+"</b></span>"+
+    "<span>提示词指纹 <b>"+esc(fp.system_prompt_sha256)+"</b></span>"+
+    "<span>问题指纹 <b>"+esc(fp.question_sha256)+"</b></span>"+
+    "<span>数据 sha256 <b>"+esc(d.data_sha256.slice(0,12))+"</b></span>"+
+    "</div>";
+}
+
+async function loadRuns(){
+  const r = await fetch("/api/runs");
+  const j = await r.json();
+  RUNS = j.runs;
+  const opts = RUNS.map(x =>
+    `<option value="${x.run_id}">${x.run_id} · ${x.created_at||""} · ${x.combined_attention||x.status||""}</option>`
+  ).join("");
+  $("#runs").innerHTML = opts;
+  $("#runA").innerHTML = opts;
+  $("#runB").innerHTML = opts;
+  const want = new URLSearchParams(location.search).get("run_id");
+  if (want && RUNS.some(x=>x.run_id===want)) $("#runs").value = want;
+  const pick = (id,v)=>{ if(RUNS.some(x=>x.run_id===v)) $(id).value=v; };
+  pick("#runA","run_012"); pick("#runB","run_015");
+}
+function setTab(t){
+  TAB = t;
+  document.querySelectorAll(".tab").forEach(b=>
+    b.classList.toggle("on", b.dataset.tab===t));
+  $("#comparebar").style.display =
+    (t==="compare"||t==="view4")?"inline-block":"none";
+  refresh();
+}
+document.querySelectorAll(".tab").forEach(b=>
+  b.onclick = ()=>setTab(b.dataset.tab));
+
+async function refresh(){
+  if(TAB==="overview") return loadOverview();
+  if(TAB==="evolution") return loadEvolution();
+  if(TAB==="evidence") return loadEvidence();
+  if(TAB==="view4") return loadView4();
+  return loadCompare();
+}
+
+/* ================= 视图一 ================= */
+async function loadOverview(){
+  const rid = $("#runs").value;
+  if(!rid){ $("#main").innerHTML = '<div class="err">没有可用的 run 存档</div>'; return; }
+  let d;
+  try{
+    const r = await fetch("/api/overview?run_id="+encodeURIComponent(rid));
+    if(!r.ok){ const e = await r.json(); throw new Error(e.detail||r.statusText); }
+    d = await r.json();
+  }catch(err){
+    $("#main").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
+    return;
+  }
+  history.replaceState(null,"","?tab=overview&run_id="+encodeURIComponent(rid));
+  $("#fp").innerHTML = fpHtml(d);
+
+  const raw = d.raw, und = d.understood, ev = d.evidence, ce = und.current_environment||{};
+  const att = und.attention||{}, tr = und.recent_trend||{}, pa = und.predicted_attention||{};
+  const unit = (ce.unit&&ce.unit.temperature)||"℃";
+
+  let missing = "<div class='dim'>（无）</div>";
+  if(!ev.has_ledger){
+    missing = "<pre>"+esc(ev.summary)+"</pre>";
+  }else if(ev.missing.length){
+    missing = "<pre>"+ev.missing.map(m =>
+      "· "+m.evidence_id+"（"+m.source_type+"，source="+m.source+"）status="+m.status+
+      "\n  不可用的原因："+(m.error||"（存档未记录 error 字段）")
+    ).join("\n")+"</pre>";
+  }else{
+    missing = "<div class='dim'>（无）</div>";
+  }
+
+  let failed = "";
+  if(tr.failed_criteria && tr.failed_criteria.length){
+    failed = "<h3 style='font-size:13px;color:var(--dim);margin:10px 0 4px'>触发的判据（未通过）</h3><pre>"+
+      esc(tr.failed_criteria.map(x=>"· "+x).join("\n"))+"</pre>";
+  }
+
+  let attHtml = "<div class='dim'>（该 run 没有 combined_attention 字段）</div>";
+  if(att.value){
+    attHtml = "<b>"+esc(att.value)+"</b>（"+esc(att.explanation||"—")+"）"+
+      (att.reason?"<pre style='margin-top:6px'>判定理由："+esc(att.reason)+"</pre>":"")+
+      "<div class='fp' style='margin-top:4px'>内部预测 "+esc(att.internal_predicted_attention)+
+      " / 外部信号 "+esc(att.external_signal)+" / 有分歧 "+esc(att.has_conflict)+"</div>";
+  }
+
+  const rawCards = [
+    ["采样时间", raw.timestamp],
+    ["温度", raw.temperature+" "+(ce.unit&&ce.unit.temperature||unit)],
+    ["湿度", raw.humidity+" %"],
+    ["光照", raw.lux+" lux"],
+    ["source_type", raw.source_type],
+    ["模拟场景标签", raw.sim_scenario]
+  ].map(x=>`<div class="card"><div class="k">${esc(x[0])}</div>`+
+          `<div class="v">${esc(x[1])}</div></div>`).join("");
+
+  const qCards = d.questions.map(q=>
+    `<div class="card"><div class="k">${esc(q.q)}</div>`+
+    `<div class="v">${esc(q.a)}</div></div>`).join("");
+
+  $("#main").innerHTML = `
+  <div class="cols">
+  <div class="col">
+  <div class="panel raw p-raw"><h2>【一】原始数值 —— 这次分析真正使用的当前环境</h2><div class="body">
+    <div class="cards">${rawCards}</div>
+    <div class="warn" style="margin-top:8px">⚠ 这一块只是数值，本身不构成判断</div>
+  </div></div>
+
+  <div class="panel und p-und"><h2>【二】系统理解后的状态 —— 基于已有证据形成的判断</h2><div class="body">
+    <div class="cards">
+      <div class="card"><div class="k">当前环境状态</div>
+        <div class="v"><b>${esc(und.state_verdict||"—")}</b></div></div>
+      <div class="card"><div class="k">下一窗口预测</div>
+        <div class="v"><b>${esc(pa.value||"—")}</b>
+          ${pa.model_version?"<span class='dim'>model_version="+esc(pa.model_version)+"</span>":""}
+        </div></div>
+      <div class="card half"><div class="k">数值快照（系统判断层记录的当前环境）</div>
+        <div class="v">温度 ${esc(ce.temperature??"—")} ${esc((ce.unit&&ce.unit.temperature)||unit)} ／
+          湿度 ${esc(ce.humidity??"—")} % ／ 光照 ${esc(ce.lux??"—")} lux
+          <span class="dim">采样 ${esc(ce.sampled_at||"—")}</span></div></div>
+      <div class="card half"><div class="k">近期趋势</div>
+        <div class="v">${esc(tr.stability_verdict||"—")}　<span class="dim">窗口 ${esc(tr.window_span||"—")}：${esc(tr.window_start||"—")} → ${esc(tr.window_end||"—")}</span>
+        ${tr.conclusion?"<pre style='margin-top:6px'>结论："+esc(tr.conclusion)+"</pre>":""}</div></div>
+      <div class="card wide"><div class="k">关注等级</div>
+        <div class="v">${attHtml}</div></div>
+      <div class="card wide"><div class="k">证据完整度</div>
+        <div class="v">${esc(ev.summary)}
+        <h3 style="font-size:12px;color:var(--dim);margin:10px 0 4px">缺失清单</h3>
+        ${missing}</div></div>
+    </div>
+    ${failed}
+  </div></div>
+
+  <div class="panel p-llm"><h2>【三】这次分析的 LLM 解释（已保存，未重新生成）</h2><div class="body">
+    <pre>${esc(d.llm_explanation||"（空）")}</pre>
+  </div></div>
+
+  <div class="panel p-q"><h2>【四】四个问题（做完就该能答上来）</h2><div class="body">
+    <div class="qgrid">${qCards}</div>
+  </div></div>
+  </div>
+  </div>`;
+}
+
+/* ================= 视图二 ================= */
+const METRICS = [
+  {key:"temperature", label:"温度", unit:"℃", color:"#e0796b"},
+  {key:"humidity",    label:"湿度", unit:"%",  color:"#7fd1a0"},
+  {key:"lux",         label:"光照", unit:"lux",color:"#e0b872"}
+];
+const MK_COLORS = ["#d9a441","#9c8cf0","#4fb0c6","#e07fb0","#8fd06a"];
+
+function fmtV(v){ return String(Math.round(v*100)/100); }
+function svgText(x,y,txt,color,anchor,size,family){
+  return `<text x="${x}" y="${y}" fill="${color}" font-size="${size||11}" `+
+         `text-anchor="${anchor||"middle"}" font-family="${family||"Consolas,monospace"}">`+
+         `${esc(txt)}</text>`;
+}
+function mkShort(kind){
+  if(String(kind).indexOf("窗口开始")>=0) return "①窗口起";
+  if(String(kind).indexOf("窗口结束")>=0) return "②窗口止";
+  if(String(kind).indexOf("温度持续上升")>=0) return "③温度升起点";
+  if(String(kind).indexOf("温度持续下降")>=0) return "③温度降起点";
+  if(String(kind).indexOf("湿度持续上升")>=0) return "④湿度升起点";
+  if(String(kind).indexOf("湿度持续下降")>=0) return "④湿度降起点";
+  return kind;
+}
+function xLabel(p,i){
+  const rel = (p.relative_minute===null||p.relative_minute===undefined)
+    ? "" : (" +"+p.relative_minute+"′");
+  return "第"+(i+1)+"点"+rel;
+}
+
+/* 单 run：一个指标一个 panel，各自归一化 */
+function buildChart(points, markers, opt){
+  opt = opt || {};
+  const W=800, PH=86, GAP=52, TOP=78, LEFT=72, RIGHT=20, BOT=60;
+  const n = points.length;
+  const plotW = W-LEFT-RIGHT;
+  const xs = i => n<=1 ? LEFT+plotW/2 : LEFT + i*plotW/(n-1);
+  const totalH = TOP + METRICS.length*(PH+GAP) - GAP + BOT;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${totalH}" width="100%" `+
+          `preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">`;
+  s += `<rect x="0" y="0" width="${W}" height="${totalH}" fill="#111719"/>`;
+
+  (markers||[]).filter(m=>m.scope==="window").forEach((m,i)=>{
+    const c = MK_COLORS[i%MK_COLORS.length];
+    s += `<rect x="${LEFT}" y="${TOP-24}" width="${plotW}" height="${totalH-TOP-BOT+24}" `+
+         `fill="${c}" opacity="0.06"/>`;
+    s += `<rect x="${LEFT}" y="${TOP-24}" width="${plotW}" height="${totalH-TOP-BOT+24}" `+
+         `fill="none" stroke="${c}" stroke-dasharray="4 4" opacity="0.5"/>`;
+  });
+
+  const scale = (opt && opt.scale) || null;
+  const refLine = (opt && opt.refLine) || null;
+  METRICS.forEach((m,k)=>{
+    const top = TOP + k*(PH+GAP);
+    const vals = points.map(p=>Number(p[m.key]));
+    let yMin, yMax;
+    if(scale && scale[m.key]){
+      // ★ 外部传入的刻度 —— 对比模式下两个 run 用同一把尺子
+      yMin = scale[m.key].yMin; yMax = scale[m.key].yMax;
+    }else{
+      let lo = Math.min.apply(null,vals), hi = Math.max.apply(null,vals);
+      if(!isFinite(lo)||!isFinite(hi)){ lo=0; hi=1; }
+      const pad = (hi-lo)*0.18 || 1;
+      yMin = lo-pad; yMax = hi+pad;
+    }
+    const y = v => top + PH - (v-yMin)/(yMax-yMin)*PH;
+    const shared = !!(scale && scale[m.key]);
+    s += svgText(LEFT, top-10,
+      m.label+"（"+m.unit+"）"+(shared?"　·　两图共用同一刻度 "+fmtV(yMin)+" ~ "+fmtV(yMax):""),
+      m.color, "start", 12, "Microsoft YaHei,Consolas,monospace");
+    if(refLine && refLine[m.key]!==undefined && refLine[m.key]!==null){
+      const ry = y(refLine[m.key]);
+      s += `<line x1="${LEFT}" y1="${ry}" x2="${W-RIGHT}" y2="${ry}" `+
+           `stroke="#e0b872" stroke-dasharray="6 4" opacity="0.85"/>`;
+      s += svgText(W-RIGHT-2, ry-6, "两 run 末点 "+fmtV(refLine[m.key])+m.unit,
+                   "#e0b872", "end", 10, "Microsoft YaHei,Consolas,monospace");
+    }
+    for(let g=0; g<=3; g++){
+      const val = yMin + (yMax-yMin)*g/3;
+      const yy = y(val);
+      s += `<line x1="${LEFT}" y1="${yy}" x2="${W-RIGHT}" y2="${yy}" stroke="#2a3539"/>`;
+      s += svgText(LEFT-8, yy+4, fmtV(val), "#8b9a9f", "end", 11);
+    }
+    const pts = vals.map((v,i)=>xs(i).toFixed(1)+","+y(v).toFixed(1)).join(" ");
+    s += `<polyline points="${pts}" fill="none" stroke="${m.color}" stroke-width="2"/>`;
+    vals.forEach((v,i)=>{
+      s += `<circle cx="${xs(i)}" cy="${y(v)}" r="3.6" fill="${m.color}"/>`;
+      s += svgText(xs(i), y(v)-10, fmtV(v), m.color, "middle", 11);
+    });
+  });
+
+  // X 轴（只有一行，避免两行数字叠在一起）
+  const axisY = TOP + METRICS.length*(PH+GAP) - GAP + 28;
+  points.forEach((p,i)=>{
+    s += svgText(xs(i), axisY, xLabel(p,i), "#8b9a9f", "middle", 12);
+  });
+  s += svgText(LEFT, axisY+24, "X 轴 = 窗口内相对位置（不是绝对时间）",
+               "#5f6f74", "start", 11, "Microsoft YaHei,Consolas,monospace");
+
+  // 时点标记（竖虚线 + 菱形 + 顶部引线标签）
+  const pm = (markers||[]).filter(m=>m.scope==="point"&&m.point_index!==null);
+  pm.forEach((m,i)=>{
+    const c = MK_COLORS[i%MK_COLORS.length];
+    const x = xs(m.point_index);
+    const row = i%2, ly = 16+row*13;
+    s += `<line x1="${x}" y1="${ly+4}" x2="${x}" y2="${totalH-BOT+8}" stroke="${c}" `+
+         `stroke-dasharray="3 3" opacity="0.6"/>`;
+    const top0 = TOP;
+    s += `<polygon points="${x},${top0-6} ${x+5},${top0+1} ${x},${top0+8} ${x-5},${top0+1}" `+
+         `fill="${c}" stroke="#111719"/>`;
+    s += `<line x1="${x}" y1="${ly+4}" x2="${x}" y2="${top0-4}" stroke="${c}"/>`;
+    s += svgText(x, ly+8, mkShort(m.kind), c, "middle", 10,
+                 "Microsoft YaHei,Consolas,monospace");
+  });
+  s += `</svg>`;
+  return s;
+}
+
+/* 对比：两个 run **各自一张图**（结构与单 run 一致），但 Y 轴刻度共用同一把尺子 */
+function sharedScale(A, B){
+  const sc = {}, ref = {};
+  METRICS.forEach(m=>{
+    const all = A.points.map(p=>Number(p[m.key]))
+                   .concat(B.points.map(p=>Number(p[m.key])));
+    let lo = Math.min.apply(null,all), hi = Math.max.apply(null,all);
+    if(!isFinite(lo)||!isFinite(hi)){ lo=0; hi=1; }
+    const pad = (hi-lo)*0.18 || 1;
+    sc[m.key] = {yMin: lo-pad, yMax: hi+pad};
+    const ea = Number(A.points[A.points.length-1][m.key]);
+    const eb = Number(B.points[B.points.length-1][m.key]);
+    if(Math.abs(ea-eb)<=0.5) ref[m.key] = ea;     // 末点相同 → 画参考线
+  });
+  return {scale: sc, refLine: ref};
+}
+
+function markerCards(markers){
+  return "<div class='mk'>"+(markers||[]).map(m=>{
+    const when = m.scope==="window" ? "覆盖整个窗口（不是某一个时刻）"
+                                    : String(m.at);
+    return `<div class="mkitem"><div class="when">${esc(when)}</div>`+
+      `<div class="kind">${esc(m.kind)}</div>`+
+      `<div>${esc(m.text)}</div>`+
+      `<div class="src">依据来源：${esc(m.source)}</div></div>`;
+  }).join("")+"</div>";
+}
+
+async function loadEvolution(){
+  const rid = $("#runs").value;
+  if(!rid){ $("#main").innerHTML = '<div class="err">没有可用的 run 存档</div>'; return; }
+  let d;
+  try{
+    const r = await fetch("/api/evolution?run_id="+encodeURIComponent(rid));
+    if(!r.ok){ const e = await r.json(); throw new Error(e.detail||r.statusText); }
+    d = await r.json();
+  }catch(err){
+    $("#main").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
+    return;
+  }
+  history.replaceState(null,"","?tab=evolution&run_id="+encodeURIComponent(rid));
+  $("#fp").innerHTML = fpHtml(d);
+
+  const pts = d.points||[], met = (d.process&&d.process.metrics)||{};
+  const win = d.window||{};
+  const align = d.alignment||{};
+
+  let ptRows = pts.map(p=>[
+    String(p.index+1), p.timestamp,
+    (p.relative_minute===null||p.relative_minute===undefined)?"—":"+"+p.relative_minute+"′",
+    p.temperature, p.arrow_temperature,
+    p.humidity,   p.arrow_humidity,
+    p.lux,        p.arrow_lux
+  ]);
+
+  const mrows = [];
+  METRICS.forEach(m=>{
+    const x = met[m.key]||{};
+    if(!x.available){ mrows.push([m.label+"（"+m.unit+"）", x.note||"—","","","",""]); return; }
+    mrows.push([m.label+"（"+m.unit+"）",
+      x.start_value, x.end_value, (x.delta>=0?"+":"")+Number(x.delta).toFixed(2),
+      x.min+"~"+x.max, Number(x.range_width).toFixed(2)]);
+  });
+
+  const srows = [];
+  METRICS.forEach(m=>{
+    const x = met[m.key]||{};
+    if(!x.available) return;
+    srows.push([m.label,
+      x.monotone_up?"是":"否", x.monotone_down?"是":"否",
+      Number(x.max_step).toFixed(2) + (x.max_step_index!==null&&x.max_step_index!==undefined
+        ? "（第"+(x.max_step_index+1)+"→第"+(x.max_step_index+2)+"点）":""),
+      x.trend_shape, x.shape_basis]);
+  });
+
+  const na = ((d.timeline||{}).not_available)||[];
+
+  $("#main").innerHTML = `
+  <div class="cols">
+  <div class="col">
+    <div class="panel"><h2>【一】过程 —— 逐点读数</h2><div class="body">
+      ${dataTable(["#","时刻","窗口内","温度℃","向","湿度%","向","光照lux","向"],
+                  ptRows, ["right","left","right","right","center","right","center","right","center"])}
+      <div class="dim" style="margin-top:8px">箭头 = 相邻两点变化方向（差值为 0 记 →）；
+        6 个点就是 6 个点，未做平滑/插值/补点</div>
+    </div></div>
+
+    <div class="panel"><h2>【二】曲线 —— 温度 / 湿度 / 光照（SVG）</h2><div class="body">
+      <div class="meta" style="margin-bottom:6px">
+        <span>曲线数据源 <b>${esc(d.curve_source)}</b></span>
+        <span>存档窗口 <b>${esc(win.start)} → ${esc(win.end)}</b></span>
+        <span>窗口核对 <b>${align.checked ? (align.ok?"一致 ✔":"不一致 ✘") : "—"}</b></span>
+      </div>
+      <div class="chartwrap">${buildChart(pts,(d.timeline||{}).markers)}</div>
+      <div class="dim">只读存档：曲线画的就是那次分析真正用的那段 history（6 个采样点连线，
+        未做平滑/插值）；判据数值读存档里的 criteria。</div>
+    </div></div>
+
+    <div class="panel"><h2>【二·附】过程量（★ 只从 history 序列算，不读结论）</h2><div class="body">
+      <div class="duo">
+      ${dataTable(["过程量","起始值","结束值","首尾差","窗口内区间","区间宽度"],
+                  mrows, ["left","right","right","right","left","right"])}
+      ${dataTable(["趋势","单调不降","单调不升","最大单步跳变","趋势形状","判定依据"],
+                  srows, ["left","center","center","left","left","left"])}
+      </div>
+      <div class="dim" style="margin-top:10px">趋势形状是<b>规则判定</b>（不是模型输出）：
+        全程单调不降且至少一次严格上升 → 持续上升；全程单调不升且至少一次严格下降 → 持续下降；
+        相对波动幅度 (max-min)/max|值| ≤ ${esc(d.stable_rel_span_max*100)}% → 稳定；
+        有内部极值且 |末点-首点| ≤ 波动幅度/2 → 短时波动后恢复；其余 → 波动；点数 &lt; 2 → 其他。</div>
+    </div></div>
+
+    <div class="panel"><h2>【三】时间线标记 —— 状态是怎么走到现在这一步的</h2><div class="body">
+      <h3 style="font-size:13px;color:var(--dim);margin:0 0 6px'>【能做】每条都带着序列里的时刻</h3>
+      ${markerCards((d.timeline||{}).markers)}
+      <h3 style="font-size:13px;color:var(--dim);margin:14px 0 6px'>【做不了 —— 必须显式说明，不许留空、不许假装有】</h3>
+      <div class="tline">${na.map(x=>
+        `<div><div class="kind warn">${esc(x.title)}</div><div>${esc(x.reason)}</div></div>`
+      ).join("")}</div>
+    </div></div>
+
+    ${(d.window_selection&&d.window_selection.reason)?`
+    <div class="panel"><h2>【附】窗口是怎么选出来的（为什么这段可比）</h2><div class="body">
+      <pre>${esc(d.window_selection.reason)}</pre>
+      <div class="dim" style="margin-top:6px">scenario=${esc(d.window_selection.scenario)}
+        anchor_policy=${esc(d.window_selection.anchor_policy)}</div>
+    </div></div>`:""}
+
+    ${(d.external_conditions)?`
+    <div class="panel"><h2>【附】外部条件（单点判定，覆盖整个窗口，不是时点）</h2><div class="body">
+      <pre>signal=${esc(d.external_conditions.signal)}
+judge_method=${esc(d.external_conditions.judge_method)}
+${esc(d.external_conditions.basis)}</pre>
+    </div></div>`:""}
+  </div>
+  </div>`;
+}
+
+/* ================= 视图二 · 对比 ================= */
+async function loadCompare(){
+  const a = $("#runA").value, b = $("#runB").value;
+  if(!a||!b){ $("#main").innerHTML='<div class="err">请选择两个 run</div>'; return; }
+  let d;
+  try{
+    const r = await fetch("/api/evolution/compare?a="+encodeURIComponent(a)+
+                          "&b="+encodeURIComponent(b));
+    if(!r.ok){ const e = await r.json(); throw new Error(e.detail||r.statusText); }
+    d = await r.json();
+  }catch(err){
+    $("#main").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
+    return;
+  }
+  history.replaceState(null,"","?tab=compare&a="+encodeURIComponent(a)+"&b="+encodeURIComponent(b));
+  const A=d.a, B=d.b;
+  $("#fp").innerHTML = "本次对比 = <b>"+esc(d.run_a)+"</b> vs <b>"+esc(d.run_b)+"</b>"+
+    "<div class='meta'>"+
+    "<span>A <b>"+esc(d.run_a)+"</b> · "+esc(A.scenario)+" · "+esc(A.analysis_time)+"</span>"+
+    "<span>A model <b>"+esc(A.fingerprint.model)+"</b></span>"+
+    "<span>A 提示词指纹 <b>"+esc(A.fingerprint.system_prompt_sha256)+"</b></span>"+
+    "<span>A 问题指纹 <b>"+esc(A.fingerprint.question_sha256)+"</b></span>"+
+    "<span>B <b>"+esc(d.run_b)+"</b> · "+esc(B.scenario)+" · "+esc(B.analysis_time)+"</span>"+
+    "<span>B model <b>"+esc(B.fingerprint.model)+"</b></span>"+
+    "<span>B 提示词指纹 <b>"+esc(B.fingerprint.system_prompt_sha256)+"</b></span>"+
+    "<span>B 问题指纹 <b>"+esc(B.fingerprint.question_sha256)+"</b></span>"+
+    "<span>数据 sha256 <b>"+esc(d.data_sha256.slice(0,12))+"</b></span>"+
+    "</div>";
+
+  const SH = sharedScale(A,B);
+
+  const rowsHtml = (d.rows||[]).map(r=>
+    `<tr><td>${esc(r.metric)}</td><td class='num'>${esc(r.a)}</td>`+
+    `<td class='num'>${esc(r.b)}</td><td class='num'>${esc(r.diff||"—")}</td></tr>`).join("");
+
+  const asserts = (d.assertions||[]).map(c=>
+    `<div class="mkitem"><div class="kind ${c.passed?"ok":"bad"}">`+
+    `[${c.passed?"PASS":"FAIL"}] ${esc(c.id)} ${esc(c.claim)}</div>`+
+    `<div>${esc(d.run_a)}=${esc(c.a_value)}　${esc(d.run_b)}=${esc(c.b_value)}`+
+    (c.delta!==null&&c.delta!==undefined?`　Δ=${Number(c.delta).toFixed(2)}`:"")+
+    `</div><div class="src">${esc(c.note)}</div></div>`).join("");
+
+  const ctrl = (c,rid)=>{
+    if(!c.has_control) return `<div class="mkitem"><div>${esc(rid)}：（没有找到使用同一段历史窗口的其他 run）</div></div>`;
+    const shown=(c.siblings||[]).filter(s=>!s.identical||s.run_id==="run_023");
+    return `<div class="mkitem"><div>${esc(rid)}：共 ${(c.siblings||[]).length} 个 run 使用同一段窗口，`+
+      `${c.same_count} 个过程量完全相同，${c.diff_count} 个不同</div>`+
+      shown.map(s=>`<div class="src">· ${esc(rid)} vs ${esc(s.run_id)}：`+
+        (s.identical?"过程量完全相同 ✔":"过程量不同 ✘ —— 需要排查")+
+        `<br>　${esc(s.note)}</div>`).join("")+"</div>";
+  };
+
+  const warnSame = d.same_calendar_day
+    ? `<div class="dim">两个 run 的窗口在同一天；X 轴仍用窗口内相对位置对齐</div>`
+    : `<div class="warn">⚠ 两个 run 不在同一天（${esc(String(A.window.start).slice(0,10))} vs `+
+      `${esc(String(B.window.start).slice(0,10))}）—— 下面的 X 轴一律用<b>窗口内相对位置</b>，`+
+      `不是绝对时间</div>`;
+
+  $("#main").innerHTML = `
+  <div class="cols">
+  <div class="col">
+    <div class="panel"><h2>【一】两个 run 的身份 —— 绝对时间不在同一天</h2><div class="body">
+      ${warnSame}
+      <div style="margin-top:10px">
+        ${dataTable(["run","scenario","analysis_time","窗口起","窗口止","model"],
+          [[d.run_a,A.scenario,A.analysis_time,A.window.start,A.window.end,A.fingerprint.model],
+           [d.run_b,B.scenario,B.analysis_time,B.window.start,B.window.end,B.fingerprint.model]],
+          ["left","left","left","left","left","left"])}
+      </div>
+    </div></div>
+
+    <div class="panel"><h2>【二】曲线（两个 run 共用同一把 Y 轴刻度 + 同一条 X 轴）</h2><div class="body">
+      <div class="meta" style="margin-bottom:8px">
+        <span>A <b>${esc(d.run_a)}</b>（${esc(A.scenario)}）绝对窗口
+          <b>${esc(A.window.start)} → ${esc(A.window.end)}</b></span>
+        <span>B <b>${esc(d.run_b)}</b>（${esc(B.scenario)}）绝对窗口
+          <b>${esc(B.window.start)} → ${esc(B.window.end)}</b></span>
+      </div>
+      <div class="chartwrap">${buildChart(A.points,(A.timeline||{}).markers,SH)}</div>
+      <div style="margin-top:14px">
+        <div class="chartwrap">${buildChart(B.points,(B.timeline||{}).markers,SH)}</div>
+      </div>
+      <div class="dim">「稳定到现在」vs「持续变化到现在」直接看图就能看出来：
+        上面的 ${esc(d.run_a)}（S1）在 ${esc(A.window.start).slice(11,16)} 前基本走平，
+        下面的 ${esc(d.run_b)}（S2）一路上行 —— <b>两条线用同一把尺子</b>，
+        而且都终止在同一条水平虚线（末点温度相同）上，所以"当前值一样、过程不同"一眼可见。</div>
+    </div></div>
+
+    <div class="panel"><h2>【三】过程量对比表</h2><div class="body">
+      <table class="data"><tr><th>过程量</th>
+        <th style="text-align:right">${esc(d.run_a)}(${esc(A.scenario)})</th>
+        <th style="text-align:right">${esc(d.run_b)}(${esc(B.scenario)})</th>
+        <th style="text-align:right">差异</th></tr>${rowsHtml}</table>
+    </div></div>
+
+    <div class="panel"><h2>【四】机器判定 C1~C5（相对比较，不拍绝对阈值）</h2><div class="body">
+      <div class="mk">${asserts}</div>
+      <div class="warn" style="margin-top:8px">反向检查：${esc(d.reverse_check)}</div>
+      <div class="dim">★ C1~C5 全部只从 history 序列算，不读 structured_judgement</div>
+    </div></div>
+
+    <div class="panel"><h2>【五】对照检查（同段窗口 → 过程量必须完全相同）</h2><div class="body">
+      <div class="mk">${ctrl(d.control_a,d.run_a)}${ctrl(d.control_b,d.run_b)}</div>
+    </div></div>
+
+    <div class="panel"><h2>【六】为什么这两个 run 可比（窗口选择依据）</h2><div class="body">
+      ${(d.why_comparable||[]).map(w=>
+        `<div style="margin-bottom:8px"><b>${esc(w.run_id)}</b><pre>${esc(w.reason)}</pre></div>`
+      ).join("")}
+    </div></div>
+  </div>
+  </div>`;
+}
+
+/* ================= 视图三 | 证据空间 ================= */
+function evList(items){
+  if(!items || !items.length) return "<div class='dim'>（无）</div>";
+  return "<ul>"+items.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+"</ul>";
+}
+function evBlock(b){
+  const cls = "evcard"+(b.status!=="ok"?" bad":"")+(b.absent?" absent":"");
+  const badge = "<span class='badge "+esc(b.direction)+"'>"+esc(b.direction_label)+"</span>";
+  const st = b.absent
+    ? "<span class='st'>"+esc(b.status_label)+"</span>"
+    : "<span class='st "+(b.status==="ok"?"":"bad")+"'>status="+esc(b.status)+"</span>";
+  const where = evList(b.where);
+  const said = (b.said && b.said.length)
+    ? evList(b.said)
+    : "<div class='dim'>（没有内容 —— 这次取数失败了）</div>";
+  const valid = evList(b.valid);
+  const why = (b.why_unavailable && b.why_unavailable.length)
+    ? "<div><div class='q'>为什么不可用？</div>"+evList(b.why_unavailable)+"</div>" : "";
+  const imp = (b.impact && b.impact.length)
+    ? "<div class='impact "+(b.status==="ok"?"":"bad")+"'><div class='q'>它影响了什么判断？</div>"+
+      evList(b.impact)+"</div>" : "";
+  return "<details class='"+cls+"' open>"+
+    "<summary>"+
+      "<span class='ttl'>"+esc(b.title)+"</span>"+
+      badge+st+
+      "<span class='id'>"+esc(b.evidence_id||"—")+
+        (b.source?"　source="+esc(b.source):"")+"</span>"+
+    "</summary>"+
+    "<div class='qa'>"+
+      "<div><div class='q'>它从哪里来？</div>"+where+"</div>"+
+      "<div><div class='q'>它说了什么？</div>"+said+"</div>"+
+      "<div><div class='q'>它现在是否有效？</div>"+valid+"</div>"+
+      why+imp+
+    "</div>"+
+  "</details>";
+}
+async function loadEvidence(){
+  const rid = $("#runs").value;
+  if(!rid){ $("#main").innerHTML = '<div class="err">没有可用的 run 存档</div>'; return; }
+  let d;
+  try{
+    const r = await fetch("/api/evidence?run_id="+encodeURIComponent(rid));
+    if(!r.ok){ const e = await r.json(); throw new Error(e.detail||r.statusText); }
+    d = await r.json();
+  }catch(err){
+    $("#main").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
+    return;
+  }
+  history.replaceState(null,"","?tab=evidence&run_id="+encodeURIComponent(rid));
+  $("#fp").innerHTML = fpHtml(d);
+
+  const tc = d.tool_calls||{}, dv = d.divergence||{}, ca = d.combined_attention||{};
+  const reasons = tc.not_adopted_reasons||{};
+  const noLedger = !d.has_ledger;
+
+  const toolRows = (tc.records||[]).map(function(r){
+    const yes = !!r.adopted;
+    const nc = (tc.not_adopted_calls||[]).filter(function(x){
+      return x.tool_name===r.tool_name;})[0]||{};
+    const reason = yes ? "" :
+      ("<div class='why full'>未采用的理由："+
+       esc(reasons[r.tool_name] || nc.reason || "（存档未记录理由）")+"</div>");
+    const err = r.error ? "<div class='full warn'>错误："+esc(r.error)+"</div>" : "";
+    return "<div class='toolrow'>"+
+      "<div class='mark "+(yes?"yes":"no")+"'>"+(yes?"✔ 已采用":"✘ 未采用")+"</div>"+
+      "<div class='nm'>"+esc(r.tool_name)+
+        " <span class='st"+(r.status==="ok"?"":" bad")+"'>status="+esc(r.status)+"</span></div>"+
+      "<div class='full dim'>目的："+esc(r.purpose||"—")+"</div>"+
+      "<div class='full dim'>参数："+esc(JSON.stringify(r.arguments||{}))+"</div>"+
+      reason+err+
+    "</div>";
+  }).join("");
+
+  let missingHtml = "";
+  if((d.not_ok_entries&&d.not_ok_entries.length)){
+    missingHtml = "<h3 style='font-size:13px;color:var(--dim);margin:10px 0 4px'>现在缺失的证据</h3>"+
+      "<pre>"+esc(d.not_ok_entries.map(function(m){
+        return "· "+m.evidence_id+"（"+m.source_type+"，status="+m.status+"）\n  "+
+          (m.error||"（存档未记录 error 字段）");}).join("\n"))+"</pre>";
+  }
+
+  $("#main").innerHTML =
+  "<div class='cols'>"+
+  "<div class='col'>"+
+    "<div class='panel'><h2>【0】证据可用度（★ 按 status==ok 统计）</h2><div class='body'>"+
+      "<div class='v' style='white-space:pre-wrap'>"+esc(d.counts.summary)+"</div>"+
+      (noLedger?"<div class='warn' style='margin-top:8px'>★ "+esc(d.ledger_note)+"</div>":"")+
+      missingHtml+
+    "</div></div>"+
+
+    "<div class='panel'><h2>【1~4】四类证据分区 —— 每份证据都回答三个问题</h2>"+
+      "<div class='body'>"+
+      "<div class='evgrid'>"+
+        (d.blocks||[]).map(evBlock).join("")+
+      "</div>"+
+      "<div class='dim' style='margin-top:10px'>"+
+        "方向徽章：<span class='badge supporting'>支持</span> "+
+        "<span class='badge opposing'>反向</span> "+
+        "<span class='badge undetermined'>未定</span> "+
+        "—— 徽章取存档里已判定的 direction，<b>不重新判定</b>；"+
+        "「不存在」与「不可用」是两回事：不可用的证据照常显示，只是 status 不是 ok。"+
+      "</div>"+
+    "</div></div>"+
+
+    "<div class='panel'><h2>【5】工具 / 运行状态</h2><div class='body'>"+
+      "<div class='dim'>"+esc(tc.adoption_text||"（存档未记录 adoption.text）")+"</div>"+
+      "<div class='meta' style='margin:8px 0'>"+
+        "<span>调用总数 <b>"+esc((tc.counts||{}).total)+"</b></span>"+
+        "<span>被采用 <b>"+esc((tc.counts||{}).adopted)+"</b></span>"+
+        "<span>调用了但未采用 <b>"+esc((tc.counts||{}).called_but_not_adopted)+"</b></span>"+
+      "</div>"+
+      (toolRows || "<div class='dim'>（本次运行没有台账，工具调用记录不存在）</div>")+
+    "</div></div>"+
+
+    "<div class='panel'><h2>【6】分歧与缺失能不能被看见</h2><div class='body'>"+
+      "<div class='meta'>"+
+        "<span>方向不一致 has_conflict <b>"+esc(dv.has_conflict)+"</b></span>"+
+        "<span>合并关注等级 <b>"+esc(ca.value)+"</b></span>"+
+        "<span>internal <b>"+esc(ca.internal_predicted_attention)+"</b></span>"+
+        "<span>external <b>"+esc(ca.external_signal)+"</b></span>"+
+      "</div>"+
+      "<pre>"+esc(dv.resolution||"—")+"</pre>"+
+      (ca.reason?"<pre>判定理由："+esc(ca.reason)+"</pre>":"")+
+      "<h3 style='font-size:13px;color:var(--dim);margin:10px 0 4px'>每源方向</h3>"+
+      "<pre>"+esc(JSON.stringify(dv.each_source||{}))+"</pre>"+
+      (dv.note?"<div class='dim' style='margin-top:6px'>"+esc(dv.note)+"</div>":"")+
+    "</div></div>"+
+  "</div>"+
+  "</div>";
+}
+
+/* ================= 视图四 | 场景回放与对比 ================= */
+function diffMark(changed){ return changed ? "✔ 变了" : "✘ 没变"; }
+function layerHtml(title, layer, ra, rb){
+  const items = layer.items||[];
+  const changed = items.filter(x=>x.changed);
+  const same = items.filter(x=>!x.changed);
+  function row(it, cls){
+    return "<tr><td>"+esc(it.key)+"</td>"+
+      "<td>"+esc(it.a)+"</td>"+
+      "<td>"+esc(it.b)+"</td>"+
+      "<td class='"+cls+"'>"+diffMark(it.changed)+"</td></tr>";
+  }
+  const hist = items.find(x=>x.key==="history（序列逐点）");
+  let histExtra = "";
+  if(hist){
+    histExtra = "<div class='dim' style='margin-top:6px'>"+
+      "history 逐点比较："+esc(hist.diff_points)+"/"+esc(hist.total_points)+
+      " 点不同（"+(hist.changed?"不同":"逐点相同")+"）</div>";
+  }
+  return "<div class='layer'><h3>"+esc(title)+
+    "　<span class='"+(layer.changed?"chg":"nochg")+"'>"+
+    (layer.changed?"整体：变了":"整体：没变")+"</span></h3>"+
+    "<table class='data'>"+
+    "<tr><th>字段</th><th>"+esc(ra)+"</th><th>"+esc(rb)+
+    "</th><th style='text-align:right'>差异</th></tr>"+
+    changed.map(x=>row(x,"chg")).join("")+
+    same.map(x=>row(x,"nochg")).join("")+
+    "</table>"+histExtra+
+    ((layer.notes&&layer.notes.length)
+      ? "<div class='warn' style='margin-top:6px'>"+
+        layer.notes.map(n=>"★ "+esc(n)).join("<br>")+"</div>" : "")+
+    "</div>";
+}
+async function loadView4(){
+  const a = $("#runA").value, b = $("#runB").value;
+  if(!a||!b){ $("#main").innerHTML='<div class="err">请选择两个 run</div>'; return; }
+  let d;
+  try{
+    const r = await fetch("/api/compare?a="+encodeURIComponent(a)+
+                          "&b="+encodeURIComponent(b));
+    if(!r.ok){ const e = await r.json(); throw new Error(e.detail||r.statusText); }
+    d = await r.json();
+  }catch(err){
+    $("#main").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
+    return;
+  }
+  history.replaceState(null,"","?tab=view4&a="+encodeURIComponent(a)+"&b="+encodeURIComponent(b));
+
+  const A=d.a, B=d.b, at=d.attribution;
+  $("#fp").innerHTML =
+    "本次对比 = <b>"+esc(d.run_a)+"</b>（A）　vs　<b>"+esc(d.run_b)+"</b>（B）"+
+    "<div class='meta'>"+
+    "<span>A <b>"+esc(d.run_a)+"</b> · "+esc(A.scenario)+" · "+esc(A.analysis_time)+"</span>"+
+    "<span>A model <b>"+esc(A.fingerprint.model)+"</b></span>"+
+    "<span>A 提示词指纹 <b>"+esc(A.fingerprint.system_prompt_sha256)+"</b></span>"+
+    "<span>A 问题指纹 <b>"+esc(A.fingerprint.question_sha256)+"</b></span>"+
+    "<span>B <b>"+esc(d.run_b)+"</b> · "+esc(B.scenario)+" · "+esc(B.analysis_time)+"</span>"+
+    "<span>B model <b>"+esc(B.fingerprint.model)+"</b></span>"+
+    "<span>B 提示词指纹 <b>"+esc(B.fingerprint.system_prompt_sha256)+"</b></span>"+
+    "<span>B 问题指纹 <b>"+esc(B.fingerprint.question_sha256)+"</b></span>"+
+    "<span>数据 sha256 <b>"+esc(d.data_sha256.slice(0,12))+"</b></span>"+
+    "</div>";
+
+  function side(tag, runId, S){
+    const f=S.five||{};
+    const items=[
+      ["当前状态", f.current_state],
+      ["近期趋势", f.recent_trend],
+      ["预测", f.prediction],
+      ["证据", f.evidence],
+      ["最终判断", f.final]
+    ];
+    return "<div class='side'>"+
+      "<header><span class='who'>"+esc(tag)+"　"+esc(runId)+"</span>"+
+      "<span class='fp'>"+esc(S.scenario)+" · "+esc(S.analysis_time)+"</span>"+
+      "<span class='fp'>指纹 "+esc(S.fingerprint.system_prompt_sha256)+" / "+
+        esc(S.fingerprint.question_sha256)+"</span></header>"+
+      "<div class='five'>"+
+      items.map(it=>
+        "<div class='fitem'><div class='k'>"+esc(it[0])+"</div>"+
+        "<div class='v'>"+esc(it[1])+"</div></div>").join("")+
+      "</div></div>";
+  }
+
+  const refs = (at.refs&&at.refs.length)
+    ? "<ul>"+at.refs.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>" : "";
+  const notable = (at.notable&&at.notable.length)
+    ? "<ul>"+at.notable.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>" : "";
+  const notes = (at.notes&&at.notes.length)
+    ? "<ul>"+at.notes.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>" : "";
+
+  $("#main").innerHTML =
+  "<div class='panel' style='margin-bottom:13px'>"+
+  "<h2>【一】五项并排 —— A / B 各自一份（一次只比两个 run）</h2><div class='body'>"+
+    "<div class='diff2'>"+
+      side("A", d.run_a, A)+
+      side("B", d.run_b, B)+
+    "</div>"+
+  "</div></div>"+
+
+  "<div class='panel'>"+
+  "<h2>【二】差异归因（三层 + 归因链）</h2><div class='body'>"+
+    "<div class='attrib"+(at.instability_detected?" bad":"")+"'>"+
+      "<div class='rule'>归因规则命中 "+esc(at.rule)+"："+esc(at.rule_text)+"</div>"+
+      "<div class='chain'>归因链：<b>"+esc(at.chain)+"</b></div>"+
+      (at.instability_detected
+        ? "<div class='chg' style='font-weight:600'>★ 同一条件下重跑结果不一致（不稳定性）</div>"
+        : "")+
+      "<div class='meta'>"+
+        "<span>attribution_complete <b>"+esc(at.attribution_complete)+"</b></span>"+
+        "<span>instability_detected <b>"+esc(at.instability_detected)+"</b></span>"+
+        "<span>证据层可比 <b>"+esc(at.evidence_comparable)+"</b></span>"+
+      "</div>"+
+      (refs?("<div style='margin-top:8px'><b>变了的具体字段</b>"+refs+"</div>"):"")+
+      (notable?("<div style='margin-top:8px'><b>关键未变字段</b>"+notable+"</div>"):"")+
+      (notes?("<div style='margin-top:8px'><b>★ 关键</b>"+notes+"</div>"):"")+
+    "</div>"+
+
+    "<div style='margin-top:18px'>"+
+      layerHtml("第 1 层 · 输入（inputs）", d.inputs, d.run_a, d.run_b)+
+      layerHtml("第 2 层 · 证据（evidence）", d.evidence, d.run_a, d.run_b)+
+      layerHtml("第 3 层 · 状态（state）", d.state, d.run_a, d.run_b)+
+    "</div>"+
+
+    "<div class='dim' style='margin-top:10px'>"+
+      "★ 本页只读 run 存档，绝不重新计算：三层差异与归因全部由存档字段推出。"+
+      "回放（发起新运行）只在命令行里做：<b>python -m B07.replay S1</b>。"+
+    "</div>"+
+  "</div></div>";
+}
+
+loadRuns().then(()=>{
+  const q = new URLSearchParams(location.search);
+  const t = q.get("tab");
+  if(t==="evolution"||t==="compare"||t==="evidence"||t==="view4"){
+    if(q.get("a")) $("#runA").value=q.get("a");
+    if(q.get("b")) $("#runB").value=q.get("b");
+    setTab(t);
+  }else{
+    refresh();
+  }
+});
+</script>
+</body>
+</html>

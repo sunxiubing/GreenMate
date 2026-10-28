@@ -1,5 +1,6 @@
 # GreenMate 项目统一依赖
 # 安装方式：pip install -r requirements.txt
+# Python 版本：3.12（开发验证于 3.12.7）
 #
 # B01 需要：FastAPI + LLM 调用
 # B02 需要：FastAPI（时序查询服务）
@@ -17,6 +18,21 @@
 # B07 创新点 3（"有些话现在不能说"走查器，C1–C5 机器检查）：只用标准库 + 复用 B07.runs，
 #      只新跑 1 次 LLM，没有引入任何新的运行时依赖。
 #      三个创新点的不变量测试同样用 pytest（见下）。
+# B07 第三遍视图一（状态总览，只读 run 存档）：只用标准库（json / hashlib / pathlib），
+#      终端版零依赖；Web 版复用上面已列出的 fastapi / uvicorn，
+#      没有引入任何新的运行时依赖。
+# B07 第三遍视图二（状态演化，只读 run 存档的 history）：终端版同样只用标准库；
+#      Web 版的曲线是**纯 SVG**（页面里不引任何 CDN 外链），
+#      复用上面已列出的 fastapi / uvicorn，同样没有引入新的运行时依赖。
+# B07 第三遍视图三（证据空间，只读 run 存档的 evidence_ledger）：终端版只用标准库；
+#      Web 版复用上面已列出的 fastapi / uvicorn，页面同样不引任何 CDN 外链，
+#      同样没有引入新的运行时依赖。
+# B07 第三遍视图四（场景回放与对比）+ 四视图统一检查：
+#      views_diff.py（差异归因器，只读存档）= 纯标准库；
+#      views_check.py（统一检查）= 标准库 + 复用已有 pytest（子进程跑视图一/二/三的既有断言）；
+#      replay.py（回放器）= 复用已有的 openai / httpx / requests / B03 / B04 / B05 / B06，
+#      没有引入任何新的运行时依赖；
+#      Web 版复用上面已列出的 fastapi / uvicorn，页面同样不引任何 CDN 外链。
 
 # Web 框架
 fastapi==0.115.12
@@ -43,6 +59,14 @@ matplotlib==3.9.4
 # 说明：B07/S1 只用到已有的 fastapi / pydantic / openai / httpx / scikit-learn / joblib，
 #      没有引入新的运行时依赖；pytest 是为了跑 B07 的不变量测试
 #      （S1–S5 共 169 项：test_s1 / test_s2 / test_s3 / test_weather / test_s4 / test_s4_3 / test_s5；
-#        创新点 1/2/3 共 90 项：test_innovation1 / test_innovation2 / test_innovation3，
-#        合计 259 项）。
+#        创新点 1/2/3 共 90 项：test_innovation1 / test_innovation2 / test_innovation3；
+#        第三遍视图一 14 项：test_views_invariants；视图二 17 项：test_views_evolution；
+#        视图三 15 项：test_views_evidence；视图四 11 项：test_views_compare；
+#        Web 版版面顺序 15 项：test_views_layout，
+#        合计 331 项：S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图一 14 + 视图二 17
+#              + 视图三 15 + 视图四 11 + Web 版版面顺序 15）。
+#      第三遍视图（views.py / views_web.py / static/views.html）：
+#        终端版纯标准库；Web 版复用上面的 fastapi / uvicorn，不引新的运行时依赖。
+#      第三遍回放器（replay.py）与四视图统一检查（views_check.py）同样不引入新依赖：
+#        页面是纯静态 HTML + 原生 JS（连 CSS 框架都没有），离线双击即可打开。
 pytest==9.1.1

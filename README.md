@@ -127,7 +127,17 @@ GreenMate/
 │   ├── innovation3.py     # 创新点 3：第二遍走查器（C1–C5 机器检查 + 12 节走查）
 │   ├── verify_innovation2.py  # 创新点 2 的独立复核脚本（只读，不修改任何文件）
 │   │
-│   ├── tests/             # 不变量测试（pytest，共 259 项：S1–S5 169 + 创新点 1/2/3 90）
+│   ├── views.py           # ★ 第三遍四视图的**数据层 + 终端渲染**（只读 run 存档，绝不重算）
+│   │                      #   load_run / view_data / view_evolution_data /
+│   │                      #   view_evidence_data / view_compare_data + 四个 render_*
+│   ├── views_diff.py      # 视图四差异归因器（三层对比 inputs/evidence/state + R1~R6 规则）
+│   ├── views_check.py     # 四视图统一检查（U1 身份一致 / U2 同源 sha256 / U3 零重算打桩 / U4 既有断言）
+│   ├── replay.py          # ★ 视图四**回放器**：**唯一**允许发起新运行的地方（选场景 → 跑固定问题 → 新 run_id）
+│   ├── views_web.py       # FastAPI 路由（视图一~四 + GET /api/compare?a=&b=），复用 views.py 的数据层
+│   ├── static/            # Web 版静态页面（进版本库）
+│   │   └── views.html     # 五个标签页（视图一/二/二·对比/三/四）；纯静态、离线可开、不引任何 CDN 外链
+│   │
+│   ├── tests/             # 不变量测试（pytest，共 331 项：S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图 72）
 │   │   ├── conftest.py    # 路径注入 + 假 LLM 客户端
 │   │   ├── test_s1_invariants.py
 │   │   ├── test_s2_invariants.py
@@ -138,7 +148,12 @@ GreenMate/
 │   │   ├── test_s5_invariants.py      # 17 项
 │   │   ├── test_innovation1_invariants.py   # 28 项（连续时间认知消融不变量）
 │   │   ├── test_innovation2_invariants.py   # 45 项（溯源形状 / 红线 / 台账自洽）
-│   │   └── test_innovation3_invariants.py   # 17 项（词表多字 / C2 / C4 豁免 / 确定性）
+│   │   ├── test_innovation3_invariants.py   # 17 项（词表多字 / C2 / C4 豁免 / 确定性）
+│   │   ├── test_views_invariants.py         # 14 项（同源 / 刷新不变 / 不重算 / 证据完整度）
+│   │   ├── test_views_evolution.py          # 17 项（只读 history / 过程量不依赖结论 / C1–C5 / 对照 / 不许编造标记）
+│   │   ├── test_views_evidence.py           # 15 项（只读存档 / 可用条数按 status==ok / 缺失可见 / 反抹平 / 无台账）
+│   │   ├── test_views_compare.py            # 11 项（三层可复算 / R4 不稳定性必触发 / R2·R1 命中 / 干净对照 / U1–U4）
+│   │   └── test_views_layout.py              # 15 项（版面顺序：单列自上而下 / 编号递增 / 面板内并列）
 │   ├── runs/              # 运行时生成的 run 存档（**进版本库**：证据链的一部分）
 │   │   ├── index.json     # 索引：run_id → 摘要
 │   │   └── run_XXX/run.json
@@ -166,7 +181,17 @@ GreenMate/
 │       ├── innovation2_trace.json           # 创新点 2 溯源结果（规格固定格式）
 │       ├── innovation2_trace_detail.json    # 创新点 2 溯源详版（判定依据 / 匹配信号）
 │       ├── innovation3_report.md            # 创新点 3 走查报告（12 节 + C1–C5）
-│       └── innovation3_runs.json            # 创新点 3 三次运行结构化结果 + 检查项
+│       ├── innovation3_runs.json            # 创新点 3 三次运行结构化结果 + 检查项
+│       ├── views_evolution_compare.md       # 视图二 S1↔S2 对比结果（C1–C5 实测值 + 曲线文本）
+│       ├── views_evidence_report.md         # 视图三证据空间实测报告（C1–C14 + 三问清单 + Limitations）
+│       ├── views_compare_report.md          # 视图四场景对比实测报告（4 组归因 + 三层明细 + U1–U4）
+│       ├── replay_log.jsonl                 # 回放日志（另存；run.json 存档结构一字未改）
+│       ├── views_web_01_overview.png        # ★ README 内嵌：视图一 状态总览 全景截图
+│       ├── views_web_02_evolution.png       # ★ README 内嵌：视图二 状态演化 全景截图
+│       ├── views_web_03_compare.png         # ★ README 内嵌：视图二 S1↔S2 对比 全景截图
+│       ├── views_web_04_evidence.png        # ★ README 内嵌：视图三 证据空间 全景截图
+│       └── views_web_05_view4.png           # ★ README 内嵌：视图四 场景回放与对比 全景截图
+│                                           # （其余 views_*.png 是排障截图，.gitignore 忽略，不进版本库）
 │
 └── docs/                  # 项目设计文档
     ├── b01_b03_design.md  # SIMULATED/PUBLIC 数据源定义
@@ -619,6 +644,12 @@ SoilGrids MCP（`https://gateway.pipeworx.io/soilgrids/mcp`）补齐土壤数据
 | B07 — 创新点 1：连续时间认知消融（拿掉 → 恢复 → 比较） | ✅ 完成 |
 | B07 — 创新点 2：可追溯证据的自动溯源器（结论句反查工具调用） | ✅ 完成 |
 | B07 — 创新点 3：让系统学会"有些话现在不能说"（C1–C5 机器检查 + 12 节走查） | ✅ 完成 |
+| B07 — 第三遍 · 视图一 状态总览（只读 run 存档，零重算） | ✅ 完成 |
+| B07 — 第三遍 · 视图二 状态演化（history 逐点 + 纯 SVG 曲线 + 相对时间轴） | ✅ 完成 |
+| B07 — 第三遍 · 视图三 证据空间（台账三问 + 三色方向徽章 + 缺失可见） | ✅ 完成 |
+| B07 — 第三遍 · 视图四 场景回放与对比（回放器 + 三层差异归因 R1~R6） | ✅ 完成 |
+| B07 — 第三遍 · 四视图统一检查（U1 身份 / U2 同源 / U3 零重算 / U4 回归） | ✅ 完成 |
+| B07 — 第三遍 · Web 版（五个标签页，纯静态离线可开，不引 CDN） | ✅ 完成 |
 
 ---
 
@@ -1396,7 +1427,7 @@ S5 做的是**减法**：不加功能，只把一条已有证据主动弄坏，�
 # ── 收尾 ─────────────────────────────────────────────────
 ./venv/Scripts/python.exe -m B07 list                  # 列出所有 run 存档
 ./venv/Scripts/python.exe -m B07 explain run_001       # 回溯任意一次（含复算一致性）
-./venv/Scripts/python.exe -m pytest B07/tests -q       # 259 项不变量测试
+./venv/Scripts/python.exe -m pytest B07/tests -q       # 331 项不变量测试
 ```
 
 | 步骤 | 调 LLM | 落盘副作用 |
@@ -1485,6 +1516,8 @@ S1–S5 是**把系统做出来**；创新点 1/2/3 是**证明它做到了什�
   / `direction` / `adopted` / `ext`（**没有** `role` 字段 —— 角色由 `source_type` 决定，报告里已写明）；
 - V1–V6 判定：`run_082` / `run_084` / `run_057` 三个 run 全部 ✅ 通过；
   全库 **63 个**带台账 run 的系统级扫描同样是 V1–V6 **63 / 63 全通过、异常 0 个**
+  （该扫描产物 `B07/artifacts/innovation2_trace.json` 是**冻结快照**；此后回放新增的
+  run 不在这个快照里，重跑创新点 2 才会刷新它）
   （`run_036` / `run_037` 是 `status=failed` 的失败留痕，V1 属于"空真"）；
 - 匹配强弱**如实分档**：`strong` = 数值命中或命中有区分度的特征词，
   `weak` = 只命中「温度 / 湿度 / 模型」这类通用词 —— 弱匹配只等于"这句话谈的是这一类东西"；
@@ -1588,7 +1621,7 @@ B06 窗口、知识 query、固定问题（`d3cc394bfcbe`）、system prompt（`
 ./venv/Scripts/python.exe -m B07.innovation3 --section 3    # 只看某一节
 
 # ── 收尾 ─────────────────────────────────────────────────
-./venv/Scripts/python.exe -m pytest B07/tests -q            # 259 项不变量测试
+./venv/Scripts/python.exe -m pytest B07/tests -q            # 331 项不变量测试
 ```
 
 | 创新点 | 调 LLM | 落盘副作用 |
@@ -1598,3 +1631,695 @@ B06 窗口、知识 query、固定问题（`d3cc394bfcbe`）、system prompt（`
 | 创新点 3 | 是（1 次） | 新增 `B07/runs/run_XXX/`，**覆盖** `innovation3_runs.json` / `innovation3_report.md` |
 | `--report-only` / `--show` / `--refresh-metrics` | 否 | 只读或只重写报告，不产生新的 run |
 
+
+---
+
+## B07 — 第三遍：Web 版五视图怎么启动（**先看这一节**）
+
+四个视图不是四个页面 —— 是**同一个页面上的五个标签页**。启动一次，剩下的都在顶部标签栏里切。
+
+### 启动
+
+```bash
+# 前台跑（关掉终端窗口就停）
+./venv/Scripts/python.exe -m B07.views_web --port 8010
+
+# 后台跑
+./venv/Scripts/python.exe -m B07.views_web --port 8010 > /tmp/views.log 2>&1 &
+```
+
+浏览器打开 **http://127.0.0.1:8010/**
+
+> ★ **端口别用 8000** —— 那台机器上有别的服务在跑。默认 8010，占了就换 `--port 8020`。
+> ★ 页面**只读** `B07/runs/<run_id>/run.json`：不调 LLM、不跑 B06、不取天气、不检索知识库。
+> 刷新多少次，看到的都是**那一次已经落盘的分析**，结果不会变。
+
+### 顶部工具条怎么用
+
+| 元素 | 作用 |
+|---|---|
+| `run` 下拉框 | 选**一个** run（视图一 / 视图二 / 视图三 用它），选中即自动重载 |
+| `对比对象` A / B 两个下拉框 | 选**两个** run（视图二·对比 / 视图四 用它；切到这两个标签页时才出现），默认 A=run_012、B=run_015 |
+| `刷新` 按钮 | 重新读盘重绘，**不会**改变已保存的运行结果 |
+
+### 五个标签页一览
+
+| # | 标签页 | 回答什么问题 | 直达 URL | 终端版 |
+|---|---|---|---|---|
+| 1 | 视图一 \| 状态总览 | 现在什么状态？ | `?tab=overview&run_id=run_082` | `python -m B07.views overview run_082` |
+| 2 | 视图二 \| 状态演化 | 状态是怎么走到现在这一步的？ | `?tab=evolution&run_id=run_015` | `python -m B07.views evolution run_015` |
+| 3 | 视图二 \| S1↔S2 对比 | 两个 run 的**过程**差在哪？（同刻度曲线 + C1~C5 机器判定） | `?tab=compare&a=run_012&b=run_015` | `python -m B07.views evolution --compare run_012 run_015` |
+| 4 | 视图三 \| 证据空间 | 每份证据从哪来、说了什么、还有效吗？ | `?tab=evidence&run_id=run_082` | `python -m B07.views evidence run_082` |
+| 5 | 视图四 \| 场景回放与对比 | 两个 run 的差异**落在哪一层**、为什么？ | `?tab=view4&a=run_012&b=run_023` | `python -m B07.views compare run_012 run_023` |
+
+---
+
+### ① 视图一 | 状态总览
+
+![视图一 状态总览](B07/artifacts/views_web_01_overview.png)
+
+自上而下四段：**【一】原始数值 → 【二】系统理解后的状态 → 【三】LLM 解释 → 【四】四个问题**。
+第一段是"这次分析真正使用的数值"，第二段才是"系统基于证据形成的判断"，两者一眼能分开。
+（★ 版面一律**单列自上而下**，不左右分栏；面板内部的小卡片才横排。）
+
+### ② 视图二 | 状态演化
+
+![视图二 状态演化](B07/artifacts/views_web_02_evolution.png)
+
+**【一】逐点读数 → 【二】三条曲线（纯 SVG） → 【二·附】过程量 → 【三】时间线标记**。
+曲线画的就是存档里那次分析真正用的 6 个采样点，未做平滑/插值。
+
+### ③ 视图二 | S1↔S2 对比 ★
+
+![视图二 S1↔S2 对比](B07/artifacts/views_web_03_compare.png)
+
+**一次只比两个 run**。两条曲线**共用同一把 Y 轴刻度**、同一条 X 轴（窗口内相对位置），
+所以"当前值一样、过程不同"一眼可见 —— 上面的 S1 走平、下面的 S2 一路上行，
+两条线终止在同一条水平虚线上（末点温度相同）。
+
+往下依次是 **【三】过程量对比表 → 【四】机器判定 C1~C5 → 【五】对照检查 → 【六】为什么可比**。
+
+### ④ 视图三 | 证据空间
+
+![视图三 证据空间](B07/artifacts/views_web_04_evidence.png)
+
+**【0】证据可用度 → 【1~4】四类证据分区 → 【5】工具/运行状态 → 【6】分歧与缺失**。
+每份证据固定回答三问（从哪来 / 说了什么 / 现在还有效吗），
+方向徽章三色（支持 / 反向 / 未定）取存档里**已判定**的结果，页面不重新判定。
+
+### ⑤ 视图四 | 场景回放与对比 ★
+
+![视图四 场景回放与对比](B07/artifacts/views_web_05_view4.png)
+
+**【一】五项并排（A | B 两列）→ 【二】差异归因**。
+
+上半：两个 run **并排两列**，每列五项（当前状态 / 近期趋势 / 预测 / 证据 / 最终判断），
+顶栏同时显示两个 run 的 id、提示词指纹、问题指纹、数据 sha256。
+
+下半：三层差异（**输入 / 证据 / 状态**）逐层列出「变了 / 没变」的**具体字段**，
+再由 R1~R6 规则给出归因链，并显式写出**归因文本引用了哪些字段值**。
+
+图里这一组是 `run_012`(S1) ↔ `run_023`(S3) 的**干净对照**：
+只有"是否接入外部天气"这一项变了 —— 稳定判定与 B06 预测都是 NORMAL 没变，
+变的只是关注等级 `— → watch_external`，归因规则命中 **R1**。
+
+### 只读这一条，四个视图都一样
+
+视图一/二/三/四的数据**全部来自 `B07/runs/<run_id>/run.json`**，页面层不重算任何东西。
+想看"这四个视图讲的是不是同一次分析"，跑统一检查：
+
+```bash
+./venv/Scripts/python.exe -m B07.views check run_082
+```
+
+U1 身份字段五处一致 / U2 读盘 sha256 相同 / U3 打桩后仍能渲染 / U4 既有断言仍通过。
+
+---
+
+## B07 — 第三遍：视图一 | 状态总览（文档 p.58–59）
+
+**这一轮做什么**：给 GreenMate 做一个"用户第一眼就能看懂"的**状态总览**页面。
+它只回答一个问题：**当前番茄生长环境现在处于什么状态？**
+原始数据、知识资料、工具日志**都不塞进这一屏**。
+
+**生死线：只读存档，绝不重新计算。**
+
+- 视图一的**所有**数据只从 `B07/runs/<run_id>/run.json` 读取；
+- **绝对禁止**：调用 LLM、跑 B06 模型、请求天气、生成历史窗口、检索知识；
+- 渲染路径里不 import 任何会发网络请求或跑模型的东西；
+- 核心状态（当前环境 / 关注等级 / 近期趋势 / 下一窗口预测）全部读存档里
+  **已经算好**的结构化判断，页面层不重算。
+
+为什么这么死板：状态总览如果自己再调一次 LLM"请根据这些数据显示当前状态"，
+就可能得到一个**和原始 run_id 不一样的新答案** —— 那一屏看到的东西就不再是
+"那一次分析"，而是"现在重新问了一次"。所以本视图刻意不做这件事：
+**刷新状态总览，不会因为页面重新计算而改变已保存的运行结果。**
+
+### 交付物
+
+| 文件 | 作用 |
+|---|---|
+| `B07/views.py` | 数据层（`load_run` / `view_data` / `render_overview`）+ 终端渲染 |
+| `B07/views_web.py` | FastAPI 路由，**必须复用** `views.view_data()`，web 层不重算 |
+| `B07/static/views.html` | 视图一页面（离线可开，不引任何 CDN 外链） |
+| `B07/tests/test_views_invariants.py` | 14 项不变量测试 |
+
+### 终端版（12 段结构）
+
+上半"原始数值"、下半"系统理解后的状态"，**一眼能分开**：
+
+```text
+==============================================================================
+ B07 · 视图一 | 状态总览
+ 本次分析 = run_082   created_at=2026-10-26T23:01:45  analysis_time=2026-10-21T09:30:00
+ model=qwen-max   提示词指纹=aa1400cf8568  问题指纹=d3cc394bfcbe
+ 数据 sha256（本次渲染）= 434206e3cce8
+------------------------------------------------------------------------------ 【一】原始数值 —— 这次分析真正使用的当前环境
+     采样时间   : 2026-10-21T09:30:00
+     温度       : 28.6 ℃
+     湿度       : 66.9 %
+     光照       : 42492.0 lux
+     source_type: simulated
+     模拟场景标签: flood
+     ⚠ 这一块只是数值，本身不构成判断
+------------------------------------------------------------------------------
+    【二】系统理解后的状态 —— 基于已有证据形成的判断
+       当前环境状态 ：不稳定
+       关注等级     ：conflict_unresolved（证据方向不一致，保留分歧未做合并）
+       近期趋势     ：不稳定（窗口 3 小时 / 6 点：…）
+       下一窗口预测 ：WATCH（model_version=b06-20261020-v1）
+       证据完整度   ：4/4 条证据全部可用（status=ok），本次分析没有证据缺口
+------------------------------------------------------------------------------
+    【三】这次分析的 LLM 解释（已保存，未重新生成）
+    【四】四个问题（做完就该能答上来）
+```
+
+四个问题（用户打开第一眼就该能答上来）：
+现在整体怎样？ / 最近有没有值得注意的变化？ / 下一窗口需要关注吗？ / 当前证据完整吗？
+—— 答案全部由**存档里已有的字段**规则化拼装，不调 LLM。
+
+### "证据完整度"怎么算（本轮新增）
+
+从 `evidence_ledger.entries` 统计：`ok` 条数 / 总条数 + 一句定性
++ **缺失清单**（`status != ok` 的条目要写清"哪条 / 为什么不可用"）。
+
+- 有台账且全 ok（如 `run_082`）→ `4/4 条证据全部可用（status=ok），本次分析没有证据缺口`；
+- 有台账但天气不可用（如 `run_084`）→ `3/4 条证据可用，1 条不可用：EV-B03-01（B03，status=unavailable）`
+  并附上存档里的原始错误原因；
+- **没有台账的 run**（S1/S2/S3 时期，实测 27 个；全库 94 个 run 里 64 个有台账、30 个没有）→ 显示
+  `本次运行没有证据台账（该 run 早于 S4 的证据层），证据完整度不可计算`
+  —— **不假装完整，也不报错退出**。
+
+### 关注等级那一行
+
+`combined_attention` 只是字符串，视图补一句人话：
+
+| 取值 | 说明 |
+|---|---|
+| `conflict_unresolved` | 证据方向不一致，保留分歧未做合并 |
+| `watch_internal` | 内部证据支持关注 |
+| `watch_external` | 外部条件支持关注 |
+| `internal_only` | 仅内部证据支持 |
+
+★ 取值集合**从 `B07.judgement` 读常量**（`COMBINED_*`），不在视图里另写一份。
+
+### 跑法
+
+```bash
+# 终端版
+./venv/Scripts/python.exe -m B07.views overview run_082
+./venv/Scripts/python.exe -m B07.views overview --run-id run_082
+
+# Web 版（离线可开，不引 CDN 外链）
+./venv/Scripts/python.exe -m B07.views_web              # http://127.0.0.1:8010/
+./venv/Scripts/python.exe -m B07.views_web --port 8020
+
+# 回归
+./venv/Scripts/python.exe -m pytest B07/tests -q
+```
+
+Web 路由：`GET /`（页面）、`GET /api/overview?run_id=`（数据）、`GET /api/runs`（run 列表）。
+页面顶部固定显示 run_id 与指纹，并提供切换 run_id 的入口。
+
+### 测试（14 项）
+
+1. **同源**：同一 run_id 装配两次 → `data_sha256` 相同；
+2. **刷新不变**：重新从磁盘 load 再装配 → `data_sha256` 仍相同
+   （"刷新状态总览不会因为页面重新计算而改变已保存的运行结果"的机器判定）；
+3. **没有偷偷重新判断**（★ 最硬的一个）：把 openai 客户端 / httpx / requests /
+   B03 天气 / B06 推理**全部打桩成"一调用就抛 `RuntimeError("不该被调用")"`**，
+   再加上 socket 层断网 —— 渲染视图一**仍然成功**；
+4. **证据完整度**：`status != ok` 的条目必须出现在渲染结果里（不许被过滤掉）；
+   没有台账的 run 给出"不可计算"的说明而不是报错。
+
+### Limitations
+
+- **L1** 视图一读取的是**已经落盘的那一次分析**，不是实时状态；重新运行会因 LLM
+  采样波动得到不同结果，所以视图刻意不做实时计算。
+- **L2** "证据完整度"是按台账 `status` 统计得到的**代理指标**，不等于"这份分析的
+  质量评分"。
+- **L3** S1/S2/S3 时期的那批 run（实测 27 个）早于证据层，没有台账，证据完整度
+  对这些 run 不可计算（视图里明确标注，不假装）。
+- **L4** 本轮（视图一）只做视图一；视图二、视图三已在下面两节实现，视图四尚未实现。
+
+---
+
+## B07 — 第三遍：视图二 | 状态演化（文档 p.60–62）
+
+**这一轮做什么**：把"当前状态"重新放回**连续时间过程**里。
+视图一只回答"现在是什么状态"，视图二回答**"现在这个状态，是怎样形成的？"**。
+价值不在于增加更复杂的环境曲线，而在于让用户看到过程。
+
+**生死线：只读存档，绝不重新计算。**
+
+- 曲线的**唯一数据源**是 run 存档里的 `history` 列表（6 个采样点）；
+- **不重新取数**、不按"当前最近 3 小时"重新取窗口、**不重新跑判据**、
+  不调 LLM、不跑 B06、不取天气、不查 B02；
+- `history_window` 本身**不含序列**（只有边界 + 判据结果），只用来核对
+  "这段曲线就是那次分析真正用的那一段"；
+- **过程量（delta / range / max_step / monotone / trend_shape）只从 `history`
+  序列算** —— 不读 `structured_judgement` 的结论；
+- 判据的数值与阈值**一律读存档里的 `criteria`**，不重新实现判据逻辑；
+  但"越界发生在哪一段"要从 `history` 序列算。
+
+### 四步落地
+
+| 步 | 要求 | 实现 |
+|---|---|---|
+| 一 | 读该 run 保存的历史窗口，**不重新生成** | `history` 列表 + `history_window` 边界核对（`alignment.ok`） |
+| 二 | 让用户看懂**过程** | 逐点表（6 行 + ↑↓→ 箭头）+ 三条 sparkline（`▁▂▃▄▅▆▇█`，不用 ASCII 折线）+ 过程量表 |
+| 三 | 把状态变化放回时间线 | 时间线标记：时点标记（来自序列）/ 整窗标注 / **做不了的显式说明** |
+| 四 | 重新打开 S1 与 S2 比较 | `python -m B07.views evolution --compare run_012 run_015` |
+
+### 过程量（只从序列算）
+
+`start_value` / `end_value` / `delta`（末−首）/ `range`（max−min）/
+`max_step`（相邻最大跳变）/ `monotone_up` / `monotone_down` /
+`trend_shape ∈ {稳定, 持续上升, 持续下降, 短时波动后恢复, 波动, 其他}`。
+
+`trend_shape` 是**规则判定**（不是模型输出），规则写死并显示在页面上：
+
+1. 全程单调不降（相邻差值 ≥ 0）且至少一次严格上升 → **持续上升**
+2. 全程单调不升（相邻差值 ≤ 0）且至少一次严格下降 → **持续下降**
+3. 相对波动幅度 `(max-min)/max|值| ≤ 5%` → **稳定**
+4. 有内部极值且 `|末点-首点| ≤ 波动幅度/2` → **短时波动后恢复**
+5. 其余 → **波动**；点数 < 2 → **其他**
+
+### 时间线标记：哪些能做，哪些做不了
+
+| 文档里的说法 | 能不能做 | 本视图的处理 |
+|---|---|---|
+| 「这里开始持续升温」 | ✅ 能做 | 从 `history` 找出温度进入单调段的**起点时刻**（run_015 落在窗口第一个点） |
+| 「这里模型由 NORMAL 变为 WATCH」 | ❌ **做不了** | 一次 run 只有**一次** B06 预测输出，档案里没有模型输出的时间序列 → **页面上显式写出来**，并说明"需要在多个 run 之间对比才能看到（见视图四）" |
+| 「这里外部天气开始形成新的影响」 | ⚠️ 半可做 | `external_conditions` 是**单点判定**，不能落在某个时刻上 → 只能作为**覆盖整个窗口**的整体标注（并写明"不是时点"） |
+| 「这里系统提高了关注程度」 | ❌ **做不了** | 一次 run 只有一个 `combined_attention` 值，没有关注等级的演化序列 → **显式写出来** |
+
+**凡是做不了的，必须在页面上显式写出来，不许留空、不许用静态文案假装有。**
+这句话本身就是教学点，不当成缺陷藏起来。
+
+每条能做的标记包含：**时刻（或"整个窗口"）+ 类型 + 一句说明 + 依据来源**；
+标记时刻必须来自序列，不许凭空写一个时间。
+
+### S1 ↔ S2 对比（第四步的完成线）
+
+`run_012`（S1 稳态，窗口 2026-10-21 13:30→16:00，末点 32.8℃）与
+`run_015`（S2 渐进漂移，窗口 2026-10-20 09:30→12:00，末点 32.8℃）。
+
+⚠ **两个 run 不在同一天（10-21 vs 10-20）** —— 对比时 X 轴一律用
+**窗口内相对位置**（第 1..6 点 / 相对分钟 +0′..+150′），绝对时间只写在各自小标题上，
+并**显式提示"两个 run 不在同一天"**。
+
+**机器判定（相对比较，不拍绝对阈值）** —— 全部只从 `history` 序列算：
+
+| 判定 | 内容 | 实测（run_012 / run_015） | 结果 |
+|---|---|---|---|
+| C1 | 末点温度差 \|Δ\| ≤ 0.5℃ → **当前值几乎相同** | 32.8 / 32.8（Δ=0.00） | PASS |
+| C2 | 温度首尾差：S2 更大 | −1.1 / +7.5（Δ=+8.60） | PASS |
+| C3 | 温度波动区间宽度：S2 更大 | 1.3 / 7.5（Δ=+6.20） | PASS |
+| C4 | 温度单调上升：S2 = True，S1 = False | False / True | PASS |
+| C5 | 两者温度趋势形状不同 | 稳定 / 持续上升 | PASS |
+
+反向检查：**若只看末点温度，能否区分 S1/S2？→ 不能（两者都是 32.8℃）**。
+
+对照检查（证明判定不是恒真的）：`run_023` 与 `run_012` 用的是**同一段窗口**
+（2026-10-21 13:30→16:00），其过程量与 `run_012` **完全相同**。
+
+结论：**不看最终结论，只看状态演化，用户也能大致理解为什么 S1 与 S2 会得到不同判断**
+—— "稳定到现在" vs "持续变化到现在" 直接从曲线形状就能看出来。
+
+### 交付物
+
+| 文件 | 内容 |
+|---|---|
+| `B07/views.py` | `view_evolution_data()` / `render_evolution()` / `render_evolution_compare()` / `compute_process_metrics()` / `compare_data()`；CLI `evolution` 与 `evolution --compare`。**与视图一共用同一个 `load_run()`** |
+| `B07/views_web.py` | 新增 `GET /api/evolution?run_id=` 与 `GET /api/evolution/compare?a=&b=`，**复用 `view_evolution_data()`** |
+| `B07/static/views.html` | 三个标签页：视图一 / 视图二 / 视图二·对比；视图二用**纯 SVG**（无 CDN 外链，`viewBox` + `width=100%` 响应式）画三曲线 + 标记点（不同颜色/形状的圆点 + 引线标签） |
+| `B07/tests/test_views_evolution.py` | 17 项（见下） |
+| `B07/artifacts/views_evolution_compare.md` | S1↔S2 对比结果 + C1–C5 实测值 + 曲线文本（数字全部由代码生成） |
+
+### 跑法
+
+```bash
+# 单 run 的状态演化
+./venv/Scripts/python.exe -m B07.views evolution run_015
+
+# S1 ↔ S2 对比（相对时间轴）
+./venv/Scripts/python.exe -m B07.views evolution --compare run_012 run_015
+
+# Web 版
+./venv/Scripts/python.exe -m B07.views_web              # http://127.0.0.1:8010/
+
+# 回归
+./venv/Scripts/python.exe -m pytest B07/tests -q
+```
+
+Web 路由：`GET /`、`GET /api/overview?run_id=`（视图一）、
+`GET /api/evolution?run_id=`（视图二）、`GET /api/evolution/compare?a=&b=`（对比）、
+`GET /api/runs`。对比模式下顶部**同时显示两个 run 的指纹**。
+
+### 测试（17 项）
+
+1. **曲线数据只来自 `history`**：monkeypatch 掉 B02 取数 / B03 天气 / B06 推理 /
+   openai / httpx / requests + socket 断网，渲染**仍然成功**；
+2. **过程量不依赖 `structured_judgement`**：把 `structured_judgement` 换成空 dict
+   的 run 副本，过程量结果**完全相同**；
+3. **C1–C5 五条机器判定全部成立**；
+4. **对照检查**：`run_023` 的过程量 == `run_012` 的过程量（且换 run 就不相同 ——
+   说明判定不是恒真的）；
+5. **不许编造时点标记**：时点标记的时刻必须来自 `history` 序列；
+   "模型状态变化""关注等级提升"不许以时点标记出现，且必须在结果里**显式说明**。
+
+### Limitations
+
+- **L1** 视图二读的是**存档里那一次用的历史窗口**，不是"当前最近 3 小时"。
+  重新运行会因取到不同窗口得到不同曲线，所以**刻意不做实时取数**。
+- **L2** 一次 run 只有**一次**模型判断和**一个**关注等级，档案没有时间序列，
+  所以「模型由 NORMAL 变为 WATCH」「系统提高了关注程度」这两类标记
+  **在单 run 内无法呈现**，只能靠多 run 对比（视图四）。
+- **L3** 外部条件是**单点判定**（`signal` + `basis` + `baseline_point`），
+  不是时间序列，只能作**覆盖整个窗口**的整体标注。
+- **L4** 曲线是 6 个采样点的连线，**未做平滑/插值/补点** —— 折线只是采样点之间的示意。
+- **L5** `trend_shape` 是**规则判定**的分类，规则由实现者定义（见上），
+  **不是模型输出**；页面与终端都把判定依据写出来。
+- **L6** S1 与 S2 的窗口**不在同一天**（10-21 vs 10-20），对比用的是
+  **窗口内相对时间**，绝对时间不可直接对齐。
+
+---
+
+## B07 — 第三遍：视图三 | 证据空间（文档 p.63–65）
+
+**这一轮做什么**：把"判断背后的证据"从一段长文字里**拆出来，分开显示**。
+视图一回答"现在是什么状态"，视图二回答"这个状态怎么形成的"，
+视图三回答**"这个判断凭什么成立？哪些依据方向不同？哪些依据现在缺失？"**
+
+**生死线：只读存档，绝不重新计算。**
+
+- 证据台账只有一个来源 —— run 存档里的 `evidence_ledger`；
+- **绝对禁止**：调 LLM、跑 B06、取天气、**检索知识库**、重查 B02、重跑判据；
+- 方向徽章取存档里**已判定**的 `direction`（取不到才用
+  `structured_judgement.evidence_divergence.each_source` 兜底），
+  **不重新判定方向**（方向由 `B07/evidence_ledger.judge_direction` 的程序规则判出，不经过 LLM）。
+
+### 四步落地
+
+| 步 | 要求 | 实现 |
+|---|---|---|
+| 一 | 把证据**分开显示**（历史 / 天气 / 知识 / 模型 / 工具运行状态五块），不揉成一段长文字 | 终端五块 + Web 四张独立卡片 + 第五块工具区 |
+| 二 | 每份证据至少回答三个问题：**它从哪里来？它说了什么？它现在是否有效？** | 每个证据块固定三问；天气给来源/取得时间/status/主要结果，知识给检索到什么/引用来源/支持哪部分判断，模型给输出/model_version |
+| 三 | 回到 S4，**分歧能被看见** | 三色方向徽章（supporting=绿 / opposing=橙红 / undetermined=灰）；四份证据若全变成同一种颜色，说明分歧被抹掉了 → 机器判定 C7 反向检查 |
+| 四 | 回到 S5，**缺失能被看见** | 天气失败时**照常显示这一块**：`status=unavailable` + 失败原因原文 + 「它影响了什么判断」（内容来自 `external_conditions.unavailable_context` + `combined_attention.reason`） |
+
+> **「不存在」和「没有显示」是两回事**：
+> 证据存在但取数失败（unavailable）→ **必须显示**；整个 run 没有台账
+> （S1/S2/S3 那 27 个 run）→ 明确标注"证据空间不可用"，不假装有证据。
+
+### ★ 最大的坑：`counts.adopted_entries` 不是有效条数
+
+`run_084` 的台账里 `counts = {"entries": 4, "adopted_entries": 4}`，
+但同一条台账中 B03 的 `status = "unavailable"` ——
+
+- `adopted_entries` = **被采用为证据条目的数**（工具结果被升格成证据了）；
+- **真正有效的条数 = 3**（`status == "ok"` 的条数）。
+
+所以「可用条数 / 完整度」**必须按 `status == "ok"` 统计**。
+用 `adopted_entries` 会把降级场景显示成"4/4 完整"，
+**恰好把最该暴露的缺失抹平**。视图一的 `_evidence_completeness()`
+本来就是按 `status == "ok"` 统计的（已复核，未改）。
+
+对应测试：`test_usable_count_uses_status_ok_not_adopted_entries`
+（断言 run_084 的 usable == 3 且 != adopted_entries == 4）。
+
+### 四个证据分区 ↔ 存档字段
+
+| 分区 | source_type | source | 关键字段 |
+|---|---|---|---|
+| 历史证据 · B02 | `B02` | `B02/environment_samples` | `result.stability_conclusion` / `ext.stability_criteria` |
+| 模型证据 · B06 | `B06` | `B06/b06-20261020-v1` | `result.predicted_attention` / `confidence` / `model_version` / `feature_contributions_top5` |
+| 天气证据 · B03 | `B03` | `B03/Open-Meteo（离线构造用例）` | `ext.retrieved_at` / `provider` / `status` / `result.signal` / `result.basis` |
+| 知识证据 · B04 | `B04` | `B04/knowledge_base` | `result.query` / `citations[]` / `ext.citation` |
+| 工具 / 运行状态 | — | `ledger.tool_calls` + `adoption` + `not_adopted_reasons` | `tool_name` / `arguments` / `status` / `adopted` / `purpose` |
+
+方向徽章三值：`supporting`（支持，绿）/ `opposing`（反向，橙红）/ `undetermined`（未定，灰）。
+
+### 机器判定 C1~C14（全部 PASS）
+
+| 编号 | 判定 | run | 实测 |
+|---|---|---|---|
+| C1 | 四份 direction 不全相同 | run_082 | B02/B06/B04=supporting，B03=opposing |
+| C2 | B02=supporting 且 B06=supporting | run_082 | ✔ |
+| C3 | B03=opposing 且 `external_conditions.signal==external_improving` | run_082 | ✔ |
+| C4 | B04=supporting | run_082 | ✔ |
+| C5 | `combined_attention.value == conflict_unresolved` | run_082 | ✔ |
+| C6 | `evidence_divergence.has_conflict == True` | run_082 | ✔ |
+| C7 | ★ **反抹平**：渲染同时出现「支持」与「反向」，且不出现"都支持 WATCH / 全部支持 / 一致支持" | run_082 | ✔ |
+| C8 | 渲染里必须出现 B03（不许把不可用的证据过滤掉） | run_084 | ✔ |
+| C9 | 出现 status=unavailable | run_084 | ✔ |
+| C10 | 出现 error 原文 `weather provider unavailable` | run_084 | ✔ |
+| C11 | 出现「它影响了什么判断」，内容来自 `unavailable_context` / `combined_attention.reason` | run_084 | ✔ |
+| C12 | ★ **可用条数 == 3**，不得 == `counts.adopted_entries`(4) | run_084 | usable=3 / adopted=4 |
+| C13 | `combined_attention.value == watch_internal` | run_084 | ✔ |
+| C14 | 对照组：四份 direction 全为 supporting、`has_conflict == False` | run_106 | ✔ |
+
+### 交付物
+
+| 文件 | 内容 |
+|---|---|
+| `B07/views.py` | `view_evidence_data()` / `render_evidence()`；CLI `evidence`（默认 run_082）。**与视图一/二共用同一个 `load_run()`**；视图一/二既有行为**一字未改** |
+| `B07/views_web.py` | 新增 `GET /api/evidence?run_id=`，**复用 `view_evidence_data()`** |
+| `B07/static/views.html` | 第四个标签页「视图三 | 证据空间」：四张独立证据卡片（`<details>` 可展开、固定三问）+ 工具/运行状态区 + 三色方向徽章 + 不可用卡片红边框 |
+| `B07/tests/test_views_evidence.py` | 15 项（见下） |
+| `B07/artifacts/views_evidence_report.md` | run_082 / run_084 / run_106 三份渲染摘要 + C1–C14 实测值 + 四类证据的三问清单 + Limitations（数字全部由代码生成） |
+| `B07/artifacts/views_evidence_run_082.png` / `_084.png` | 网页截图（run_082 分歧齐全 / run_084 天气缺失）；★ 仓库 `.gitignore` 全局忽略 `*.png`，这两个文件**不进版本库** |
+
+### 跑法
+
+```bash
+# 分歧齐全
+./venv/Scripts/python.exe -m B07.views evidence run_082
+
+# 天气缺失
+./venv/Scripts/python.exe -m B07.views evidence run_084
+
+# 对照组
+./venv/Scripts/python.exe -m B07.views evidence run_106
+
+# 没有台账的 run（S1）
+./venv/Scripts/python.exe -m B07.views evidence run_012
+
+# Web 版
+./venv/Scripts/python.exe -m B07.views_web              # http://127.0.0.1:8010/
+```
+
+Web 路由：`GET /api/evidence?run_id=`（视图三），其余见上一节。
+
+### 测试（15 项）
+
+1. **只读存档**：monkeypatch 掉 openai / httpx / requests / B03 天气 / B06 推理 /
+   **B04 知识检索** + socket 断网，渲染**仍然成功**；
+2. ★ **可用条数按 `status==ok` 统计**：run_084 的 usable == 3，且 != `adopted_entries`(4)；
+   逐条手数 status==ok 的条数与统计值一致；
+3. **缺失必须看得见**：run_084 的渲染里出现 B03 / `unavailable` /
+   `weather provider unavailable` 原文 /「它影响了什么判断」；
+   影响段落必须逐字包含 `combined_attention.reason` 与 `unavailable_context.signal`；
+4. ★ **反抹平**：run_082 的渲染里**同时**出现「支持」与「反向」，
+   且不出现"都支持 WATCH / 全部支持 / 一致支持 / 都支持"；
+   方向徽章逐条核对存档里的 `direction`；
+5. **对照组不出现反向徽章**：run_106 四份全是 supporting，渲染里没有「反向」；
+6. **没有台账的 run 不报错**：run_012 显式显示
+   "本次运行没有证据台账（该 run 早于 S4 的证据层）"，四块显示为「不存在」。
+
+（另有 Web 端 3 项：`/api/evidence` 与终端版 sha256 一致、未知 run 显式 404、页面无外链。）
+
+### Limitations
+
+- **L1** 视图三读的是**存档里那一次**的证据台账，不是实时重新取数；
+  刷新页面不会重新调 LLM / 不重跑 B06 / 不再取一次天气。
+- **L2** 「证据可用度」按 `status == "ok"` 统计，是**证据链可审计性**的代理指标，
+  不等于"分析质量评分"；`counts.adopted_entries` 是"被采用为证据条目的数"，
+  **不是**有效条数（降级场景 adopted=4 但只有 3 条有效）。
+- **L3** B04 知识证据的取得时间是**知识检索时刻**，可能与分析时刻差数天
+  （run_082 的检索时刻是 2026-10-26，分析时刻是 2026-10-21）；
+  界面显示真实时间，**不做对齐**。
+- **L4** 天气 caveats 只覆盖本次实测情形（夜间、`solar_radiation` 恒 0、
+  高温分支未覆盖），不是通用天气结论。
+- **L5** 外部天气走真实 API 的真实时间轴，内部 B02 是模拟时间轴，
+  两者**不可时刻级对齐**，天气只作方向参考。
+- **L6** S1/S2/S3 的 27 个 run 早于证据层，没有台账，
+  证据空间对这些 run **不可用**（明确标注，不假装有证据）。
+
+---
+
+## B07 — 第三遍：视图四 | 场景回放与对比（文档 p.66–68）+ 四视图统一检查（p.69）
+
+**这一轮做什么**：把"两个 run 为什么不一样"拆成**三层**（输入 / 证据 / 状态），
+逐层比、逐字段列出，再用规则推出**归因**；同时给出一个**回放器**，
+让"同一场景再跑一次"这件事可以被发起、被记录。
+
+**★ 架构决策（本轮最重要的分界线）**：
+
+| | 允许发起新运行？ | 干什么 |
+|---|---|---|
+| `B07/replay.py`（回放器） | **是**（唯一） | 复用 S1–S5 的既有入口，跑一次、落一个新 run |
+| `B07/views_diff.py`（对比/归因器） | **否** | 只读两个 `run.json`，比三层、推归因 |
+| `B07/views_check.py`（统一检查） | **否** | 只读存档，验证四个视图讲的是同一次分析 |
+
+对比器与归因器**一律只读存档**：不调 LLM、不跑 B06、不取天气、
+不检索知识库、不重查 B02、不重跑判据。
+
+### 归因规则 R1~R6
+
+| 规则 | 条件 | 含义 |
+|---|---|---|
+| **R1** | 输入变 + 证据变 + 状态变 | 完整因果链：输入变 → 证据变 → 状态变 |
+| **R2** | 输入变 + 证据层无变化 + 状态变 | 差异来自输入/判据层 |
+| **R3** | 输入变 + 证据变 + 状态没变 | 证据变了但状态没变（系统守恒/退让） |
+| **R4** | 输入没变 + 证据没变 + 状态变了 | **条件没变结果却变了 → 不稳定性，必须显式暴露** |
+| **R5** | 状态没变 | 本次条件下判断未变 |
+| **R6** | 输入没变 + 证据变 + 状态变 | 差异出在证据层 |
+
+- 每条归因文本**必须引用具体字段值**，不许写"因为环境不同"；
+- 输出带 `attribution_complete` 与 `instability_detected` 两个标志；
+- **R4 复述**：同一场景、同一份输入（`inputs.changed == False`）却
+  `state.changed == True` → 归因必须标为
+  「**同一条件下重跑结果不一致（不稳定性）**」并列出具体不一致的字段。
+
+### ★ 两个必须显式区分的概念
+
+1. **证据层「无法比较」 ≠ 「证据相同」**：
+   两侧都没有台账时，判为**无法比较**，不能判为"没变"。
+   （S1/S2/S3 的 27 个 run 早于证据层，没有台账。）
+2. **「可用条数」按 `status == "ok"` 统计**，不是 `counts.adopted_entries`——
+   `adopted_entries` 是**采用数**，降级场景 adopted=4 但只有 3 条有效。
+
+### 三组实测（数字全部来自实际存档）
+
+| 组 | A | B | 输入变 | 证据变 | 状态变 | 命中规则 |
+|---|---|---|---|---|---|---|
+| 组 1 | run_012（S1） | run_015（S2） | ✔ | ✘（无台账，不可比） | ✔ | **R2** |
+| 组 2（文档指定） | run_015（S2） | run_023（S3） | ✔ | ✔ | ✔ | R1 |
+| 组 2（干净对照） | run_012（S1） | run_023（S3） | ✔（只变外部条件存在性） | ✔ | ✔ | **R1** |
+| 组 3 | run_057（S4） | run_084（S5） | ✔ | ✔ | ✔ | **R1** |
+
+**组 1 的关键结论**：B06 预测**两侧都是 NORMAL**，但稳定判定从"稳定"变成"不稳定" ——
+差别是**判据层**看出来的，**模型层没看出来**。
+
+**组 2 做了两组**：文档指定的 S2↔S3 **混入了历史窗口与稳定判定的变化**，
+不是单一变量对照；真正干净的对照是 **S1↔S3**（history 逐点相同、
+稳定判定与 B06 预测都没变，变的只有关注等级 —— 这正是外部条件接入带来的唯一效果）。
+页面上必须同时展示两组并说明差别。
+
+**组 3 的关键结论**：同一份外部证据从「**可用且反向**」变成「**不可用**」
+→ 分歧退化为缺失 → 系统退让到只看内部证据（关注等级
+`conflict_unresolved` → `watch_internal`；内部 B06 仍是 WATCH，
+关注度并未归零）。
+
+### 四视图统一检查（p.69）
+
+| 编号 | 判定 | 实现 |
+|---|---|---|
+| **U1** | 身份字段（run_id / analysis_time / model / system_prompt_sha256 / question_sha256）在**五处**完全一致 | 视图一 / 视图二 / 视图三 / 视图四 A 侧 / 视图四 B 侧 |
+| **U2** | 四个视图读盘的 `run.json` 的 sha256 **相同** | 把 `load_run` 换成记录型，读盘 5 次比对哈希与路径 |
+| **U3** | **零重算**：openai / httpx / requests / B03 天气 / B05 天气接口 / B06 推理 / B04 知识检索 / B02 取样 / socket **全部打桩成"一调用就抛"**，四个视图的装配 + 渲染（8 步）**仍然全部成功** | `views_check.check_zero_recompute()` |
+| **U4** | 视图一/二/三**既有断言**仍然通过 | 子进程跑那三个测试文件 |
+
+任何一项不通过都**显式报 FAIL 并说明差在哪**，绝不返回静态文案伪装成功。
+
+### 交付物
+
+| 文件 | 内容 |
+|---|---|
+| `B07/replay.py` | `replay(scenario, *, offline=True, dry_run=False)`；CLI `python -m B07.replay S1` / `S3 --dry-run`。**复用** s1/s2/s3/s4/s5 的既有入口，不另写一套流程 |
+| `B07/views_diff.py` | `diff_runs(run_a, run_b)`：三层对比 + R1~R6 归因 + `attribution_complete` / `instability_detected`；**只读存档** |
+| `B07/views.py` | 新增 `view_compare_data()` / `render_compare()`；CLI `compare`。视图一/二/三既有行为**一字未改** |
+| `B07/views_check.py` | `check_same_analysis(run_id)`；CLI `python -m B07.views check run_082`（U1–U4） |
+| `B07/views_web.py` | 新增 `GET /api/compare?a=&b=`（复用 `view_compare_data()`） |
+| `B07/static/views.html` | 第五个标签页「视图四 | 场景回放与对比」：**并排两列 A\|B**（每列五项）+ 中间差异归因区（三层 + 归因链）。**不引 CDN**，离线可开；**不是**五场景大页面 |
+| `B07/tests/test_views_compare.py` | 11 项（三层可复算 / **R4 必触发** / R2 命中 / 干净对照 / R1 命中 / U1–U4 / 打桩） |
+| `B07/tests/test_views_layout.py` | 15 项（★ Web 版版面顺序：`.cols` 单列自上而下 / 四个视图编号递增 / 视图一严格 一→二→三→四 / 并列只发生在面板内部） |
+| `B07/artifacts/views_compare_report.md` | 4 组归因实测 + 三层明细 + 归因规则命中情况 + 统一检查结果 + Limitations |
+| `B07/artifacts/replay_log.jsonl` | 回放日志（**另存**；`run.json` 存档结构一个字未改） |
+
+### 回放器怎么用
+
+```bash
+python -m B07.replay S1 --dry-run     # 只打印计划：不调 LLM、不落盘
+python -m B07.replay S1               # 真回放：调 LLM 1 次、落 1 个新 run
+python -m B07.replay S3 --real        # 用真实天气 API（默认离线构造夹具）
+python -m B07.replay S5 --degraded    # S5 降级变体
+```
+
+- **默认离线优先**：外部天气用 B07 已有的离线构造夹具
+  （`B07.s3.OFFLINE_CASES` / `B07.s4_offline`），`--real` 才调真实 API；
+- 用离线构造时，`warnings` 里必须写明：
+  「本次回放使用离线构造的天气用例（is_constructed=true），不是实时天气；
+  实时天气会随真实时间变化，回放结果不可跨时间比较。」；
+- 每次真回放前打印额度提示：
+  「⚠ 本次回放会调用 LLM 1 次并落盘 1 个新 run（run_XXX）。」；
+- **S2 的选窗依赖 S1 的参考带**（`s2._latest_s1_run_with_fingerprint`）——
+  找不到可用的 S1 就**显式报错**，绝不静默换锚点；
+- 每次回放往 `B07/artifacts/replay_log.jsonl` 追加一行：
+  `{"ts", "scenario", "run_id", "offline", "base_run_id", "notes"}`。
+
+### 跑法
+
+```bash
+# 视图四（终端）
+python -m B07.views compare run_012 run_015     # 组 1
+python -m B07.views compare run_015 run_023     # 组 2（文档指定）
+python -m B07.views compare run_012 run_023     # 组 2（干净对照）
+python -m B07.views compare run_057 run_084     # 组 3
+
+./venv/Scripts/python.exe -m B07.replay S1     # 稳态基线
+./venv/Scripts/python.exe -m B07.replay S2     # 渐进漂移
+./venv/Scripts/python.exe -m B07.replay S3     # 接入外部天气（默认离线构造）
+./venv/Scripts/python.exe -m B07.replay S4     # 证据身份层 + 分歧
+./venv/Scripts/python.exe -m B07.replay S5     # 证据退化（基线变体）
+
+
+# 四视图统一检查
+python -m B07.views check run_082
+
+# Web 版
+python -m B07.views_web --port 8010             # 第五个标签页
+```
+
+Web 路由：`GET /api/compare?a=&b=`（视图四），其余见上面几节。
+
+### ★ Web 版版面规则（用户实测反馈后固定，有回归测试守着）
+
+Web 版曾经把面板排成左右两栏 ——【四】掉到左下角、【二】【三】跑到右边，
+读起来要来回跳。现在改成：
+
+1. **一律单列自上而下**：`.cols` / `.col` 是 flex column，
+   四个视图的每个面板都**从上往下按编号排**，中间不再分栏；
+2. **编号必须递增**：视图一严格 `一 → 二 → 三 → 四`；
+   视图二 `一 → 二 → 二·附 → 三 → 附`；视图二·对比 `一 ~ 六`；
+   视图三 `0 → 1~4 → 5 → 6`；视图四 `一 → 二`；
+3. **并排只发生在"一个面板内部"**：卡片网格（`.cards` / `.qgrid` / `.duo` /
+   `.evgrid`）横向排布，避免长面板被拉成一条空荡荡的宽带；
+4. 唯一保留的跨面板并排是**视图四的 A|B 两列**（规格要求的"并排两列 A|B"）。
+
+回归测试：`B07/tests/test_views_layout.py`（15 项），把上面四条全部钉死。
+
+### Limitations
+
+- **L1** 回放**不是可复现的**：真实天气走真实世界时间，同一场景两次回放的
+  外部条件可能不同；LLM 采样本身也有波动。离线构造的天气可复现，
+  但那是**构造用例**，不是实时天气。
+- **L2** 回放会**真的调用 LLM 并落盘新 run**，消耗额度；
+  对比与归因部分完全离线、只读存档。
+- **L3** 归因是**基于存档字段的规则推导**，不是因果推断。
+  「输入变了」不等于「输入变了一定导致了判断变」，
+  只能说「本次存档里差异出现在这一层」。
+- **L4** R4 说明系统存在**输出不稳定**。这是 S3 已观察到的采样波动
+  在产品层的复现，**不应**被解读为判断错误。
+- **L5** 文档指定的 S2↔S3 在本档案中**不是单一变量对照**
+  （历史窗口与稳定判定同时变了）；真正干净的对照是 S1↔S3。
+  页面上必须同时展示两组并说明差别。
+- **L6** S1/S2/S3 的 27 个 run 没有证据台账，S1↔S2 的「台账层」
+  只能判为**无法比较**，不能判为「证据相同」。
+- **L7** 统一检查只覆盖「四个视图讲的是同一次分析」这一件事，
+  **不检查判断本身对不对**。
+- **L8** 三组对比各只取了 **1 个代表 run**（S4 有 19 个同构 run、
+  S5 有 45 个、内含 3 种状态），结论来自代表样本，
+  **不等于**对全部带台账 run 的普查结论。

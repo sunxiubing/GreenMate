@@ -30,7 +30,9 @@ Thumbs.db
 # B07 排障临时文件（正式产物在 B07/artifacts/ 下，文件名不带 _tmp_ 前缀）
 B07/artifacts/_tmp_*.txt
 B07/artifacts/_tmp_*.json
-B07/artifacts/*.bak.json
+B07/artifacts/_tmp_*.md
+B07/artifacts/_tmp_*.log
+B07/artifacts/*.bak.*
 
 # B07 创新点 1/2/3 —— 可再生的调试 / 复核日志。
 # 正式产物照旧进版本库（它们是报告数字的来源，也是回归基线）：
@@ -47,6 +49,19 @@ logs/
 *.png
 *.jpg
 report/
+
+# ---- B07 第三遍视图四（场景回放与对比）· 显式列出"进/不进版本库" ----
+# ★ 以下都**要进版本库**，别误加进忽略列表：
+#   B07/views.py / views_diff.py / views_check.py / views_web.py / replay.py
+#   B07/static/views.html            纯静态页面（无 CDN 外链，离线可开）
+#   B07/tests/test_views_*.py        视图一~四 + 版面顺序的不变量测试
+#   B07/runs/**                      run 存档是证据链的一部分
+#   B07/artifacts/replay_log.jsonl   回放日志（每次回放追加一行）
+# 网页截图分两类：
+#   views_web_*.png   → README 里内嵌的五视图全景（**进版本库**，否则 README 图片裂开）
+#   其余 views_*.png  → 排障用截图，本地可再生物（不进版本库）
+B07/artifacts/views_*.png
+!B07/artifacts/views_web_*.png
 # 临时文件
 *.tmp
 

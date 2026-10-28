@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "next_seq": 110,
+  "next_seq": 113,
   "runs": {
     "run_001": {
       "created_at": "2026-10-24T09:26:53",
@@ -1105,6 +1105,42 @@
       "combined_attention": "watch_internal",
       "note": null,
       "path": "B07/runs/run_109/run.json"
+    },
+    "run_110": {
+      "created_at": "2026-10-28T22:39:05",
+      "scenario": "S1",
+      "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+      "verdict": "NORMAL",
+      "model_version": "b06-20261020-v1",
+      "status": "success",
+      "failed_stage": null,
+      "combined_attention": "internal_only",
+      "note": null,
+      "path": "B07/runs/run_110/run.json"
+    },
+    "run_111": {
+      "created_at": "2026-10-28T22:43:25",
+      "scenario": "S5",
+      "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+      "verdict": "WATCH",
+      "model_version": "b06-20261020-v1",
+      "status": "success",
+      "failed_stage": null,
+      "combined_attention": "conflict_unresolved",
+      "note": null,
+      "path": "B07/runs/run_111/run.json"
+    },
+    "run_112": {
+      "created_at": "2026-10-28T23:15:28",
+      "scenario": "S5",
+      "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+      "verdict": "WATCH",
+      "model_version": "b06-20261020-v1",
+      "status": "success",
+      "failed_stage": null,
+      "combined_attention": "watch_internal",
+      "note": null,
+      "path": "B07/runs/run_112/run.json"
     }
   }
 }
