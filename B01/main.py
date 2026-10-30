@@ -43,6 +43,16 @@ try:
 except ImportError:
     B03_AVAILABLE = False
 
+# B08 冻结基线的健康检查（可选：B07 目录不存在时退化成最小可用版本）
+try:
+    _b07_root = BASE_DIR.parent
+    if str(_b07_root) not in sys.path:
+        sys.path.insert(0, str(_b07_root))
+    from B07.health import deep_health as _deep_health, shallow_health as _shallow_health
+    HEALTH_AVAILABLE = True
+except Exception:            # noqa: BLE001 —— B07 缺失也不能让 B01 起不来
+    HEALTH_AVAILABLE = False
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -117,6 +127,42 @@ def index():
 def get_state():
     """Step 2：返回当前状态。"""
     return current_state()
+
+
+# --------------------------------------------------------------------------
+# B08 第一遍 · 两层健康检查（文档 p.92）
+#
+# B01 是"打开系统"的第一个入口，所以健康检查放这里也放 B07 的视图服务里，
+# 两个入口的答案必须一致（共用 B07.health）。
+#
+#   /health       浅：只证明进程活着，永远 200，**绝不碰外部服务**
+#   /health/deep  深：逐项体检 B02 库 / B03 天气 / B04 知识 / B06 模型
+# --------------------------------------------------------------------------
+
+@app.get("/health")
+def health():
+    """浅健康检查 —— 只证明进程活着。
+
+    ★ 外部服务（天气 / 知识）挂了，这里照样 200 且秒回，
+      所以页面不会因为外部服务异常而无响应。
+    """
+    if not HEALTH_AVAILABLE:
+        return {"status": "ok", "scope": "shallow", "app_version": "unknown",
+                "model_version": "unknown",
+                "detail": "B07.health 不可用（本进程未找到 B07 目录），"
+                          "只能证明进程存活。"}
+    return _shallow_health()
+
+
+@app.get("/health/deep")
+def health_deep(probe: bool = False):
+    """深健康检查 —— 逐项体检外部依赖，每项给出 ok | unavailable | error。"""
+    if not HEALTH_AVAILABLE:
+        return {"status": "error", "scope": "deep", "probe": bool(probe),
+                "checks": {},
+                "detail": "B07.health 不可用（本进程未找到 B07 目录），"
+                          "无法做依赖体检。"}
+    return _deep_health(probe=probe)
 
 
 @app.get("/api/states")

@@ -1,0 +1,251 @@
+{
+  "scenario_id": "S4",
+  "name": "多源证据分歧",
+  "app_version": "B08_baseline_01",
+  "model_version": "b06-20261020-v1",
+  "analysis_time": "2026-10-21T09:30:00",
+  "location": "A区-3号温室",
+  "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+  "system_prompt_sha256": "aa1400cf8568",
+  "question_sha256": "d3cc394bfcbe",
+  "current_state": {
+    "timestamp": "2026-10-21T09:30:00",
+    "temperature": 28.6,
+    "humidity": 66.9,
+    "lux": 42492.0,
+    "source_type": "simulated",
+    "sim_scenario": "flood"
+  },
+  "history_window": {
+    "start": "2026-10-21T07:00:00",
+    "end": "2026-10-21T09:30:00",
+    "count": 6
+  },
+  "history": [
+    {
+      "timestamp": "2026-10-21T07:00:00",
+      "temperature": 24.2,
+      "humidity": 92.6,
+      "lux": 0.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood"
+    },
+    {
+      "timestamp": "2026-10-21T07:30:00",
+      "temperature": 25.8,
+      "humidity": 88.1,
+      "lux": 980.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood"
+    },
+    {
+      "timestamp": "2026-10-21T08:00:00",
+      "temperature": 25.5,
+      "humidity": 82.3,
+      "lux": 12171.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood"
+    },
+    {
+      "timestamp": "2026-10-21T08:30:00",
+      "temperature": 27.7,
+      "humidity": 77.5,
+      "lux": 23240.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood"
+    },
+    {
+      "timestamp": "2026-10-21T09:00:00",
+      "temperature": 27.8,
+      "humidity": 71.3,
+      "lux": 32365.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood"
+    },
+    {
+      "timestamp": "2026-10-21T09:30:00",
+      "temperature": 28.6,
+      "humidity": 66.9,
+      "lux": 42492.0,
+      "source_type": "simulated",
+      "sim_scenario": "flood"
+    }
+  ],
+  "weather_evidence_snapshot": {
+    "provider": "Offline-Fixture",
+    "provider_recorded_in_archive": true,
+    "retrieved_at": "2026-10-24T00:00:00+00:00",
+    "retrieved_at_recorded_in_archive": true,
+    "forecast_time": "2026-10-25T04:00",
+    "forecast_time_recorded_in_archive": true,
+    "external_conditions": {
+      "available": true,
+      "signal": "external_improving",
+      "judge_method": "relative_delta",
+      "basis": "相对基线差分（主判定）：降水概率 50.0% → 10.0%（Δ=-40.0 个百分点，阈值 ±30.0 个百分点） → external_improving；温度 Δ-1.0℃、云量 Δ-70.0%（只作描述，不参与判定）",
+      "baseline_point": {
+        "timestamp": "2026-10-24T22:00",
+        "temperature": 15.0,
+        "humidity": 70.0,
+        "precipitation_probability": 50.0,
+        "cloud_cover": 90.0,
+        "solar_radiation": 0.0,
+        "weather_code": 0,
+        "weather_description": "小雨"
+      },
+      "forecast_point": {
+        "timestamp": "2026-10-25T04:00",
+        "temperature": 14.0,
+        "humidity": 70.0,
+        "precipitation_probability": 10.0,
+        "cloud_cover": 20.0,
+        "solar_radiation": 0.0,
+        "weather_code": 0,
+        "weather_description": "晴朗"
+      },
+      "precip_delta": -40.0,
+      "temp_delta": -1.0,
+      "cloud_delta": -70.0,
+      "solar_radiation": 0.0,
+      "future_ok": true,
+      "warnings": [
+        "外部天气为 PUBLIC 真实数据，forecast_time 属于真实世界时间轴；B02 内部为 SIMULATED 模拟时间轴（2026-10-15T02:00:00 ~ 2026-10-22T01:30:00），两者非同一时间基准，本次仅将天气用作外部条件方向参考，不做时刻级跨源对齐。"
+      ],
+      "caveats": [
+        "外部取的是窗口末时刻的单点值，不是窗口极值——中途更高/更低的值可能被漏掉",
+        "全部实测点位于夜间，solar_radiation 恒为 0，高温分支（≥35℃）至今未被任何实测点覆盖",
+        "外部为真实 API 的真实时间（比模拟锚点晚约 3 天），数值不可与内部模拟值直接比较，只作方向性参考",
+        "温度与云量只作描述，不参与主判定：温度方向单一（既可能太热也可能太冷），云量影响光照、与降水不是同一维度"
+      ],
+      "analysis_time": "2026-10-21T09:30:00",
+      "location": "河北固安",
+      "forecast_window": "6h",
+      "baseline_skew_hours": 0.0,
+      "error": null
+    },
+    "ledger_b03_ext": {
+      "provider": "Offline-Fixture",
+      "forecast_time": "2026-10-25T04:00",
+      "forecast_window": "6h",
+      "location": "河北固安",
+      "retrieved_at": "2026-10-24T00:00:00+00:00",
+      "case": "improving",
+      "is_constructed": true,
+      "label": "构造用例（不是实测）",
+      "status": "ok",
+      "error": null,
+      "degraded": false,
+      "unavailable_context": null
+    },
+    "case": "improving",
+    "degraded": false,
+    "label": "构造用例（不是实测）",
+    "analysis_time": "2026-10-21T09:30:00",
+    "available": true,
+    "status": "ok",
+    "error": null,
+    "signal": "external_improving",
+    "judge_method": "relative_delta",
+    "basis": "相对基线差分（主判定）：降水概率 50.0% → 10.0%（Δ=-40.0 个百分点，阈值 ±30.0 个百分点） → external_improving；温度 Δ-1.0℃、云量 Δ-70.0%（只作描述，不参与判定）",
+    "baseline_point": {
+      "timestamp": "2026-10-24T22:00",
+      "temperature": 15.0,
+      "humidity": 70.0,
+      "precipitation_probability": 50.0,
+      "cloud_cover": 90.0,
+      "solar_radiation": 0.0,
+      "weather_code": 0,
+      "weather_description": "小雨"
+    },
+    "forecast_point": {
+      "timestamp": "2026-10-25T04:00",
+      "temperature": 14.0,
+      "humidity": 70.0,
+      "precipitation_probability": 10.0,
+      "cloud_cover": 20.0,
+      "solar_radiation": 0.0,
+      "weather_code": 0,
+      "weather_description": "晴朗"
+    },
+    "observed_at": "2026-10-24T22:00",
+    "precip_delta": -40.0,
+    "temp_delta": -1.0,
+    "future_ok": true,
+    "warnings": [
+      "外部天气为 PUBLIC 真实数据，forecast_time 属于真实世界时间轴；B02 内部为 SIMULATED 模拟时间轴（2026-10-15T02:00:00 ~ 2026-10-22T01:30:00），两者非同一时间基准，本次仅将天气用作外部条件方向参考，不做时刻级跨源对齐。"
+    ],
+    "caveats": [
+      "外部取的是窗口末时刻的单点值，不是窗口极值——中途更高/更低的值可能被漏掉",
+      "全部实测点位于夜间，solar_radiation 恒为 0，高温分支（≥35℃）至今未被任何实测点覆盖",
+      "外部为真实 API 的真实时间（比模拟锚点晚约 3 天），数值不可与内部模拟值直接比较，只作方向性参考",
+      "温度与云量只作描述，不参与主判定：温度方向单一（既可能太热也可能太冷），云量影响光照、与降水不是同一维度"
+    ],
+    "is_constructed": true,
+    "location": "河北固安",
+    "forecast_window": "6h",
+    "snapshot_taken_from_run_id": "run_103",
+    "snapshot_source": "evidence_ledger.entries[EV-B03] + run.json.external_conditions"
+  },
+  "knowledge_evidence_snapshot": {
+    "query": "过期数据导致温室调控决策基于过时信息",
+    "top_k": 5,
+    "has_relevant": true,
+    "note": "命中 5 条，最高分 0.3627（CH-003-02）；相关切片 score > 0（注意：字符级 TF-IDF 有共同字符即有非零相似度，score>0 不等于该知识库真的覆盖本主题）",
+    "citations": [
+      {
+        "chunk_id": "CH-003-02",
+        "source_id": "SRC-003",
+        "section": "静默返回旧数据的危害",
+        "page": "./docs/b03_weather.md",
+        "score": 0.3626655720824688,
+        "content": "静默返回旧数据（phantom data）危害：下游系统以为拿到最新有效数据；温室调控决策基于过时信息可能导致作物受损；问题隐蔽，潜伏数天才被发现；违反 API 隐含契约：成功响应代表数据完整"
+      },
+      {
+        "chunk_id": "CH-003-01",
+        "source_id": "SRC-003",
+        "section": "HTTP 400 不返回旧缓存的原因",
+        "page": "./docs/b03_weather.md",
+        "score": 0.06655222249031584,
+        "content": "HTTP 400 不返回旧缓存：400 是请求参数错误（纬度格式错误），不是临时性故障。重新发请求（修正参数后）一定能成功，所以不需要降级到过期数据。Fail Loudly 原则要求显式失败而非静默降级"
+      },
+      {
+        "chunk_id": "CH-002-04",
+        "source_id": "SRC-002",
+        "section": "drought 扰动完整生命周期",
+        "page": "./B02/simulator/engine.py",
+        "score": 0.03422238306915283,
+        "content": "drought 扰动完整生命周期：进入阶段 6 小时（smoothstep 过渡）→ 稳定持续 12 小时（humidity_delta=-10.0 全量生效）→ 恢复阶段 6 小时（smoothstep 过渡）→ 回到正常基线"
+      },
+      {
+        "chunk_id": "CH-001-03",
+        "source_id": "SRC-001",
+        "section": "PUBLIC 不用于 A/B 实验的原因",
+        "page": "./docs/b01_b03_design.md",
+        "score": 0.01866426424378078,
+        "content": "PUBLIC 数据不用于 A/B 对照：Open-Meteo 每次返回实时预报不同，间隔内值可能变化；1分钟粒度的天气预报分辨率不是真正瞬时状态；HTTP 400/429 时 PUBLIC 返回 None，无法保证 A/B 两边有效状态"
+      },
+      {
+        "chunk_id": "CH-001-04",
+        "source_id": "SRC-001",
+        "section": "format_state 来源标注差异",
+        "page": "./docs/b01_b03_design.md",
+        "score": 0.017458747334187674,
+        "content": "format_state() 根据 data_source 参数区分：data_source='PUBLIC' 时追加 '_weather：该数据来自 Open-Meteo 实时天气 API，非模拟数据'；data_source='SIMULATED' 时不追加任何标注（默认即为模拟）"
+      }
+    ],
+    "status": "ok",
+    "retrieved_at": "2026-10-26T16:17:26.800468+00:00",
+    "snapshot_taken_from_run_id": "run_103",
+    "snapshot_source": "evidence_ledger.entries[EV-B04]"
+  },
+  "run_scenario": "S4",
+  "evidence_ledger_enabled": true,
+  "source_run_id": "run_103",
+  "source_run_sha256": "ea2fefac1126e1cf924628f546e3abc2d6e25ad68d62a0a371b37b14875e94d6",
+  "source_run_created_at": "2026-10-27T00:17:26",
+  "source_run_scenario": "S4",
+  "notes": [
+    "天气证据来自**离线构造夹具**（is_constructed=true），不是真实天气；真实链路验证要单独做。"
+  ],
+  "scenario_sha256": "f9c73d3403a9a3d2417daf1b5f140f0c0a635e1cf32a95ee4eb19807d73ab5d1"
+}

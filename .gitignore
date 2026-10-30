@@ -3,7 +3,7 @@
 .env.*
 !.env.example
 
-# B02/B03 数据文件
+# B02/B03 数据文件（根目录与 B02/ 各一份都会被这条规则挡住）
 greenmate.db
 greenmate.db-wal
 greenmate.db-shm
@@ -17,6 +17,7 @@ __pycache__/
 venv/
 .venv/
 .pytest_cache/
+*.egg-info/
 
 # 编辑器 / 系统
 .vscode/
@@ -64,6 +65,20 @@ B07/artifacts/views_*.png
 !B07/artifacts/views_web_*.png
 # 临时文件
 *.tmp
+
+# ---- B08 三遍（冻结 / 正式验证 / 证明）· 显式列出"进/不进版本库" ----
+# ★ 以下都**要进版本库**：
+#   B07/b08.py / b08_baseline.py / b08_trace.py / health.py / scenarios_build.py
+#   B07/scenarios/*.json + B07/scenarios/README.md   固定场景（回归输入）
+#   B07/tests/test_b08_freeze.py / test_b08_verify.py
+#   B07/artifacts/b08_*.json / b08_*.md / b08_*.jsonl   三遍的基线与报告
+#   B07/runs/run_1xx/**                              回放产生的正式 run 存档
+# 不进版本库的只有：B06 训练产物（下面单独排除）与排障截图（上面已排除）。
+#
+# ⚠️ 特别注意：**不要**加全局 `*.json` / `*.jsonl` 规则 ——
+#    B07/runs/**/run.json（证据链）与 B07/artifacts/*.jsonl（验证记录）
+#    都是版本库的一部分，加了就等于把证据链删了。
+#    `greenmate.db` 已在上面单独排除，不需要再动。
 
 # B06 训练产物
 B06/artifacts/

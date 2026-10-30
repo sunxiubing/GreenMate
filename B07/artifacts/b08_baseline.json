@@ -1,0 +1,172 @@
+{
+  "app_version": "B08_baseline_01",
+  "app_version_composition": {
+    "rule": "app_version = 语义版本号 + Git 提交指纹",
+    "app_version": "B08_baseline_01",
+    "git_commit": "9246793e0ef2f7aebe9674757d8bb0573f544ade",
+    "git_commit_short": "9246793",
+    "full": "B08_baseline_01@9246793e0ef2f7aebe9674757d8bb0573f544ade",
+    "note": "app_version **不进 run.json**（存档结构一字不改）；它表达的是「冻结时这份代码是哪一版」。"
+  },
+  "frozen_at": "2026-10-31T01:13:59",
+  "git": {
+    "commit": "9246793e0ef2f7aebe9674757d8bb0573f544ade",
+    "commit_short": "9246793",
+    "branch": "main",
+    "dirty": true,
+    "dirty_files": [
+      "M .gitignore",
+      " M B01/main.py",
+      " M B07/artifacts/replay_log.jsonl",
+      " M B07/artifacts/s1_report.md",
+      " M B07/artifacts/s2_report.md",
+      " M B07/artifacts/s3_raw_result.json",
+      " M B07/artifacts/s5_raw_result.json",
+      " M B07/replay.py",
+      " M B07/runs/index.json",
+      " M B07/views_web.py",
+      " M README.md",
+      " M requirements.txt",
+      "?? B07/artifacts/b08_baseline.json",
+      "?? B07/artifacts/b08_freeze_report.md",
+      "?? B07/artifacts/b08_pass1_contrast.md",
+      "?? B07/artifacts/b08_pass2_failure.md",
+      "?? B07/artifacts/b08_pass3_report.md",
+      "?? B07/artifacts/b08_pass3_trace.md",
+      "?? B07/artifacts/b08_validation_records.jsonl",
+      "?? B07/artifacts/b08_validation_report.md",
+      "?? B07/b08.py",
+      "?? B07/b08_baseline.py",
+      "?? B07/b08_trace.py",
+      "?? B07/health.py",
+      "?? B07/runs/run_113/",
+      "?? B07/runs/run_114/",
+      "?? B07/runs/run_115/",
+      "?? B07/runs/run_116/",
+      "?? B07/runs/run_117/",
+      "?? B07/runs/run_118/",
+      "?? B07/runs/run_119/",
+      "?? B07/runs/run_120/",
+      "?? B07/runs/run_121/",
+      "?? B07/runs/run_122/",
+      "?? B07/runs/run_123/",
+      "?? B07/runs/run_124/",
+      "?? B07/runs/run_125/",
+      "?? B07/runs/run_126/",
+      "?? B07/runs/run_127/",
+      "?? B07/scenarios/",
+      "?? B07/scenarios_build.py",
+      "?? B07/tests/test_b08_freeze.py",
+      "?? B07/tests/test_b08_verify.py"
+    ],
+    "dirty_file_count": 43
+  },
+  "model": {
+    "version": "b06-20261020-v1",
+    "manifest_path": "B06\\artifacts\\b06-20261020-v1.json",
+    "weights_path": "B06\\artifacts\\b06-20261020-v1.joblib",
+    "artifact_manifest_sha256": "ae9c9687bcf86c37efb6cf6c5da4c3a8a763cc018981462cc206fcc9d78a537e",
+    "model_weights_sha256": "aadc847a99da34acc9a4df7c11c520398d28de218de0244b76834b02fcf35c2c"
+  },
+  "knowledge": {
+    "sources": [
+      {
+        "path": "B04/SPEC.py",
+        "sha256": "fc71b6b281a5d150756c4daa044e1e1378b547167f7b7e8056c21dd5fff9a7f0",
+        "bytes": 8137
+      },
+      {
+        "path": "docs/b01_b03_design.md",
+        "sha256": "d5fa4fd1efd83b2fb95e2149efdf6fba841d6feb605b5294cf6ffab5e3d87093",
+        "bytes": 2092
+      },
+      {
+        "path": "docs/b03_weather.md",
+        "sha256": "1d8692016bd6b019b34a9f88feb72f37aa5dcbacb62f129cc593de99f974d600",
+        "bytes": 2111
+      }
+    ],
+    "missing_sources": [],
+    "combined_sha256": "168e3ee34c9d12ed1cbe1dfcb3886b62f47a37e1ea8b4d4c7e8fa7c7647c3624",
+    "combined_sha256_rule": "对 sources 按 path 升序排列，逐条把 `<path>\\n<sha256>\\n` 拼进同一个 sha256",
+    "version_note": "知识库目前**没有版本号机制**，用文件 sha256 代替版本：文件一改 sha 就变，等价于版本。"
+  },
+  "prompt": {
+    "system_prompt_sha256": "aa1400cf8568",
+    "question_sha256": "d3cc394bfcbe",
+    "question": "分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。",
+    "note": "SYSTEM_PROMPT 与固定问题**绝对不许改**；指纹是前 12 位 sha256（与 run.json 的 llm_meta 同口径）。"
+  },
+  "scenarios": [
+    {
+      "scenario_id": "S1",
+      "name": "稳态基线",
+      "analysis_time": "2026-10-21T16:00:00",
+      "available": true,
+      "scenario_file": "B07\\scenarios\\S1.json",
+      "source_run_id": "run_113",
+      "scenario_sha256": "e19476db6c38f000181bb6380a7d48fcbb4611b8a1512d09eb7b6331fea7919f",
+      "weather_provider": null,
+      "weather_is_constructed": null
+    },
+    {
+      "scenario_id": "S2",
+      "name": "渐进漂移",
+      "analysis_time": "2026-10-20T12:00:00",
+      "available": true,
+      "scenario_file": "B07\\scenarios\\S2.json",
+      "source_run_id": "run_114",
+      "scenario_sha256": "da58371184026e26cf1e0905fd54daa926db23a83f46220720f434ed791bd5d4",
+      "weather_provider": null,
+      "weather_is_constructed": null
+    },
+    {
+      "scenario_id": "S3",
+      "name": "外部扰动",
+      "analysis_time": "2026-10-21T16:00:00",
+      "available": true,
+      "scenario_file": "B07\\scenarios\\S3.json",
+      "source_run_id": "run_023",
+      "scenario_sha256": "5f60b88ce36db54a140c393d3b0d7d46f4ea34d3fe05987c491068207c6e75a6",
+      "weather_provider": "Open-Meteo",
+      "weather_is_constructed": false
+    },
+    {
+      "scenario_id": "S4",
+      "name": "多源证据分歧",
+      "analysis_time": "2026-10-21T09:30:00",
+      "available": true,
+      "scenario_file": "B07\\scenarios\\S4.json",
+      "source_run_id": "run_103",
+      "scenario_sha256": "f9c73d3403a9a3d2417daf1b5f140f0c0a635e1cf32a95ee4eb19807d73ab5d1",
+      "weather_provider": "Offline-Fixture",
+      "weather_is_constructed": true
+    },
+    {
+      "scenario_id": "S5",
+      "name": "证据退化",
+      "analysis_time": "2026-10-21T09:30:00",
+      "available": false,
+      "scenario_file": "B07\\scenarios\\S5.json",
+      "source_run_id": "run_120",
+      "scenario_sha256": "368f092b03118de86969ccdff9fb2b59ea08f5eee4206f92d6ebeb6c3e21a205",
+      "weather_provider": "Offline-Fixture",
+      "weather_is_constructed": true
+    }
+  ],
+  "runs_on_disk": {
+    "total": 110,
+    "with_ledger": 73,
+    "without_ledger": 37,
+    "latest_run_id": "run_127",
+    "note": "这些 run 是 **B07 开发期产物**，不是 B08 正式验证记录；B08 第二遍起的正式验证会另行归档。"
+  },
+  "notes": [
+    "app_version 由 **Git 提交指纹**表达，不写进 run.json —— run.json 是既有存档契约，一个字节都没改。",
+    "★ 由此产生 Limitation L1：历史 run **无法追溯到它产生时的 app_version**，只能追溯到当前基线；B08 第二遍起的正式验证记录会显式带 app_version。",
+    "知识资料版本用**文件 sha256**代替版本号（知识库没有版本管理机制）。",
+    "固定场景的天气证据是**快照**（反映取得那一刻的外部事实），不是实时天气。",
+    "本轮只做第一遍（冻结）。第二遍起（在线运行 / 场景验证 / 同题对照 / 失败验证 / 运行追踪 / 固定回放 / 竞赛表达）**尚未开始**。",
+    "★ **工作区是脏的**（43 个文件有改动或未跟踪）—— git.dirty=true。基线对应的提交是 9246793，但**未提交的工作区改动不在这个基线里**，所以它不是一份干净基线；提交后再跑一次本命令刷新快照。"
+  ]
+}

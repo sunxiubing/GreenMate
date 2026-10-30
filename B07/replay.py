@@ -23,6 +23,14 @@
     python -m B07.replay S3 --real          # 用真实天气 API
     python -m B07.replay S5 --degraded      # S5 降级变体
 
+    # B08 第二遍新增：**固定场景回放**（条件不漂移）
+    python -m B07.replay --scenario-file B07/scenarios/S3.json
+    python -m B07.replay --scenario-file B07/scenarios/S3.json --dry-run
+
+    ★ 固定场景回放与上面那套的区别：外部条件**不当场取**，而是注入
+      场景文件里冻结的那份快照（不重新调天气 API、不重新构造夹具），
+      所以同一个 scenario_id 反复回放时主要条件一致。
+
 硬约束：
   · 不改 s1.py / s2.py / s3.py / s4.py / s5.py / runs.py / judgement.py 任何一行；
   · 不改 SYSTEM_PROMPT / 固定问题 / 任何判据阈值；
@@ -33,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -75,20 +84,39 @@ def _now_iso() -> str:
     return datetime.now().isoformat(timespec="seconds")
 
 
-def _base_run_for(scenario_label: str) -> str | None:
+def _run_seq(run_id: str) -> int:
+    """run_id 的数字后缀（run_120 → 120）。不是数字就返回 -1。"""
+    m = re.search(r"(\d+)\s*$", run_id or "")
+    return int(m.group(1)) if m else -1
+
+
+def _base_run_for(scenario_label: str,
+                  exclude_run_id: str | None = None) -> str | None:
     """回放前，同场景最近的一个既有存档（用来当对比基线）。
 
     只读索引，不重算。找不到就返回 None（**不静默换锚点**）。
+
+    ★ B08 第二遍修了两个 bug（只改这一个函数，其它行为不动）：
+
+      1. **排除刚生成的那个 run** —— 原实现是在 run_analysis 落盘**之后**
+         才取基线，`sorted(same)[-1]` 会把刚生成的 run 自己选出来，
+         于是 base_run_id 永远等于 run_id（基线失去意义）。
+      2. **按数字后缀排序** —— 原来用的是字符串排序，"run_99" 会排在
+         "run_120" 后面（'9' > '1'），取出来的不是"最近"的那一条。
     """
     from B07.runs import list_runs
 
     same = [i["run_id"] for i in list_runs()
-            if (i.get("scenario") or "") == scenario_label]
-    return sorted(same)[-1] if same else None
+            if (i.get("scenario") or "") == scenario_label
+            and i["run_id"] != exclude_run_id]
+    if not same:
+        return None
+    return max(same, key=lambda r: (_run_seq(r), r))
 
 
 def _append_log(scenario: str, run_id: str | None, offline: bool,
-                base_run_id: str | None, notes: str) -> None:
+                base_run_id: str | None, notes: str,
+                extra: dict | None = None) -> None:
     """往 artifacts/replay_log.jsonl 追加一行回放日志。
 
     ★ 这是**另存**的日志文件；run.json 的存档结构一个字都没动。
@@ -102,6 +130,8 @@ def _append_log(scenario: str, run_id: str | None, offline: bool,
         "base_run_id": base_run_id,
         "notes": notes,
     }
+    if extra:
+        row.update(extra)
     with open(REPLAY_LOG_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
@@ -141,6 +171,192 @@ def _s3_external_context(offline: bool, case: str) -> tuple[dict, bool]:
 
     ctx = build_external_context(anchor, WEATHER_LOCATION, WEATHER_WINDOW)
     return ctx, False
+
+
+# --------------------------------------------------------------------------
+# 固定场景回放（B08 第二遍新增）
+# --------------------------------------------------------------------------
+#
+# ★ 与上面那套"按场景入口回放"的区别：
+#
+#   按场景入口回放（S1/S2/S3/S4/S5）：走各场景自己的入口，外部条件**当场取**
+#     （离线夹具或真实 API），所以同一个场景两次回放的外部条件可能不同。
+#
+#   固定场景回放（--scenario-file）：输入**全部来自场景文件**
+#     （analysis_time / location / history / 天气证据快照），
+#     **不重新取数、不重新构造夹具**，所以条件不漂移 —— 这才是"固定场景"的含义。
+#
+# ★ 场景文件里的天气证据是**快照**：
+#   · 快照里的 external_conditions 原样注入（逐字，不重算 signal）；
+#   · 有证据台账的场景（S4/S5），台账按快照里的 B03 证据 ext 重建；
+#   · 没有台账的场景（S3），证据身份（provider/retrieved_at/forecast_time）
+#     落在注入的 external_conditions 里，否则身份会整个丢掉。
+
+def _load_scenario_file(path: str | Path) -> dict:
+    """读场景文件，并校验它没被手改过（scenario_sha256）。"""
+    from B07.scenarios_build import scenario_digest
+
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"找不到场景文件：{p}")
+    obj = json.loads(p.read_text(encoding="utf-8"))
+    stored = obj.get("scenario_sha256")
+    recomputed = scenario_digest(obj)
+    if stored != recomputed:
+        raise ValueError(
+            f"场景文件 {p} 的 scenario_sha256 与文件内容不符"
+            f"（记录 {stored}，重算 {recomputed}）—— 文件被手改过，拒绝回放。")
+    return obj
+
+
+def _scenario_inputs(obj: dict) -> tuple[dict | None, dict | None]:
+    """从场景文件里取出 (注入用的 external_conditions, 台账原料)。
+
+    Returns:
+        (inject, offline)
+          inject  —— 传给 run_analysis 的 external_conditions（None = 不接外部条件）
+          offline —— 台账装配用的原料（None = 本场景不装配台账）
+    """
+    snap = obj.get("weather_evidence_snapshot") or {}
+    ec = snap.get("external_conditions")
+    ext = snap.get("ledger_b03_ext") or {}
+    has_ledger = bool(obj.get("evidence_ledger_enabled"))
+
+    offline = None
+    if has_ledger:
+        if not ec:
+            raise ValueError(
+                f"场景 {obj.get('scenario_id')!r} 声明要装配证据台账，"
+                "但它的天气快照里没有 external_conditions —— 场景文件不完整。")
+        offline = {
+            # 外部条件上下文：逐字来自存档
+            "context": ec,
+            # provider 这一层的原始返回：台账里的证据身份与状态都从这里取
+            "raw_forecast": {
+                "status": ext.get("status") or snap.get("status"),
+                "provider": ext.get("provider"),
+                "retrieved_at": ext.get("retrieved_at"),
+                "error": ext.get("error"),
+            },
+            "case": ext.get("case"),
+            "degraded": bool(ext.get("degraded")),
+            "is_constructed": snap.get("is_constructed"),
+            "label": snap.get("label"),
+        }
+
+    inject = None
+    if ec:
+        inject = dict(ec)
+        if not has_ledger:
+            # 没有台账 → 证据身份只能落在这里（否则回放出来的 run 会丢掉身份）
+            for key in ("provider", "retrieved_at", "forecast_time"):
+                if snap.get(key) is not None:
+                    inject[key] = snap[key]
+    return inject, offline
+
+
+def replay_scenario_file(path: str | Path, *, dry_run: bool = False,
+                         location: str | None = None,
+                         model_path: str | Path | None = None) -> dict:
+    """按**固定场景文件**回放一次（条件不漂移的那种回放）。
+
+    Args:
+        path:       场景文件路径，如 B07/scenarios/S3.json
+        dry_run:    True = 只打印计划，不调 LLM、不落盘
+        location:   覆盖场景文件里的位置（默认用场景文件里的）
+        model_path: B06 模型产物路径（None = 用默认）
+
+    Returns:
+        {"run_id", "archive", "source", "warnings", "base_run_id", ...}
+    """
+    from B07.runs import DEFAULT_MODEL_PATH, run_analysis
+
+    obj = _load_scenario_file(path)
+    sid = obj.get("scenario_id")
+    anchor = obj.get("analysis_time")
+    loc = location or obj.get("location") or DEFAULT_LOCATION
+    run_scenario = obj.get("run_scenario") or sid
+    inject, offline = _scenario_inputs(obj)
+
+    warnings: list[str] = []
+    notes: list[str] = [
+        f"固定场景回放：{path}",
+        f"条件来自场景文件（analysis_time={anchor}，location={loc}），"
+        "外部天气用快照，**没有重新取数**。",
+    ]
+    if offline is not None:
+        notes.append("证据台账按场景快照里的 B03 证据重建（provider/状态/error 逐字保留）。")
+    else:
+        notes.append("本场景不装配证据台账（与来源存档一致）。")
+
+    if dry_run:
+        return {
+            "run_id": None,
+            "archive": None,
+            "source": "B07.runs.run_analysis(scenario_file)",
+            "warnings": warnings + ["dry-run：没有调用 LLM、没有落盘新 run。"],
+            "dry_run": True,
+            "base_run_id": obj.get("source_run_id"),
+            "scenario_label": run_scenario,
+            "notes": notes,
+            "plan": {
+                "scenario": sid,
+                "run_scenario": run_scenario,
+                "analysis_time": anchor,
+                "location": loc,
+                "scenario_file": str(path),
+                "source_run_id": obj.get("source_run_id"),
+                "external_conditions": bool(inject),
+                "evidence_ledger": offline is not None,
+                "llm_calls": 1,
+                "new_runs": 1,
+            },
+        }
+
+    factory = None
+    if offline is not None:
+        from B07.s4 import build_ledger
+
+        def factory(bundle, _offline=offline, _anchor=anchor):
+            return build_ledger(bundle, _offline, _anchor)
+
+    archive = run_analysis(
+        anchor=anchor,
+        location=loc,
+        model_path=model_path or DEFAULT_MODEL_PATH,
+        scenario=run_scenario,
+        external_conditions=inject,
+        evidence_ledger=factory,
+    )
+
+    run_id = archive.get("run_id")
+    # ★ 场景文件回放：基线固定为**场景文件里的 source_run_id**
+    #   （不是"同场景最近的一条"——固定场景回放的对比对象就是它冻结时那一条）
+    base_run_id = obj.get("source_run_id")
+
+    _append_log(
+        sid, run_id, offline=True, base_run_id=base_run_id,
+        notes="；".join(notes + warnings)[:800],
+        extra={
+            "scenario_id": sid,
+            "scenario_file": str(path),
+            "run_scenario": run_scenario,
+            "evidence_ledger": offline is not None,
+            "source_run_id": obj.get("source_run_id"),
+            "base_run_id_source": "scenario_file.source_run_id",
+        },
+    )
+
+    return {
+        "run_id": run_id,
+        "archive": archive,
+        "source": "B07.runs.run_analysis(scenario_file)",
+        "warnings": warnings,
+        "dry_run": False,
+        "base_run_id": base_run_id,
+        "scenario_label": run_scenario,
+        "notes": notes,
+    }
 
 
 # --------------------------------------------------------------------------
@@ -280,7 +496,8 @@ def replay(scenario: str, *, offline: bool = True, dry_run: bool = False,
         raise RuntimeError(f"未处理的场景：{scenario}")
 
     run_id = archive.get("run_id")
-    base_run_id = _base_run_for(scenario_label)
+    # ★ 排除刚生成的这个 run —— 否则基线会选到自己（见 _base_run_for 的说明）
+    base_run_id = _base_run_for(scenario_label, exclude_run_id=run_id)
 
     # 回放日志（另存，不动 run.json）
     _append_log(scenario, run_id, offline, base_run_id,
@@ -328,7 +545,12 @@ def _plan(scenario: str, offline: bool, degraded: bool, case: str) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description="B07 视图四 · 场景回放器（唯一允许发起新运行的地方）")
-    ap.add_argument("scenario", help="S1 / S2 / S3 / S3_without / S4 / S5")
+    ap.add_argument("scenario", nargs="?",
+                    help="S1 / S2 / S3 / S3_without / S4 / S5"
+                         "（与 --scenario-file 二选一）")
+    ap.add_argument("--scenario-file", default=None,
+                    help="按固定场景文件回放（如 B07/scenarios/S3.json）："
+                         "输入全部来自场景文件，外部天气用快照，不重新取数")
     ap.add_argument("--dry-run", action="store_true",
                     help="只打印计划：不调 LLM、不落盘")
     ap.add_argument("--real", action="store_true",
@@ -339,9 +561,50 @@ def main(argv=None) -> int:
                     help="仅 S5：跑降级变体（天气证据不可用）")
     ap.add_argument("--case", default="deteriorating",
                     help="仅 S3：离线构造用例名（B07.s3.OFFLINE_CASES 的键）")
-    ap.add_argument("--location", default=DEFAULT_LOCATION)
+    ap.add_argument("--location", default=None,
+                    help="位置标识（--scenario-file 时默认用场景文件里的）")
     ap.add_argument("--model", default=None, help="B06 已存模型产物路径")
     args = ap.parse_args(argv)
+
+    if args.scenario_file:
+        if args.scenario:
+            ap.error("--scenario-file 与位置参数只能二选一")
+        print("=" * 70)
+        print("B07 视图四 · 固定场景回放（条件不漂移）")
+        print("=" * 70)
+        print(f"\n  场景文件：{args.scenario_file}")
+        print(f"  天气来源：场景文件里的固定快照（**不重新取数**）")
+        print(f"\n  {QUOTA_NOTICE}")
+        try:
+            res = replay_scenario_file(
+                args.scenario_file, dry_run=args.dry_run,
+                location=args.location, model_path=args.model)
+        except Exception as exc:                # 失败显式暴露
+            print(f"\n  ❌ 回放失败：{type(exc).__name__}: {exc}")
+            return 1
+        if res["dry_run"]:
+            p = res["plan"]
+            print("\n  ── 回放计划 ──")
+            print(f"  场景        ：{p['scenario']}（run_scenario={p['run_scenario']}）")
+            print(f"  analysis_time: {p['analysis_time']}")
+            print(f"  位置        ：{p['location']}")
+            print(f"  来源存档    ：{p['source_run_id']}（对比基线）")
+            print(f"  外部条件    ：{'注入快照' if p['external_conditions'] else '不接入'}")
+            print(f"  证据台账    ：{'按快照重建' if p['evidence_ledger'] else '不装配'}")
+            print(f"  LLM 调用   ：{p['llm_calls']} 次")
+            print("\n  说明：")
+            for n in res["notes"]:
+                print(f"    · {n}")
+            print("\n  （dry-run 到此为止：没有调用 LLM，没有落盘新 run。）")
+            return 0
+        print(f"\n  ✅ 回放完成：{res['run_id']}")
+        print(f"     入口    ：{res['source']}")
+        print(f"     对比基线：{res['base_run_id']}（场景文件里的 source_run_id）")
+        print(f"\n  回放日志：{REPLAY_LOG_PATH.relative_to(_PROJECT_ROOT)}")
+        return 0
+
+    if not args.scenario:
+        ap.error("缺少场景参数（或用 --scenario-file 指定固定场景文件）")
 
     offline = not args.real          # 默认离线；--offline 显式再确认一次
     if args.offline:
@@ -361,7 +624,8 @@ def main(argv=None) -> int:
     try:
         res = replay(args.scenario, offline=offline, dry_run=args.dry_run,
                      degraded=args.degraded, case=args.case,
-                     location=args.location, model_path=args.model)
+                     location=args.location or DEFAULT_LOCATION,
+                     model_path=args.model)
     except Exception as exc:                    # 失败显式暴露
         print(f"\n  ❌ 回放失败：{type(exc).__name__}: {exc}")
         return 1

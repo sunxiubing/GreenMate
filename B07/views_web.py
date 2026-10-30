@@ -10,6 +10,8 @@
   · `GET /api/evolution/compare?a=&b=` → 视图二的 S1↔S2 并排对比
   · `GET /api/compare?a=&b=`     → 视图四（场景回放与对比）的三层差异 + 归因
   · `GET /api/runs`             → 可选的 run_id 列表（只读 index.json）
+  · `GET /health`              → B08 浅健康检查（只证明进程活着，绝不碰外部服务）
+  · `GET /health/deep`         → B08 深健康检查（逐项体检 B02/B03/B04/B06）
 
 页面顶部固定显示 run_id 与指纹，并提供切换 run_id 的入口。
 
@@ -33,6 +35,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 
+from B07.health import deep_health, shallow_health
 from B07.views import (
     RUNS_DIR,
     compare_data,
@@ -47,6 +50,37 @@ INDEX_PATH = RUNS_DIR / "index.json"
 
 app = FastAPI(title="GreenMate · 视图 状态总览 / 状态演化 / 证据空间 / 场景对比",
               version="1.3")
+
+
+# --------------------------------------------------------------------------
+# B08 第一遍 · 两层健康检查（文档 p.92）
+#
+#   /health       浅：**只证明进程活着**，永远 200，绝不碰外部服务
+#                 → 天气 / 知识挂了页面也不会无响应
+#   /health/deep  深：逐项体检 B02 库 / B03 天气 / B04 知识 / B06 模型
+#                 → B03 默认**不发真实请求**（?probe=true 才真调）
+# --------------------------------------------------------------------------
+
+@app.get("/health")
+def health():
+    """浅健康检查 —— 只证明进程活着。
+
+    ★ 无论 B03 天气 / B04 知识 / B02 库 / B06 模型是死是活，这里都返回 200，
+      而且**不访问任何外部服务**（连 sqlite 都不碰），所以永远秒回。
+    """
+    return shallow_health()
+
+
+@app.get("/health/deep")
+def health_deep(probe: bool = Query(False,
+                                   description="B03 天气是否真调一次 API（默认不调）")):
+    """深健康检查 —— 逐项体检外部依赖。
+
+    ★ 外部服务挂掉时，本接口**仍然返回 200**，但 body 里的
+      `status` 会是 degraded / error，每一项都有明确的原因 ——
+      这样探针能区分"服务死了"和"某个依赖坏了"。
+    """
+    return deep_health(probe=probe)
 
 
 @app.get("/")

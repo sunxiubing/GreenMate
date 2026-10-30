@@ -2,11 +2,19 @@
 # 安装方式：pip install -r requirements.txt
 # Python 版本：3.12（开发验证于 3.12.7）
 #
-# B01 需要：FastAPI + LLM 调用
-# B02 需要：FastAPI（时序查询服务）
+# ★ 版本钉法（2026-10-31 更新）
+#   本文件钉的是**实际训练 / 冻结 / 验证时用的那一套环境**，不是"某个能跑起来的版本"。
+#   原因：B06 模型权重（b06-20261020-v1.joblib）的 sha256 记录在
+#   B07/artifacts/b08_baseline.json 里，换一套 sklearn / numpy / joblib 重训，
+#   得到的 sha256 必然不同 —— 冻结基线就失去意义了。
+#   B06 模型清单里记的版本是 sklearn 1.9.1 / numpy 2.5.4，与这里一致。
+#
+# B01 需要：FastAPI + LLM 调用（openai）
+# B02 需要：FastAPI（时序查询服务）+ sqlite3（标准库）
 # B04 需要：scikit-learn（TF-IDF 向量检索）
 # B05 需要：requests（SoilGrids MCP HTTP 调用）
-# B06 需要：joblib（模型持久化）
+# B03 需要：httpx（天气 API）+ matplotlib（卡尔曼滤波可视化）
+# B06 需要：joblib（模型持久化）+ scikit-learn / numpy（训练与推理）
 # B07 需要：scikit-learn + numpy（加载 B06 模型推理）、pytest（S1–S5 不变量测试）
 #      其中 B07 的 S3–S5（B03 天气接入层 / S4 证据身份层与分歧 / S5 证据退化）
 #      没有引入任何新的运行时依赖，全部复用上面已列出的库。
@@ -33,40 +41,60 @@
 #      replay.py（回放器）= 复用已有的 openai / httpx / requests / B03 / B04 / B05 / B06，
 #      没有引入任何新的运行时依赖；
 #      Web 版复用上面已列出的 fastapi / uvicorn，页面同样不引任何 CDN 外链。
+# B08 第一遍（冻结 B07）：
+#      b08_baseline.py（基线快照）= 纯标准库（json / hashlib / subprocess / pathlib）；
+#      scenarios_build.py（固定场景抽取与校验）= 纯标准库，复用已有 B07.explain；
+#      health.py（两层健康检查）= 纯标准库 + 复用已有的 sqlite3 / joblib / sklearn；
+#      固定场景文件（B07/scenarios/*.json）是**数据文件**，不是代码；
+#      没有引入任何新的运行时依赖。
+# B08 第二遍（正式验证 S1~S5）：
+#      b08.py（验证器：baseline / verify / records / report）= 纯标准库 + 复用已有 B07.runs；
+#      判定重算走 B07.judgement 的纯函数，**不调 LLM**；
+#      没有引入任何新的运行时依赖。
+# B08 第三遍（同题对照 / 失败验证 / 运行追踪）：
+#      b08_trace.py（12 环节追踪 + 对照 + 因果证明 + F-1~F-4）= 纯标准库 + 复用 B07.runs；
+#      纯函数重算走 B07.judgement / B07.stability / B07.views，**不调 LLM**；
+#      没有引入任何新的运行时依赖。
 
 # Web 框架
-fastapi==0.115.12
-uvicorn==0.34.0
-pydantic==2.10.6
-python-dotenv==1.0.1
+fastapi==0.143.1
+uvicorn==0.54.0
+pydantic==2.14.1
+python-dotenv==1.2.4
 
 # LLM
-openai==1.58.1
+openai==3.31.0
 
 # HTTP
 httpx==0.28.1
-requests==2.32.3
+requests==2.34.2
 
 # ML / 数据
-scikit-learn==1.6.1
-numpy==1.26.4
-joblib==1.4.2
+# ★ 这三个必须与 B06 模型清单记录的版本一致，否则重训 sha256 对不上
+scikit-learn==1.9.1
+numpy==2.5.4
+joblib==1.6.0
 
 # 可视化
-matplotlib==3.9.4
+matplotlib==3.11.2
 
 # 测试
 # 说明：B07/S1 只用到已有的 fastapi / pydantic / openai / httpx / scikit-learn / joblib，
 #      没有引入新的运行时依赖；pytest 是为了跑 B07 的不变量测试
-#      （S1–S5 共 169 项：test_s1 / test_s2 / test_s3 / test_weather / test_s4 / test_s4_3 / test_s5；
-#        创新点 1/2/3 共 90 项：test_innovation1 / test_innovation2 / test_innovation3；
+#      （S1–S5 共 169 项：test_s1 24 / test_s2 26 / test_weather 18 / test_s3 25
+#                          / test_s4 44 / test_s4_3 15 / test_s5 17；
+#        创新点 1/2/3 共 90 项：test_innovation1 28 / test_innovation2 45 / test_innovation3 17；
 #        第三遍视图一 14 项：test_views_invariants；视图二 17 项：test_views_evolution；
 #        视图三 15 项：test_views_evidence；视图四 11 项：test_views_compare；
-#        Web 版版面顺序 15 项：test_views_layout，
-#        合计 331 项：S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图一 14 + 视图二 17
-#              + 视图三 15 + 视图四 11 + Web 版版面顺序 15）。
+#        Web 版版面顺序 15 项：test_views_layout；
+#        B08 第一遍（冻结）38 项：test_b08_freeze；
+#        B08 第二遍（正式验证）17 项：test_b08_verify，
+#        合计 386 项：S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图一 14 + 视图二 17
+#              + 视图三 15 + 视图四 11 + Web 版版面顺序 15 + B08 冻结 38 + B08 验证 17）。
 #      第三遍视图（views.py / views_web.py / static/views.html）：
 #        终端版纯标准库；Web 版复用上面的 fastapi / uvicorn，不引新的运行时依赖。
 #      第三遍回放器（replay.py）与四视图统一检查（views_check.py）同样不引入新依赖：
 #        页面是纯静态 HTML + 原生 JS（连 CSS 框架都没有），离线双击即可打开。
+#      B08 第三遍（b08_trace.py）不引入新依赖，也**不新增测试文件**（纯函数重算靠
+#        上面 386 项回归保证；本轮 pytest 结果与上一轮持平）。
 pytest==9.1.1

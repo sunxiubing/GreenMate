@@ -11,9 +11,11 @@
 
 ```
 GreenMate/
-├── .gitignore
+├── .gitignore             # 忽略规则（★ 不含全局 *.json —— run 存档与验证记录要入库）
 ├── README.md              # 本文档
 ├── requirements.txt       # 统一依赖（pip install -r requirements.txt）
+├── greenmate.db           # SQLite 副本（★ 不在版本库）
+├── venv/                  # Python 虚拟环境（★ 不在版本库）
 │
 ├── B01/                   # LLM 状态上下文对照
 │   ├── main.py            # FastAPI：状态定义、页面路由、A/B 对照接口
@@ -22,8 +24,8 @@ GreenMate/
 │   ├── verify_step5.py    # 故障注入验收脚本
 │   ├── static/
 │   │   └── index.html     # 页面：A/B 双面板、可编辑数值、Context 展开
-│   ├── .env               # 密钥（已移至根目录，gitignore 排除）
-│   └── venv/              # 已移除，统一使用根目录 venv/
+│   ├── .env               # 密钥（★ 不在版本库；从 .env.example 复制）
+│   └── .env.example       # 配置模板（★ 在版本库）
 │
 ├── B02/                   # 数据记忆：时序持久化 + 变点检测
 │   ├── SPEC.py            # 字段规范 / 时间轴 / sim_scenario 使用限制
@@ -45,7 +47,7 @@ GreenMate/
 │   ├── query_sample.py    # 查询 / 验证 env_data 表
 │   ├── check_disturbance.py  # 查询扰动数据
 │   ├── __init__.py
-│   └── greenmate.db       # SQLite 数据库（已 commit，gitignore）
+│   └── greenmate.db       # SQLite 数据库（★ 不在版本库，需 `python B02/database/generate.py` 生成）
 │
 ├── B03/                   # 气象 API 接入：外部环境证据 + 卡尔曼滤波
 │   ├── SPEC.py            # API 文档 / 预置城市坐标 / WMO 天气代码
@@ -78,6 +80,8 @@ GreenMate/
 │   ├── feature.py         # 33 特征提取（仅从 history 窗口）
 │   ├── split.py           # 时间切分 + 泄漏自检（4 项检查）
 │   ├── train.py           # 朴素基线 + LogisticRegression 训练评估
+│   ├── artifacts/         # ★ 不在版本库：b06-20261020-v1.{joblib,json} + misclassified.*
+│   │                      #   需 `python B06/persist/persist.py save --model B06/artifacts/b06-20261020-v1` 生成
 │   ├── persist/           # 模型持久化
 │   │   ├── persist.py     # save_model / load_model（含一致性校验）
 │   │   └── __main__.py    # CLI：save / load
@@ -132,30 +136,50 @@ GreenMate/
 │   │                      #   view_evidence_data / view_compare_data + 四个 render_*
 │   ├── views_diff.py      # 视图四差异归因器（三层对比 inputs/evidence/state + R1~R6 规则）
 │   ├── views_check.py     # 四视图统一检查（U1 身份一致 / U2 同源 sha256 / U3 零重算打桩 / U4 既有断言）
-│   ├── replay.py          # ★ 视图四**回放器**：**唯一**允许发起新运行的地方（选场景 → 跑固定问题 → 新 run_id）
+│   ├── replay.py          # ★ 视图四**回放器**：**唯一**允许发起新运行的地方（选场景 → 跑固定问题 → 新 run_id）；★ `--scenario-file` 按固定场景文件回放
 │   ├── views_web.py       # FastAPI 路由（视图一~四 + GET /api/compare?a=&b=），复用 views.py 的数据层
 │   ├── static/            # Web 版静态页面（进版本库）
 │   │   └── views.html     # 五个标签页（视图一/二/二·对比/三/四）；纯静态、离线可开、不引任何 CDN 外链
 │   │
-│   ├── tests/             # 不变量测试（pytest，共 331 项：S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图 72）
-│   │   ├── conftest.py    # 路径注入 + 假 LLM 客户端
-│   │   ├── test_s1_invariants.py
-│   │   ├── test_s2_invariants.py
-│   │   ├── test_weather_invariants.py
-│   │   ├── test_s3_invariants.py
-│   │   ├── test_s4_invariants.py      # 44 项
-│   │   ├── test_s4_3_invariants.py    # 15 项
-│   │   ├── test_s5_invariants.py      # 17 项
-│   │   ├── test_innovation1_invariants.py   # 28 项（连续时间认知消融不变量）
-│   │   ├── test_innovation2_invariants.py   # 45 项（溯源形状 / 红线 / 台账自洽）
-│   │   ├── test_innovation3_invariants.py   # 17 项（词表多字 / C2 / C4 豁免 / 确定性）
-│   │   ├── test_views_invariants.py         # 14 项（同源 / 刷新不变 / 不重算 / 证据完整度）
-│   │   ├── test_views_evolution.py          # 17 项（只读 history / 过程量不依赖结论 / C1–C5 / 对照 / 不许编造标记）
-│   │   ├── test_views_evidence.py           # 15 项（只读存档 / 可用条数按 status==ok / 缺失可见 / 反抹平 / 无台账）
-│   │   ├── test_views_compare.py            # 11 项（三层可复算 / R4 不稳定性必触发 / R2·R1 命中 / 干净对照 / U1–U4）
-│   │   └── test_views_layout.py              # 15 项（版面顺序：单列自上而下 / 编号递增 / 面板内并列）
+│   ├── ★ B08 第一遍（冻结 B07）
+│   ├── b08_baseline.py    # 基线版本快照生成器（app_version=语义版本+git sha / 模型 sha / 知识 sha / 固定问题指纹）
+│   ├── scenarios_build.py # 固定场景抽取与校验器（从已有存档抽取，不重跑、不调 LLM、不调天气 API）
+│   ├── health.py          # 两层健康检查（浅：只证明进程活着；深：逐项体检 B02/B03/B04/B06）
+│   ├── scenarios/         # ★ 五个固定场景（进版本库：条件不漂移的回归输入）
+│   │   ├── S1.json        # 稳态基线（run_113）
+│   │   ├── S2.json        # 渐进漂移（run_114）
+│   │   ├── S3.json        # 外部扰动（run_023，真实 API 快照）
+│   │   ├── S4.json        # 多源证据分歧（run_103）
+│   │   ├── S5.json        # 证据退化（run_120，保留 unavailable 与 error 原文）
+│   │   └── README.md      # 场景格式 / 生成 / 校验 / 回放说明
+│   │
+│   ├── ★ B08 第二遍（正式验证 S1~S5）
+│   ├── b08.py             # 验证器：baseline / verify --all / verify S1 / records / report
+│   │
+│   ├── ★ B08 第三遍（同题对照 / 失败验证 / 运行追踪）
+│   ├── b08_trace.py       # 12 环节运行追踪（薄包装，只读存档）+ 证明一对照/因果证明 + 证明二 F-1~F-4
+│   │
+│   ├── tests/             # 不变量测试（pytest，共 386 项：S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图 72 + B08 冻结 38 + B08 验证 17）
+│   │   ├── conftest.py                # 路径注入 + 假 LLM 客户端
+│   │   ├── test_s1_invariants.py       # 24 项
+│   │   ├── test_s2_invariants.py       # 26 项
+│   │   ├── test_weather_invariants.py  # 18 项
+│   │   ├── test_s3_invariants.py       # 25 项
+│   │   ├── test_s4_invariants.py       # 44 项
+│   │   ├── test_s4_3_invariants.py     # 15 项
+│   │   ├── test_s5_invariants.py       # 17 项
+│   │   ├── test_innovation1_invariants.py  # 28 项（连续时间认知消融不变量）
+│   │   ├── test_innovation2_invariants.py  # 45 项（溯源形状 / 红线 / 台账自洽）
+│   │   ├── test_innovation3_invariants.py  # 17 项（词表多字 / C2 / C4 豁免 / 确定性）
+│   │   ├── test_views_invariants.py        # 14 项（同源 / 刷新不变 / 不重算 / 证据完整度）
+│   │   ├── test_views_evolution.py         # 17 项（只读 history / 过程量不依赖结论 / C1–C5 / 对照 / 不许编造标记）
+│   │   ├── test_views_evidence.py          # 15 项（只读存档 / 可用条数按 status==ok / 缺失可见 / 反抹平 / 无台账）
+│   │   ├── test_views_compare.py           # 11 项（三层可复算 / R4 不稳定性必触发 / R2·R1 命中 / 干净对照 / U1–U4）
+│   │   ├── test_views_layout.py            # 15 项（版面顺序：单列自上而下 / 编号递增 / 面板内并列）
+│   │   ├── test_b08_freeze.py              # 38 项（版本冻结 / 场景冻结 / 存档契约不污染 / 健康检查分层）
+│   │   └── test_b08_verify.py              # 17 项（场景可校验 / 回放 base_run_id / 判定重算是纯函数 / 多字短语 / 鉴别力）
 │   ├── runs/              # 运行时生成的 run 存档（**进版本库**：证据链的一部分）
-│   │   ├── index.json     # 索引：run_id → 摘要
+│   │   ├── index.json     # 索引：run_id → 摘要（110 条）
 │   │   └── run_XXX/run.json
 │   └── artifacts/         # 阶段报告（**进版本库**：报告数字全部来自这里的存档）
 │       ├── s1_report.md
@@ -186,6 +210,14 @@ GreenMate/
 │       ├── views_evidence_report.md         # 视图三证据空间实测报告（C1–C14 + 三问清单 + Limitations）
 │       ├── views_compare_report.md          # 视图四场景对比实测报告（4 组归因 + 三层明细 + U1–U4）
 │       ├── replay_log.jsonl                 # 回放日志（另存；run.json 存档结构一字未改）
+│       ├── b08_baseline.json                # ★ B08 基线版本快照（app_version / git / 模型 / 知识 / 固定问题 / 五场景）
+│       ├── b08_freeze_report.md             # ★ B08 第一遍冻结报告（含 Limitations L1–L5 与已知缺口）
+│       ├── b08_validation_records.jsonl     # ★ B08 第二遍验证记录（五场景各一条；第二遍与第四遍回归报告共用结构）
+│       ├── b08_validation_report.md         # ★ B08 第二遍验证报告（6 节 + 五条因果证明 + Limitations L1–L7）
+│       ├── b08_pass1_contrast.md           # ★ B08 第三遍证明一：四组同题对照 + 三条因果证明
+│       ├── b08_pass2_failure.md            # ★ B08 第三遍证明二：主动制造失败（F-1~F-4 + 反向对照）
+│       ├── b08_pass3_trace.md              # ★ B08 第三遍证明三：run_082 的 12 环节追踪 + 读者检验
+│       ├── b08_pass3_report.md             # ★ B08 第三遍总报告（6 节 + 完成线核对 + Limitations L1–L8）
 │       ├── views_web_01_overview.png        # ★ README 内嵌：视图一 状态总览 全景截图
 │       ├── views_web_02_evolution.png       # ★ README 内嵌：视图二 状态演化 全景截图
 │       ├── views_web_03_compare.png         # ★ README 内嵌：视图二 S1↔S2 对比 全景截图
@@ -198,6 +230,25 @@ GreenMate/
     └── b03_weather.md     # HTTP 400 缓存策略 / Fail Loudly 设计
 ```
 
+### 什么进版本库、什么不进
+
+| 内容 | 进版本库？ | 为什么 |
+|---|---|---|
+| `B07/runs/**/run.json` + `index.json` | ✅ | **证据链本体** —— 报告里每个数字都从它来 |
+| `B07/artifacts/*.md / *.json / *.jsonl` | ✅ | 阶段报告与验证记录，是回归基线 |
+| `B07/scenarios/*.json` | ✅ | 固定场景 = 回归输入，条件不漂移 |
+| `B07/artifacts/views_web_*.png` | ✅ | README 内嵌的五视图全景，丢了 README 图片就裂 |
+| `B07/artifacts/views_*.png`（其余） | ❌ | 排障截图，本地可再生 |
+| `B07/artifacts/_tmp_*` / `*.bak.*` | ❌ | 临时文件 |
+| `B06/artifacts/`、`B06/data/` | ❌ | 训练产物，按固定 seed 重新生成 |
+| `B02/greenmate.db`、`greenmate.db` | ❌ | 数据库，按固定 seed 重新生成 |
+| `B01/.env`、`.env` | ❌ | 密钥；只有 `.env.example` 进库 |
+| `venv/`、`.pytest_cache/`、`__pycache__/` | ❌ | 本地环境 |
+
+> ⚠️ **别往 `.gitignore` 里加全局 `*.json` / `*.jsonl` 规则** ——
+> 那等于把 run 存档和验证记录（证据链）从版本库里抹掉。
+> `.gitignore` 里已留了显式警告。
+
 ---
 
 ## 环境要求
@@ -205,6 +256,12 @@ GreenMate/
 - **Python 3.12**（开发验证于 3.12.7）
 - 统一依赖安装：`pip install -r requirements.txt`
 - B01 额外需要：一个 OpenAI 兼容的 LLM 服务（本项目用阿里云百炼 MaaS 工作空间）
+
+> ★ **`requirements.txt` 钉的是实际训练 / 冻结环境的那一套版本**
+> （`scikit-learn==1.9.1 / numpy==2.5.4 / joblib==1.6.0`，与 B06 模型清单记录一致）。
+> 这三个库一动，**重训出的模型 sha256 就对不上**基线里记录的 `aadc847a…`；
+> 要升级就得同步重训模型并刷新 `B07/artifacts/b08_baseline.json`。
+> 其余库（fastapi / uvicorn / openai 等）钉的也是当前实跑通过的版本。
 
 ---
 
@@ -650,6 +707,10 @@ SoilGrids MCP（`https://gateway.pipeworx.io/soilgrids/mcp`）补齐土壤数据
 | B07 — 第三遍 · 视图四 场景回放与对比（回放器 + 三层差异归因 R1~R6） | ✅ 完成 |
 | B07 — 第三遍 · 四视图统一检查（U1 身份 / U2 同源 / U3 零重算 / U4 回归） | ✅ 完成 |
 | B07 — 第三遍 · Web 版（五个标签页，纯静态离线可开，不引 CDN） | ✅ 完成 |
+| B08 — 第一遍 · 冻结 B07（基线快照 / 固定场景 / 两层健康检查） | ✅ 完成 |
+| B08 — 第二遍 · 正式验证 S1~S5（断言型检查 + 因果证明，五场景全 PASS） | ✅ 完成 |
+| B08 — 第三遍 · 同题对照 / 失败验证 / 运行追踪（四组对照 + CA-1~3 + F-1~4 + 12 环节） | ✅ 完成 |
+| B08 — 第四遍 · 回归报告（≥10 个固定回归案例） | ⬜ 未开始 |
 
 ---
 
@@ -770,13 +831,15 @@ B07 的 S1 阶段做一件事：**用「当前状态 + 最近历史 + 已保存�
 | `B07/s1.py` | S1 统一入口 + 阶段报告生成 | ✅ |
 | `B07/s2.py` | S2 统一入口（渐进漂移，只做编排）+ 6 条自检 + 阶段报告 | ✅ |
 | `B07/scenarios.py` | 场景注册表（S1 / S2） | ✅ |
-| `B07/tests/` | S1 + S2 + S3 不变量测试（68 条，pytest） | ✅ |
-| `B07/runs/index.json` | 索引：run_id → {created_at, scenario, question, verdict, model_version, status} | ❌ gitignore |
-| `B07/runs/<run_id>/run.json` | 单次运行完整快照 | ❌ gitignore |
+| `B07/tests/` | 不变量测试（386 条，pytest） | ✅ |
+| `B07/runs/index.json` | 索引：run_id → {created_at, scenario, question, verdict, model_version, status} | ✅ 进版本库 |
+| `B07/runs/<run_id>/run.json` | 单次运行完整快照 | ✅ 进版本库 |
 | `B07/artifacts/s1_report.md` | 阶段报告（run_id / 证据来源 / 判据 / 五字段 / coef Top5 / LLM 原文 / 回溯输出） | ✅ |
 | `B07/artifacts/s2_report.md` | S2 阶段报告（S1/S2 并排对比 / 实验有效性证明 / 温度带约定 / 边界与局限） | ✅ |
 
-> `B07/runs/*.json` 命中 `.gitignore` 的全局 `*.json` 规则，属于运行时产物，不入库；需要留档请自行备份该目录。
+> ★ `B07/runs/**` **进版本库** —— run 存档是证据链的一部分，报告里的每个数字都从它来。
+> `.gitignore` 里**没有**全局 `*.json` 规则（曾有过，早已移除）：把 `*.json` 加回去
+> 等于把证据链删掉。已在 `.gitignore` 里留了显式警告，勿再加。
 
 **留下什么资产**
 
@@ -789,7 +852,7 @@ B07 的 S1 阶段做一件事：**用「当前状态 + 最近历史 + 已保存�
 - `B07/runs/` — 每次运行的完整快照与索引（本地留存）
 - `B07/artifacts/s1_report.md` — 本阶段报告
 - `B07/artifacts/s2_report.md` — S2 阶段报告（渐进漂移的对比证据）
-- `B07/tests/` — 68 条不变量测试（S1 24 + S2 26 + S3 18），全部离线可跑（LLM 用假客户端、天气用假工具）
+- `B07/tests/` — 386 条不变量测试（S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图 72 + B08 冻结 38 + B08 验证 17），全部离线可跑（LLM 用假客户端、天气用假工具）
 
 ---
 
@@ -2323,3 +2386,336 @@ Web 版曾经把面板排成左右两栏 ——【四】掉到左下角、【二
 - **L8** 三组对比各只取了 **1 个代表 run**（S4 有 19 个同构 run、
   S5 有 45 个、内含 3 种状态），结论来自代表样本，
   **不等于**对全部带台账 run 的普查结论。
+
+---
+
+## B08 — 第一遍 | 先冻结 B07（文档 p.89–92）
+
+> **本轮只做第一遍（冻结）**。后面四遍（在线运行 / 场景验证 / 同题对照 /
+> 失败验证 / 运行追踪 / 固定回放 / 竞赛表达）下一轮各做一次。
+
+**冻结的完整报告：[`B07/artifacts/b08_freeze_report.md`](B07/artifacts/b08_freeze_report.md)**
+
+### 冻结了什么
+
+| 冻结项 | 值 | 指纹 |
+|---|---|---|
+| app_version | `B08_baseline_01` | git commit（见基线 json） |
+| model_version | `b06-20261020-v1` | manifest + joblib 的 sha256 |
+| 知识资料版本 | `B04/SPEC.py` + `docs/*.md` | 逐个 sha256 + combined sha256 |
+| 固定问题 | 分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。 | `d3cc394bfcbe` |
+| SYSTEM_PROMPT | （**绝对不许改**） | `aa1400cf8568` |
+
+基线快照：[`B07/artifacts/b08_baseline.json`](B07/artifacts/b08_baseline.json)
+
+### ★ app_version 的构成规则（可复核）
+
+```
+app_version = 语义版本号 + Git 提交指纹
+            = "B08_baseline_01" + git rev-parse HEAD
+完整形式   : B08_baseline_01@<完整 sha>
+```
+
+★ **app_version 不写进 run.json** —— run.json 是既有存档契约，一个字节都没改
+（改了会连带影响视图层的 sha256 与统一检查 U2）。文档 p.89 明确允许
+"如果使用 Git，可以记录对应提交版本"。代价见 L1。
+
+★ `git.dirty` **必须真实反映工作区**：`git status --porcelain` 非空就是 `true`，
+并在基线 json 的 `notes` 里写明"这不是一份干净基线"。
+
+### 五个固定场景（`B07/scenarios/`）
+
+| 场景 | 名称 | 来源 run | 天气证据 |
+|---|---|---|---|
+| `S1.json` | 稳态基线 | `run_113` | 无（按设计不接入） |
+| `S2.json` | 渐进漂移 | `run_114` | 无（按设计不接入） |
+| `S3.json` | 外部扰动 | `run_116` | 真实 API 快照（`is_constructed=false`） |
+| `S4.json` | 多源证据分歧 | `run_103` | 离线夹具（`is_constructed=true`） |
+| `S5.json` | 证据退化 | `run_120` | **不可用**（保留 B03 的 error 原文） |
+
+格式说明：[`B07/scenarios/README.md`](B07/scenarios/README.md)
+
+```bash
+# 生成（从已有存档抽取；不重跑分析、不调 LLM、不调天气 API）
+./venv/Scripts/python.exe -m B07.scenarios_build
+
+# 校验（重算 sha256 + 与来源存档逐字段比对）
+./venv/Scripts/python.exe -m B07.scenarios_build --verify
+
+# 刷新基线快照
+./venv/Scripts/python.exe -m B07.b08_baseline
+```
+
+★ 每个场景文件末尾的 `scenario_sha256` 让"场景有没有被手改过"**可机器判定**。
+
+### 两类验证的区分（文档 p.90）
+
+| | (1) 真实链路验证 | (2) 固定场景回放 / 回归测试 |
+|---|---|---|
+| 外部天气 | **重新调 B03 真实天气 API** | **已真实取得并保存的快照** |
+| 会不会漂 | 会（真实世界时间轴） | 不会（条件被固定） |
+| 证明什么 | 请求 / 参数 / 来源 / 时间记录 / 失败处理**都是真实工作的** | 同一个 `scenario_id` 重复验证时**主要条件一致** |
+| 本轮 | 没做（第二遍做一次） | **做了**（五个场景已固化） |
+
+★ **正式回归用 (2)**；(1) 单独做一次，证明链路没断。
+
+### ★ 两层健康检查（文档 p.92）
+
+| 端点 | 干什么 | 外部服务挂了会怎样 |
+|---|---|---|
+| `GET /health` | **只证明进程活着**，永远 200，**绝不碰任何外部服务** | 照样 200、秒回 —— 页面不会无响应 |
+| `GET /health/deep` | 逐项体检 B02 库 / B03 天气 / B04 知识 / B06 模型 | `status` 变 `degraded` / `error`，每项给出原因 |
+
+两个入口都有：B07 视图服务（`B07/views_web.py`）与 B01（`B01/main.py`）——
+B01 是"打开系统"的第一个入口，答案与 B07 一致（共用 `B07/health.py`）。
+
+```bash
+./venv/Scripts/python.exe -m B07.views_web --port 8010     # 起服务
+curl http://127.0.0.1:8010/health                          # 浅
+curl http://127.0.0.1:8010/health/deep                     # 深
+curl "http://127.0.0.1:8010/health/deep?probe=true"        # 深 + 真调一次天气 API
+```
+
+★ 深检查里 B03 天气**默认不真的发请求**（避免每次体检都耗网络/卡超时），
+`network_requested=false` 会写在返回里；`?probe=true` 才真调。
+
+### ★ 另一个人怎么启动 + 跑固定问题拿到新的 run_id
+
+> 这是文档 p.92 第四步「让别人能够启动这个版本」的落地写法。
+> **六步照抄即可**，每步都标了预期输出。
+
+```bash
+# 1) 拉代码 + 装依赖
+git clone <仓库地址> && cd GreenMate
+python -m venv venv
+./venv/Scripts/pip.exe install -r requirements.txt
+
+# 2) 配 LLM（只有 .env.example 在版本库里，.env 被 .gitignore 排除）
+cp B01/.env.example B01/.env     # 填自己的 LLM_BASE_URL / LLM_API_KEY / LLM_MODEL
+
+# 3) 生成 B02 环境数据（确定性：seed=42）★ 不在版本库，必须这一步
+./venv/Scripts/python.exe B02/database/generate.py
+#    预期：生成完成 336 条 / 已有则跳过
+
+# 4) 训练并保存 B06 模型（模型产物不在版本库）★ 同上
+./venv/Scripts/python.exe B06/persist/persist.py save --model B06/artifacts/b06-20261020-v1
+
+# 5) 起服务，打开系统
+./venv/Scripts/python.exe -m B07.views_web --port 8010
+#    浏览器开 http://127.0.0.1:8010/    ← 五个标签页
+#    另开一个标签：curl http://127.0.0.1:8010/health   ← 看到 "系统已就绪"
+
+# 6) 运行固定问题 → 得到新的 run_id
+./venv/Scripts/python.exe -m B07.replay S1
+#    预期：✅ 回放完成：run_121   （调 LLM 1 次，落 1 个新 run）
+```
+
+**固定问题不用传** —— `B07/explain.py:33` 里写死了，回放器自动带上：
+
+> 分析当前番茄生长环境状态以及接下来值得关注的变化，并说明判断依据。
+
+（S1/S2 传了别的 `--question` 会**直接 exit 2 拒绝** —— 固定问题不许改。）
+
+**先看不花钱的预演**（不调 LLM、不落盘）：
+
+```bash
+./venv/Scripts/python.exe -m B07.replay S1 --dry-run
+#  预期输出：Will 调用入口 B07.s1.run_s1 / LLM 调用 1 次 / 新增 run 1 个
+#            并显式写明"没有调用 LLM、没有落盘新 run"
+```
+
+**新 run_id 拿到之后**：`save_run()` 会同时更新 `B07/runs/index.json` →
+**刷新页面，`run` 下拉框里就有新 run 了**，四个视图立刻能看：
+
+| 想看 | 页面 | 终端 |
+|---|---|---|
+| 状态总览 | 标签页 1 | `python -m B07.views overview run_121` |
+| 状态演化 | 标签页 2 | `python -m B07.views evolution run_121` |
+| 证据空间 | 标签页 4 | `python -m B07.views evidence run_121` |
+| 和旧 run 比 | 标签页 5（A/B 下拉框） | `python -m B07.views compare run_113 run_121` |
+
+`next_seq` 是**持久化递增**的（`B07/runs.py:114`），所以每跑一次必然是新 run_id，不会重号。
+
+#### 这条路成立的前提（★ 三样东西不在版本库里）
+
+| 缺什么 | 大小 | 补法 |
+|---|---|---|
+| `B01/.env`（LLM key） | 239 B | `cp .env.example .env` + 填 —— **只能自己填，不能进版本库** |
+| `B02/greenmate.db` | 56 K | 第 3 步（seed=42 确定性，已实测幂等：已有则跳过） |
+| `B06/artifacts/b06-20261020-v1.{joblib,json}` | 1.2 K + 1.4 K | 第 4 步 |
+
+#### 两个必须说清的口子
+
+1. ~~**依赖版本与训练环境不一致**~~ —— **已修（2026-10-31）**。
+   原来 `requirements.txt` 钉的是 `scikit-learn==1.6.1 / numpy==1.26.4 / joblib==1.4.2`，
+   而实际训练环境（基线 manifest 记录）是 **sklearn 1.9.1 / numpy 2.5.4 / joblib 1.6.0**，
+   照旧文件装 → 重训出的模型 sha256 与基线记录的 `aadc847a…` 必然不同。
+   现在 `requirements.txt` **钉的就是训练环境那一套**
+   （`scikit-learn==1.9.1 / numpy==2.5.4 / joblib==1.6.0`），
+   按文件装即可复现冻结基线。★ 后续若要升级这三个库，
+   必须同步重训模型并刷新 `b08_baseline.json` 里的 sha256。
+2. **Web 页面里没有"跑固定问题"按钮**：Web 层是**只读**的（视图与归因只读存档，
+   只有 `B07/replay.py` 能发起新运行），所以只能 CLI 跑完再刷新页面。
+
+### 冻结的已知缺口（诚实记录）
+
+- ★ **工作区是脏的**（`git.dirty=true`）—— 基线对应的提交在，但**未提交的改动不在基线里**，
+  所以它**不是一份干净基线**；提交后重跑 `python -m B07.b08_baseline` 刷新。
+- 110 个 run 里，**前 103 个是 B07 开发期产物**；`run_121`~`run_127`
+  是 B08 第二遍 / 第三遍的正式记录（`run_126`/`run_127` 是降级变体）。
+- 知识库**没有版本号机制**，用文件 sha256 代替。
+- **S3 的 `retrieved_at` 为空** —— S1/S2/S3 当时的存档没记这个字段，
+  快照按存档原样保留、**没有推测补齐**（`provider_recorded_in_archive=false`）。
+- **S4 / S5 的天气是离线夹具**，不是真实天气；它们固定的是"证据分歧 / 证据退化"两种判定形态。
+- 本轮**没有做真实链路验证**。
+
+### Limitations
+
+- **L1** app_version 由 Git tag + commit 表达，**不是**写进 run.json 的字段；
+  所以**历史 run 无法追溯到它们产生时的 app_version**，只能追溯到当前基线。
+  B08 第二遍起的正式验证记录会显式带 app_version。
+- **L2** 知识资料版本用文件 sha256 代替版本号 —— 知识库目前没有版本管理机制；
+  文件一改 sha 就变，等价于版本。
+- **L3** 固定场景的天气证据是**快照**，反映的是"取得那一刻"的外部事实；
+  它不是实时天气。真实链路验证要单独做。
+- **L4** 场景文件是从**已有存档**抽取的 —— 它固化的是"当时那一次"的输入，
+  不是重新生成的。重新生成会因 LLM 采样与真实天气漂移而不同。
+- **L5** 本遍只做第一遍。正式验证记录（第二遍）、同题对照 / 失败验证 / 运行追踪的
+  证明材料（第三遍）**现已完成**；≥10 个固定回归案例、第四遍回归报告、
+  竞赛材料**仍未开始**。
+
+---
+
+## B08 — 第二遍 | 正式验证 S1~S5（文档 p.93–94）
+
+> **本遍只做第二遍**（第三遍已完成，见文末「B08 — 第三遍」一节）。
+> ≥10 个固定回归案例与第四遍回归报告**仍未开始**。
+
+**验证报告：[`B07/artifacts/b08_validation_report.md`](B07/artifacts/b08_validation_report.md)**
+**验证记录：[`B07/artifacts/b08_validation_records.jsonl`](B07/artifacts/b08_validation_records.jsonl)**（五场景各一条）
+
+### 怎么跑
+
+```bash
+# 1) 按五个固定场景各回放一次（每个场景 1 次 LLM 调用，共 5 次）
+python -m B07.replay --scenario-file B07/scenarios/S1.json
+python -m B07.replay --scenario-file B07/scenarios/S2.json
+python -m B07.replay --scenario-file B07/scenarios/S3.json
+python -m B07.replay --scenario-file B07/scenarios/S4.json
+python -m B07.replay --scenario-file B07/scenarios/S5.json
+
+# 2) 逐场景判定
+python -m B07.b08 verify --all        # 或 verify S1
+
+# 3) 看记录 / 生成报告
+python -m B07.b08 records
+python -m B07.b08 report
+```
+
+### 判定分两类（不许混）
+
+| | 断言型检查 | 因果证明（counter_evidence） |
+|---|---|---|
+| 问什么 | 这次运行是不是这样 | 改了**一个**输入，输出跟不跟着变 |
+| 怎么判 | 读存档字段逐条比对 | 同一套纯函数重算（**不调 LLM**） |
+| 覆盖 | S1-1…S5-5 | 每个场景各一条 |
+
+### 本轮结果
+
+| 场景 | run_id | 判定 | 检查通过 | 反向对照 |
+|---|---|---|---|---|
+| `S1` | `run_121` | **PASS** | 5/5 | 通过 |
+| `S2` | `run_122` | **PASS** | 3/3 | 通过 |
+| `S3` | `run_123` | **PASS** | 4/4 | 通过 |
+| `S4` | `run_124` | **PASS** | 4/4 | 通过 |
+| `S5` | `run_125` | **PASS** | 5/5 | 通过 |
+
+### 两条需要说清楚的事
+
+1. ★ **S1-5 是 "N/A（该场景无证据台账）"，不是通过。** S1 按设计不接入外部证据，
+   所以没有台账可查 —— 按文档要求标 N/A 并写进 notes，不报错也不假装有台账。
+2. ★ **S4 / S5 的天气是离线夹具**（`provider=Offline-Fixture`），
+   S3 的天气是**历史真实 API 的快照**（不是这一轮取的）。本轮**没有做真实链路验证**。
+
+### Limitations
+
+- **L1** app_version 由 Git 提交指纹表达，**不是**写进 run.json 的字段；
+  所以历史 run 无法追溯到它们产生时的 app_version，只能追溯到当前基线。
+  本轮的验证记录**显式带** app_version。
+- **L2** 知识资料版本用文件 sha256 代替版本号 —— 知识库目前没有版本管理机制。
+- **L3** 固定场景的天气证据是**快照**，反映的是"取得那一刻"的外部事实；
+  它不是实时天气。
+- **L4** 场景文件是从**已有存档**抽取的 —— 固化的是"当时那一次"的输入，
+  不是重新生成的。
+- **L5** 判定重算**不调 LLM**，因果证明只覆盖纯函数部分
+  （稳定性判定、合成关注等级、证据分歧）。
+- **L6** S3 天气的 provider / retrieved_at 在部分存档中缺失，
+  本轮按项目既有约定（`B07/evidence_registry.py`）补齐并逐项标注来源。
+- **L7** 本轮只做第二遍 —— ≥10 个固定回归案例与第四遍回归报告尚未开始。
+
+---
+
+## B08 — 第三遍 | 同题对照、失败验证、运行追踪（文档 p.95–98）
+
+> **本遍只做三种证明**：改变一个主要条件（证明一）/ 主动制造一次真实失败（证明二）/
+> 从最终判断反向追踪到输入、工具、证据、模型版本（证明三）。
+> **本遍不新增场景。**
+
+**总报告：[`B07/artifacts/b08_pass3_report.md`](B07/artifacts/b08_pass3_report.md)**
+
+| 证明 | 材料 | 命令 |
+|---|---|---|
+| 证明一 · 同题对照 | [`b08_pass1_contrast.md`](B07/artifacts/b08_pass1_contrast.md) | `python -m B07.b08_trace --contrast` |
+| 证明二 · 失败验证 | [`b08_pass2_failure.md`](B07/artifacts/b08_pass2_failure.md) | `python -m B07.b08_trace --failure run_126 run_124` |
+| 证明三 · 运行追踪 | [`b08_pass3_trace.md`](B07/artifacts/b08_pass3_trace.md) | `python -m B07.b08_trace run_082` |
+
+### 怎么跑
+
+```bash
+# 证明二：制造一次真实失败（会产生新 run_id，消耗 1 次 LLM 额度）
+python -m B07.replay S5 --degraded --offline
+
+# 证明一：四组对照 + 三条因果证明（纯函数重算，零 LLM）
+python -m B07.b08_trace --contrast
+python -m B07.b08_trace --contrast --doc-pairs   # 换用文档靶子 run 对
+
+# 证明二判定：F-1~F-4 + 反向对照
+python -m B07.b08_trace --failure run_126 run_124
+
+# 证明三：12 环节运行追踪
+python -m B07.b08_trace run_082
+python -m B07.b08_trace run_082 --json
+```
+
+### 本轮结果
+
+| 证明 | 结果 |
+|---|---|
+| 证明一 · 四组对照 | 组 A（C1~C5 全 PASS）、组 C（唯一变量=外部天气）、组 D（唯一变量=B03 状态）干净；**组 B 不干净**，只作对照说明 |
+| 证明一 · 三条因果证明 | CA-1 / CA-2 / CA-3 **全部 ✅**（纯函数重算，不落盘、不产生 run、不进索引） |
+| 证明二 · 失败验证 | 新 run_id **`run_126`**；F-1~F-4 **全 ✅**；反向对照确认变化只来自那一条证据 |
+| 证明三 · 运行追踪 | `run_082` 覆盖 **12/12 环节**，无缺失 |
+
+### 两件要说清楚的事
+
+1. ★ **组 B（S2↔S3）不干净** —— 它同时变了历史序列、历史窗口、稳定判定、
+   current_state.lux 与 analysis_time，**不足以单独归因外部条件的作用**；
+   外部条件的主证据是**组 C（S1↔S3，唯一变量）**。
+2. ★ **因果证明里 B06 预测未被改动** —— 重算沿用原存档的 `model_output`，
+   所以这些证明说明的是"判据层如何响应输入变化"，不是"模型层如何响应输入变化"。
+
+### Limitations
+
+- **L1** 组 B 同时变了历史窗口与稳定判定，不足以单独归因外部条件的作用；
+  干净对照是组 C（S1↔S3）。
+- **L2** 因果证明证明的是"在这一套判据下，改这个输入会让输出跟着变"，
+  **不等于**证明模型内部机制如此。
+- **L3** 因果证明重算时**沿用原存档的 `model_output`**（B06 预测不在重算范围内）。
+- **L4** 因果证明的重算**不落盘**，不产生 run，不进索引。
+- **L5** 证明二只制造了"天气不可用"一种失败；参数错误、超时、空结果、
+  知识检索失败尚未覆盖。
+- **L6** S4 与 S5 的实质区别是**证据状态**，不是 scenario 字符串 ——
+  仓库里 `scenario="S5"` 实际混着"分歧"与"缺失"两种状态。
+- **L7** 本遍的对照与追踪是**离线复算 + 存档读取**，不重新消耗 LLM；
+  只有证明二那次主动失败运行消耗 1 次额度。
+- **L8** 若第二遍尚未完成，本遍引用的 run 均为 B07 开发期存档。
