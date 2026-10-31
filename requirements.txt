@@ -55,6 +55,12 @@
 #      b08_trace.py（12 环节追踪 + 对照 + 因果证明 + F-1~F-4）= 纯标准库 + 复用 B07.runs；
 #      纯函数重算走 B07.judgement / B07.stability / B07.views，**不调 LLM**；
 #      没有引入任何新的运行时依赖。
+# B08 第四遍（固定回归）：
+#      b08.py（复用第二遍的验证器，新增 L1 复算层 / L2 期望层 / L3 一致性层
+#      + 13 个固定案例 + 负对照 + regression diff）= 纯标准库 + 复用已有
+#      B07.runs / B07.judgement / B07.stability / B07.weather；
+#      回归**不调 LLM、不跑模型、不取天气、不检索知识**；
+#      没有引入任何新的运行时依赖。
 
 # Web 框架
 fastapi==0.143.1
@@ -88,13 +94,17 @@ matplotlib==3.11.2
 #        视图三 15 项：test_views_evidence；视图四 11 项：test_views_compare；
 #        Web 版版面顺序 15 项：test_views_layout；
 #        B08 第一遍（冻结）38 项：test_b08_freeze；
-#        B08 第二遍（正式验证）17 项：test_b08_verify，
-#        合计 386 项：S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图一 14 + 视图二 17
-#              + 视图三 15 + 视图四 11 + Web 版版面顺序 15 + B08 冻结 38 + B08 验证 17）。
+#        B08 第二遍（正式验证）17 项：test_b08_verify；
+#        B08 第四遍（固定回归）17 项：test_b08_regression，
+#        合计 403 项：S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图一 14 + 视图二 17
+#              + 视图三 15 + 视图四 11 + Web 版版面顺序 15 + B08 冻结 38 + B08 验证 17
+#              + B08 固定回归 17）。
 #      第三遍视图（views.py / views_web.py / static/views.html）：
 #        终端版纯标准库；Web 版复用上面的 fastapi / uvicorn，不引新的运行时依赖。
 #      第三遍回放器（replay.py）与四视图统一检查（views_check.py）同样不引入新依赖：
 #        页面是纯静态 HTML + 原生 JS（连 CSS 框架都没有），离线双击即可打开。
 #      B08 第三遍（b08_trace.py）不引入新依赖，也**不新增测试文件**（纯函数重算靠
 #        上面 386 项回归保证；本轮 pytest 结果与上一轮持平）。
+#      B08 第四遍（b08.py 的回归子命令 + test_b08_regression.py）同样不引入新依赖：
+#        回归全程离线，期望值存在冻结的 JSON 里，代码只负责「重算 → 比对 → 记录」。
 pytest==9.1.1

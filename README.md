@@ -19,116 +19,115 @@ GreenMate/
 │
 ├── B01/                   # LLM 状态上下文对照
 │   ├── main.py            # FastAPI：状态定义、页面路由、A/B 对照接口
-│   ├── llm.py             # 提示词、状态注入、配置日志、异常翻译
-│   ├── check_llm.py       # 独立验证 API Key / Base URL / 模型名
-│   ├── verify_step5.py    # 故障注入验收脚本
+│   ├── llm.py             # 提示词、状态注入、配置日志、异常翻译（Step 4）
+│   ├── check_llm.py       # 独立验证 API Key / Base URL / 模型名（Step 3）
+│   ├── verify_step5.py    # 故障注入验收：主动制造错误，确认接口明确失败、不伪装成功（Step 5）
 │   ├── static/
 │   │   └── index.html     # 页面：A/B 双面板、可编辑数值、Context 展开
 │   ├── .env               # 密钥（★ 不在版本库；从 .env.example 复制）
 │   └── .env.example       # 配置模板（★ 在版本库）
 │
 ├── B02/                   # 数据记忆：时序持久化 + 变点检测
-│   ├── SPEC.py            # 字段规范 / 时间轴 / sim_scenario 使用限制
+│   ├── SPEC.py            # 字段规范 / 时间轴 / sim_scenario 使用限制（Step 1）
 │   ├── simulator/
-│   │   └── engine.py      # 7天 × 336点时序数据生成器（GreenhouseSimulator）
+│   │   └── engine.py      # 7 天 × 336 点时序数据生成器（Step 2）
 │   ├── database/
-│   │   ├── store.py       # SQLite 持久化（建表 / 写入 / 校验）
-│   │   └── generate.py    # 主程序入口（生成 + 写入 + 报告）
+│   │   ├── store.py       # SQLite 持久化：建表 / 写入 / 校验（Step 3）
+│   │   └── generate.py    # 主程序入口：生成 + 写入 + 报告（Step 3）
 │   ├── api/
-│   │   ├── history.py     # 直接调用，不过 HTTP
-│   │   └── server.py      # FastAPI 时序查询服务（端口 8001）
+│   │   ├── history.py     # 历史查询接口，直接调用不过 HTTP（Step 4）
+│   │   └── server.py      # FastAPI 时序查询服务（端口 8001，Step 4）
 │   ├── quality/
-│   │   └── checker.py     # 6 项质量检查
+│   │   └── checker.py     # 6 项质量检查（Step 5）
 │   ├── changepoint/
-│   │   └── detector.py    # 变点监测算法
+│   │   └── detector.py    # 变点监测算法（创新点）
 │   ├── static/
 │   │   └── history.html   # Chart.js 时序曲线页面
 │   ├── gen_sample.py      # 生成 20 条样本写入 env_data 表
 │   ├── query_sample.py    # 查询 / 验证 env_data 表
-│   ├── check_disturbance.py  # 查询扰动数据
-│   ├── __init__.py
+│   ├── check_disturbance.py  # 查询 environment_samples 表中的扰动数据
+│   ├── __init__.py        # 包声明（各子包另有 __init__.py，此处不逐个列出）
 │   └── greenmate.db       # SQLite 数据库（★ 不在版本库，需 `python B02/database/generate.py` 生成）
 │
 ├── B03/                   # 气象 API 接入：外部环境证据 + 卡尔曼滤波
-│   ├── SPEC.py            # API 文档 / 预置城市坐标 / WMO 天气代码
-│   ├── weather.py         # 最小真实调用：打印 HTTP status + 原始 JSON
-│   ├── weather_service.py # 主程序：PUBLIC/SIMULATED 对比 + 卡尔曼滤波 + 可视化
+│   ├── SPEC.py            # API 文档 / 预置城市坐标 / WMO 天气代码（Step 1）
+│   ├── weather.py         # 最小真实调用：打印 HTTP status + 原始 JSON（Step 3/4）
+│   ├── weather_service.py # 主程序：PUBLIC/SIMULATED 对比 + 卡尔曼滤波 + 可视化（Step 5）
 │   └── .env.example       # 配置模板（终端传参优先级高于此文件）
 │
 ├── B04/                   # 检索增强知识库问答：带溯源引用的 RAG
-│   ├── SPEC.py            # 知识库问题 / 可信资料 / 切片定义
-│   ├── retrieve.py        # TF-IDF 向量检索（纯 Python，无需大模型 API）
-│   ├── answer.py          # Step 5-6：回答生成 + 边界幻觉测试
-│   └── __pycache__/       # Python 缓存（gitignore）
+│   ├── SPEC.py            # 知识库问题 / 可信资料 / 切片定义（Step 1&2）
+│   ├── retrieve.py        # TF-IDF 向量检索（Step 4，纯 Python，无需大模型 API）
+│   └── answer.py          # 回答生成 + 边界幻觉测试（Step 5）
 │
 ├── B05/                   # 工具调用编排器 + SoilGrids MCP
-│   ├── orchestrator.py    # ReAct 流水线：参数验证 / 超时保护 / unavailable 重试
-│   ├── tools.py           # OpenAI function-calling 工具定义（4 个工具）
-│   ├── test_functions.py  # 四个底层业务函数测试（ok/unavailable/error 三态）
-│   ├── test_connect_error.py   # 网络异常注入测试
-│   ├── test_multi_tool.py      # 多工具任务验证（五步日志格式）
-│   ├── test_orchestrator.py    # 编排器 ask() 主流程测试
-│   ├── test_boundary.py        # 边界幻觉测试
-│   ├── test_soilgrids.py       # SoilGrids MCP 五步 + Step 6 手动交互
-│   ├── verify_weather_source.py # 气象数据源验证
+│   ├── orchestrator.py    # ReAct 流水线：参数验证 / 超时保护 / unavailable 重试（Step 3）
+│   ├── tools.py           # OpenAI function-calling 工具定义（4 个工具，Step 2）
+│   ├── test_functions.py  # 四个底层业务函数测试（ok/unavailable/error 三态，Step 1）
+│   ├── test_connect_error.py   # 断网验证：_inject 模拟 DNS 失败 / ConnectError
+│   ├── test_multi_tool.py      # 多工具任务验证（五步日志格式，Step 4）
+│   ├── test_orchestrator.py    # 编排器 ask() 主流程测试（Step 3）
+│   ├── test_boundary.py        # 边界异常测试：error / unavailable 场景程序不崩溃
+│   ├── test_soilgrids.py       # SoilGrids MCP 五步 + Step 6 手动交互（Step 5）
+│   ├── verify_weather_source.py # 真实 Open-Meteo 请求 vs Mock 模式对比
 │   └── run_all_b05.py     # 全量测试串行执行器
 │
 ├── B06/                   # 实时窗口推理 + SHAP 贡献
-│   ├── SPEC.py            # 时间窗口结构 + DTW 算法（纯 Python）
+│   ├── SPEC.py            # 时间窗口结构 + DTW 算法（纯 Python，Step 1）
 │   ├── config.py          # 特征白名单、标签阈值、DTW 配置
-│   ├── generate.py        # 窗口构造 + trace CLI（WINDOW_SIZE=6 可配置）
-│   ├── feature.py         # 33 特征提取（仅从 history 窗口）
-│   ├── split.py           # 时间切分 + 泄漏自检（4 项检查）
-│   ├── train.py           # 朴素基线 + LogisticRegression 训练评估
-│   ├── artifacts/         # ★ 不在版本库：b06-20261020-v1.{joblib,json} + misclassified.*
+│   ├── generate.py        # 窗口构造 + trace CLI（WINDOW_SIZE=6 可配置，Step 1）
+│   ├── feature.py         # 33 特征提取（仅从 history 窗口，Step 2）
+│   ├── split.py           # 时间切分 + 泄漏自检（4 项检查，Step 3）
+│   ├── train.py           # 朴素基线 + LogisticRegression 训练评估（Step 4）
+│   ├── artifacts/         # ★ 不在版本库：b06-20261020-v1.{joblib,json} + misclassified.{csv,md}
 │   │                      #   需 `python B06/persist/persist.py save --model B06/artifacts/b06-20261020-v1` 生成
 │   ├── persist/           # 模型持久化
-│   │   ├── persist.py     # save_model / load_model（含一致性校验）
+│   │   ├── persist.py     # save_model / load_model（含一致性校验，Step 5）
 │   │   └── __main__.py    # CLI：save / load
 │   └── inference/         # 实时推理
-│       ├── inference.py   # predict_window / MODEL_OUTPUT / SHAP / DTW
+│       ├── inference.py   # predict_window / MODEL_OUTPUT / SHAP / DTW（Step 6）
 │       └── __main__.py    # CLI：infer / verify
 │
 ├── B07/                   # S1–S5：选窗 → 取数 → 推理 → 判断 → 解释 → 存档 → 阶段报告
 │   ├── __init__.py        # 包声明（让 python -m B07.runs 能跑）
 │   ├── __main__.py        # 入口分发：默认 S1 全流程，--scenario S1/S2，list/explain 透传给 runs
 │   ├── config.py          # 位置 / 窗口点数 / 采样间隔 / gap 阈值 / 降级开关说明
-│   ├── s1.py              # S1 统一入口 + 阶段报告生成
-│   ├── s2.py              # S2 统一入口（渐进漂移）+ 阶段报告生成
-│   ├── scenarios.py       # 场景注册表（S1/S2）：哪个场景用哪个选窗策略
+│   ├── s1.py              # S1 统一入口：一条命令跑完整个 S1 流程
+│   ├── s2.py              # S2 统一入口：与 S1 同一套流程，只换一段历史
+│   ├── scenarios.py       # 场景注册表（S1 稳态基线 / S2 渐进漂移）
 │   ├── check_s2_experiment.py  # S2 实验有效性校验脚本（只读存档，9 条自检）
-│   ├── stability.py       # 稳定窗口扫描 + 透明稳定判定规则
-│   ├── evidence.py        # 当前状态 + 最近历史 + 时间锚点（含校验）
-│   ├── predict.py         # 加载 B06 已存模型做一次预测
-│   ├── knowledge.py       # S4-1：走 B05 search_tomato_knowledge 接 B04 知识库
-│   ├── weather.py         # S3 天气接入层（B03 未来外部天气）+ S5 降级开关（唯一读开关处）
-│   ├── evidence_registry.py  # S4-0：证据身份层（status 三态 / data / error 硬约束）
-│   ├── evidence_ledger.py    # S4-2：台账 → 方向 → 分歧三列（supporting/opposing/undetermined）
+│   ├── stability.py       # 稳定历史窗口准备 + 透明稳定性判定（5 条判据，阈值写在模块顶部）
+│   ├── evidence.py        # 当前状态 + 最近历史 + 时间锚点（含 6 项校验）
+│   ├── predict.py         # 加载 B06 已保存模型，用最新窗口做一次预测
 │   ├── judgement.py       # 结构化判断五/六字段 + 合成关注等级（纯程序，无 LLM）
 │   ├── explain.py         # LLM 解释 + 一致性校验（只解释，不判断）
 │   ├── runs.py            # run 存档 + index 索引 + explain_run 回溯 + rebuild_index
+│   ├── knowledge.py       # S4-1：走 B05 search_tomato_knowledge 接 B04 知识库
+│   ├── weather.py         # S3 天气证据接入层（只接 B03 未来外部天气）+ S5 降级开关
+│   ├── evidence_registry.py  # S4-0：统一证据身份层（来源/时间/状态/结果/错误 五项最小语义）
+│   ├── evidence_ledger.py    # S4-2：台账 → 方向 → 分歧三列（supporting/opposing/undetermined）
 │   │
-│   ├── s3.py              # S3-2 单变量对照实验（真实组 / 离线组 / 降级验证）
-│   ├── s3_report.py       # 从实测存档生成 s3_report.md
+│   ├── s3.py              # S3-2 带 / 不带外部天气的对照实验（真实组 / 离线组 / 降级验证）
+│   ├── s3_report.py       # 由 S3 原始结果生成 s3_report.md
 │   ├── s3_citation_probe.py   # 引用率探针（冻结 ⑥ 块重复跑，只测 LLM 采样波动）
 │   ├── s3_citation_table.py   # 全部 S3_with 存档的统一判定表
 │   ├── verify_s3.py       # S3 阶段验收自检（全部离线，不联网、不调 LLM）
 │   │
-│   ├── s4.py              # S4-2 分歧场景主入口（内部 WATCH × 外部转好）
+│   ├── s4.py              # S4-2 证据分歧场景编排
 │   ├── s4_windows.py      # S4-1：扫描 B06 输出 WATCH 的窗口，挑出 S4 锚点
 │   ├── s4_offline.py      # S4-1：可复现的离线天气夹具（构造用例，非实测）
-│   ├── s4_3.py            # S4-3 负面对照（平铺组 vs 分身份组）
-│   ├── s4_3_detector.py   # S4-3 断言/归因检测器（复用 S3 判定思路）
+│   ├── s4_3.py            # S4-3 负面对照：平铺组 vs 分身份组
+│   ├── s4_3_detector.py   # S4-3 断言检测器：这个「一定」到底是谁告诉你的
 │   ├── s4_report.py       # 由 s4_raw_result.json 生成 s4_report.md + model_table.md
 │   │
-│   ├── s5.py              # S5 证据退化实验（基线 n 次 + 降级 n 次）
-│   ├── s5_probe.py        # S5 防伪造检验探针（A/B/C/D，复用 S3 的句子切分与元陈述判定）
-│   ├── s5_report.py       # 由 s5_raw_result.json 生成 s5_report.md
-│   ├── s5_show.py         # S5 一步到位展示（只读存档，不调 LLM）
+│   ├── s5.py              # S5-1 证据退化实验（一次只弄坏一条证据）
+│   ├── s5_probe.py        # S5-2 防伪造检验探针（复用 S3 的句子切分与元陈述判定）
+│   ├── s5_report.py       # S5 阶段报告生成器（离线、可确定性重放）
+│   ├── s5_show.py         # S5 一步到位展示（只读存档，不调 LLM，不花钱）
 │   │
 │   ├── innovation1.py     # 创新点 1：连续时间认知消融（2 锚点 × 3 档 = 6 次 LLM）
 │   ├── innovation2.py     # 创新点 2：可追溯证据的自动溯源器（只读 run 存档，0 次 LLM）
-│   ├── innovation3.py     # 创新点 3：第二遍走查器（C1–C5 机器检查 + 12 节走查）
+│   ├── innovation3.py     # 创新点 3：让系统学会「有些话现在不能说」（C1–C5 机器检查 + 12 节走查）
 │   ├── verify_innovation2.py  # 创新点 2 的独立复核脚本（只读，不修改任何文件）
 │   │
 │   ├── views.py           # ★ 第三遍四视图的**数据层 + 终端渲染**（只读 run 存档，绝不重算）
@@ -138,7 +137,7 @@ GreenMate/
 │   ├── views_check.py     # 四视图统一检查（U1 身份一致 / U2 同源 sha256 / U3 零重算打桩 / U4 既有断言）
 │   ├── replay.py          # ★ 视图四**回放器**：**唯一**允许发起新运行的地方（选场景 → 跑固定问题 → 新 run_id）；★ `--scenario-file` 按固定场景文件回放
 │   ├── views_web.py       # FastAPI 路由（视图一~四 + GET /api/compare?a=&b=），复用 views.py 的数据层
-│   ├── static/            # Web 版静态页面（进版本库）
+│   ├── static/
 │   │   └── views.html     # 工作台版式（左 Logo / 右侧边栏 4 个视图 / 右上角深浅主题切换）；纯静态、离线可开、不引任何 CDN 外链
 │   │
 │   ├── ★ B08 第一遍（冻结 B07）
@@ -153,13 +152,16 @@ GreenMate/
 │   │   ├── S5.json        # 证据退化（run_120，保留 unavailable 与 error 原文）
 │   │   └── README.md      # 场景格式 / 生成 / 校验 / 回放说明
 │   │
-│   ├── ★ B08 第二遍（正式验证 S1~S5）
-│   ├── b08.py             # 验证器：baseline / verify --all / verify S1 / records / report
+│   ├── ★ B08 第二遍（正式验证 S1~S5）+ 第四遍（固定回归）—— 同一个文件，不另起
+│   ├── b08.py             # 第二遍：baseline / verify --all / verify S1 / records / report
+│   │                      # 第四遍：regression 子命令（run / diff / freeze）+ verify --recompute
+│   │                      #         （L1 复算层 / L2 期望层 / L3 一致性层 + 13 个固定案例 + 负对照）
+│   │                      # ★ --recompute 是 opt-in 开关，默认行为与第二遍一字未改
 │   │
 │   ├── ★ B08 第三遍（同题对照 / 失败验证 / 运行追踪）
 │   ├── b08_trace.py       # 12 环节运行追踪（薄包装，只读存档）+ 证明一对照/因果证明 + 证明二 F-1~F-4
 │   │
-│   ├── tests/             # 不变量测试（pytest，共 386 项：S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图 72 + B08 冻结 38 + B08 验证 17）
+│   ├── tests/             # 不变量测试（pytest，共 403 项：S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图 72 + B08 冻结 38 + B08 验证 17 + B08 固定回归 17）
 │   │   ├── conftest.py                # 路径注入 + 假 LLM 客户端
 │   │   ├── test_s1_invariants.py       # 24 项
 │   │   ├── test_s2_invariants.py       # 26 项
@@ -177,7 +179,8 @@ GreenMate/
 │   │   ├── test_views_compare.py           # 11 项（三层可复算 / R4 不稳定性必触发 / R2·R1 命中 / 干净对照 / U1–U4）
 │   │   ├── test_views_layout.py            # 15 项（版面顺序：单列自上而下 / 编号递增 / 面板内并列）
 │   │   ├── test_b08_freeze.py              # 38 项（版本冻结 / 场景冻结 / 存档契约不污染 / 健康检查分层）
-│   │   └── test_b08_verify.py              # 17 项（场景可校验 / 回放 base_run_id / 判定重算是纯函数 / 多字短语 / 鉴别力）
+│   │   ├── test_b08_verify.py              # 17 项（场景可校验 / 回放 base_run_id / 判定重算是纯函数 / 多字短语 / 鉴别力）
+│   │   └── test_b08_regression.py          # 17 项（案例规模与分组 / 负对照必须被抓到 / L1 真的在复算 / 期望存在冻结件 / 跑两次能 diff / 记录追加 / --no-write 不落盘）
 │   ├── runs/              # 运行时生成的 run 存档（**进版本库**：证据链的一部分）
 │   │   ├── index.json     # 索引：run_id → 摘要（110 条）
 │   │   └── run_XXX/run.json
@@ -210,7 +213,8 @@ GreenMate/
 │       ├── views_evidence_report.md         # 视图三证据空间实测报告（C1–C14 + 三问清单 + Limitations）
 │       ├── views_compare_report.md          # 视图四场景对比实测报告（4 组归因 + 三层明细 + U1–U4）
 │       ├── replay_log.jsonl                 # 回放日志（另存；run.json 存档结构一字未改）
-│       ├── b08_baseline.json                # ★ B08 基线版本快照（app_version / git / 模型 / 知识 / 固定问题 / 五场景）
+│       │
+│       ├── b08_baseline.json                # ★ B08 第一遍基线版本快照（app_version / git / 模型 / 知识 / 固定问题 / 五场景）
 │       ├── b08_freeze_report.md             # ★ B08 第一遍冻结报告（含 Limitations L1–L5 与已知缺口）
 │       ├── b08_validation_records.jsonl     # ★ B08 第二遍验证记录（五场景各一条；第二遍与第四遍回归报告共用结构）
 │       ├── b08_validation_report.md         # ★ B08 第二遍验证报告（6 节 + 五条因果证明 + Limitations L1–L7）
@@ -218,6 +222,13 @@ GreenMate/
 │       ├── b08_pass2_failure.md            # ★ B08 第三遍证明二：主动制造失败（F-1~F-4 + 反向对照）
 │       ├── b08_pass3_trace.md              # ★ B08 第三遍证明三：run_082 的 12 环节追踪 + 读者检验
 │       ├── b08_pass3_report.md             # ★ B08 第三遍总报告（6 节 + 完成线核对 + Limitations L1–L8）
+│       │
+│       ├── b08_regression_expectations.json # ★ B08 第四遍冻结的期望清单（13 个案例；期望值存在这里，不在代码里）
+│       ├── b08_regression_records.jsonl    # ★ B08 第四遍回归记录（每次追加 13 案例 + 1 负对照）
+│       ├── b08_regression_results.jsonl    # ★ B08 第四遍回归汇总（每次追加一行：七项 + 版本信息）
+│       ├── b08_regression_report.md        # ★ B08 第四遍回归报告（9 节 + 负对照 + 版本漂移 + Limitations）
+│       ├── b08_recompute_records.jsonl     # ★ B08 第四遍 L1 复算记录（verify --all --recompute 的输出，追加）
+│       │
 │       ├── views_web_01_overview.png        # ★ README 内嵌：视图一 状态总览 全景截图
 │       ├── views_web_02_evolution.png       # ★ README 内嵌：视图二 状态演化 全景截图
 │       ├── views_web_03_compare.png         # ★ README 内嵌：视图二 S1↔S2 对比 全景截图
@@ -710,7 +721,7 @@ SoilGrids MCP（`https://gateway.pipeworx.io/soilgrids/mcp`）补齐土壤数据
 | B08 — 第一遍 · 冻结 B07（基线快照 / 固定场景 / 两层健康检查） | ✅ 完成 |
 | B08 — 第二遍 · 正式验证 S1~S5（断言型检查 + 因果证明，五场景全 PASS） | ✅ 完成 |
 | B08 — 第三遍 · 同题对照 / 失败验证 / 运行追踪（四组对照 + CA-1~3 + F-1~4 + 12 环节） | ✅ 完成 |
-| B08 — 第四遍 · 回归报告（≥10 个固定回归案例） | ⬜ 未开始 |
+| B08 — 第四遍 · 固定回归（13 个案例 + 负对照 + L1 复算层 + 可对比的回归汇总） | ✅ 完成 |
 
 ---
 
@@ -831,7 +842,7 @@ B07 的 S1 阶段做一件事：**用「当前状态 + 最近历史 + 已保存�
 | `B07/s1.py` | S1 统一入口 + 阶段报告生成 | ✅ |
 | `B07/s2.py` | S2 统一入口（渐进漂移，只做编排）+ 6 条自检 + 阶段报告 | ✅ |
 | `B07/scenarios.py` | 场景注册表（S1 / S2） | ✅ |
-| `B07/tests/` | 不变量测试（386 条，pytest） | ✅ |
+| `B07/tests/` | 不变量测试（403 条，pytest） | ✅ |
 | `B07/runs/index.json` | 索引：run_id → {created_at, scenario, question, verdict, model_version, status} | ✅ 进版本库 |
 | `B07/runs/<run_id>/run.json` | 单次运行完整快照 | ✅ 进版本库 |
 | `B07/artifacts/s1_report.md` | 阶段报告（run_id / 证据来源 / 判据 / 五字段 / coef Top5 / LLM 原文 / 回溯输出） | ✅ |
@@ -852,7 +863,7 @@ B07 的 S1 阶段做一件事：**用「当前状态 + 最近历史 + 已保存�
 - `B07/runs/` — 每次运行的完整快照与索引（本地留存）
 - `B07/artifacts/s1_report.md` — 本阶段报告
 - `B07/artifacts/s2_report.md` — S2 阶段报告（渐进漂移的对比证据）
-- `B07/tests/` — 386 条不变量测试（S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图 72 + B08 冻结 38 + B08 验证 17），全部离线可跑（LLM 用假客户端、天气用假工具）
+- `B07/tests/` — 403 条不变量测试（S1–S5 169 + 创新点 1/2/3 90 + 第三遍视图 72 + B08 冻结 38 + B08 验证 17 + B08 固定回归 17），全部离线可跑（LLM 用假客户端、天气用假工具）
 
 ---
 
@@ -2744,3 +2755,114 @@ python -m B07.b08_trace run_082 --json
 - **L7** 本遍的对照与追踪是**离线复算 + 存档读取**，不重新消耗 LLM；
   只有证明二那次主动失败运行消耗 1 次额度。
 - **L8** 若第二遍尚未完成，本遍引用的 run 均为 B07 开发期存档。
+
+---
+
+## B08 — 第四遍 | 固定回归（文档 p.99–101）
+
+> **本遍只做固定回归**：把「读存档的断言」升级成「**按存档原始字段重算再比对**」，
+> 扩到 **13 个固定案例 + 1 个负对照**，每次回归留一行可比的汇总。
+> **本遍不调 LLM、不跑模型、不取天气、不检索知识**，纯离线。
+
+**回归报告：[`B07/artifacts/b08_regression_report.md`](B07/artifacts/b08_regression_report.md)**
+**期望清单（冻结件）：[`B07/artifacts/b08_regression_expectations.json`](B07/artifacts/b08_regression_expectations.json)**
+**回归记录：[`B07/artifacts/b08_regression_records.jsonl`](B07/artifacts/b08_regression_records.jsonl)**（追加）
+**回归汇总：[`B07/artifacts/b08_regression_results.jsonl`](B07/artifacts/b08_regression_results.jsonl)**（每次追加一行）
+**复算记录：[`B07/artifacts/b08_recompute_records.jsonl`](B07/artifacts/b08_recompute_records.jsonl)**（`verify --all --recompute` 的输出，追加）
+
+### 怎么跑
+
+```bash
+python -m B07.b08 regression freeze            # 冻结期望清单（13 个案例，三组交叉校验）
+python -m B07.b08 regression                   # 跑一遍（追加记录 + 汇总 + 生成报告）
+python -m B07.b08 regression diff              # 与上一次回归对比（翻转 / 新增 / 缺失 / 跨版本）
+python -m B07.b08 regression --case NEG_must_fail   # 只跑一个案例
+python -m B07.b08 regression --no-write        # 只打印，**不落盘**（记录 / 汇总 / 期望清单都不写）
+python -m B07.b08 verify --all --recompute      # 场景级：actual 换成重算值（写入 b08_recompute_records.jsonl）
+python -m B07.b08 verify --all --no-write      # 场景级：只读打印，**不碰第二遍的冻结记录**
+```
+
+> ⚠️ `verify --all`（不带 `--no-write`）会**覆写**第二遍的冻结记录
+> `b08_validation_records.jsonl`（这是第二遍的原有行为）。要留证据就加 `--no-write`。
+> `regression` 的记录与汇总是**追加**的，跑几次都不会覆盖前一次。
+
+### 三层检查
+
+| 层 | 问什么 | 输入 | 判据 |
+|---|---|---|---|
+| **L1 复算层** | 现在的代码还能不能把当年的结论**重算出来** | 存档原始字段（history / external_conditions / evidence_ledger / model_output） | 重算值 == 存档值 |
+| **L2 期望层** | 重算出来的结果**还对不对** | 第二遍的期望值（一字未改） | 满足期望 |
+| **L3 一致性层** | 结构化判断与 LLM 解释**有没有互相打架** | 存档里的解释原文 | 复用第二遍的 `find_consistency_claims` / `find_weather_facts` |
+
+★ **L1 是这一遍的关键**：第二遍每条 check 的 actual 直接取自 `run.json`，
+只要存档没动，把 `judge_stability` 改错了验证照样全绿；第四遍把 actual 换成
+**按原始字段重算出来的值**，再与存档逐项比对 —— 这才测得出「代码改坏了」。
+
+### 13 个案例 + 1 个负对照
+
+| 分组 | 案例（场景 / run） |
+|---|---|
+| stable | `S1_stable_a`(S1/run_121)、`S1_stable_b`(S1/run_113) |
+| drift | `S2_drift_a`(S2/run_122)、`S2_drift_b`(S2/run_114) |
+| external | `S3_ext_stable`(S3/run_116)、`S3_ext_deteriorating`(S3/run_123)、`S3_no_weather`(S3/run_115 · 对照组) |
+| conflict | `S4_conflict_a`(S4/run_124)、`S4_conflict_b`(S4/run_117) |
+| degrade | `S5_degrade_a`(S5/run_125)、`S5_degrade_b`(S5/run_119)、`S5_degrade_c`(S5/run_127)、`S5_degrade_d`(S5/run_126) |
+| 负对照 | `NEG_must_fail` —— 在**内存副本**上把一帧温度 +1.0℃，L1 复算必然对不上 → **必须报 FAIL**；被抓不到就说明整个回归集无效 |
+
+> ★ 案例的**期望值存在冻结件里**（`b08_regression_expectations.json`），
+> 代码只负责「重算 → 比对 → 记录」；冻结时跑过三组交叉校验
+> （第二遍冻结记录 / 同场景孪生案例 / S3 组语义规则），矛盾就**拒绝冻结**。
+>
+> ★ `S3_no_weather` 与 `S3_ext_stable` 的部分检查**本来就该不成立**
+> （没有外部天气时不许报外部关注）—— 它们的通过标准是「与冻结期望一致」，不是「全绿」。
+
+### 怎么验它**真的有鉴别力**
+
+光看「13/13 全绿」证明不了什么 —— 全绿也可能是因为断言根本没在跑。
+鉴别力得靠**故意改坏一次**来验：
+
+```bash
+cp B07/stability.py /tmp/stability.py.bak
+python -c "
+import pathlib
+p=pathlib.Path('B07/stability.py'); s=p.read_text(encoding='utf-8')
+p.write_text(s.replace('TEMP_RANGE_MAX = 2.0','TEMP_RANGE_MAX = 0.5'),encoding='utf-8')
+"
+python -m B07.b08 regression --no-write     # 期望：出现「2 条不一致」（S1 的两个稳定案例被抓出来）
+cp /tmp/stability.py.bak B07/stability.py   # 立刻还原
+git status --short B07/stability.py         # 期望：无输出（还原干净）
+```
+
+> 还原务必执行。工作区有未提交改动，**不要用 `git checkout --`** 覆盖整个文件，
+> 用 `cp` 备份还原最稳妥。
+
+同一条思路适用于负对照：它把一份真实存档在**内存副本**上改坏一帧温度（+1.0℃），
+L1 复算必然对不上 → 案例必须报 FAIL。**抓不到负对照 = 整个回归集无效**。
+
+### Limitations
+
+完整的 11 条见 [`B07/artifacts/b08_regression_report.md`](B07/artifacts/b08_regression_report.md) 第 9 节，
+这里只列最容易误解的三条：
+
+- **只读已有存档，不重新分析** —— 验证的是「现在的代码还能不能一致地重新推导历史存档」，
+  **不是**「现在重跑一遍会得到什么」（那是另一次联网的活跑）。
+- **不重跑模型** —— B06 的模型输出沿用存档值，所以「模型被重训 / 模型文件被换」查不出来。
+- **三个创新点都没有被直接覆盖** —— 创新点 1（消融）、创新点 2（溯源器）、
+  创新点 3（C1–C5 走查器）本回归集**都没有对应案例**，报告第 8 节写明了要补哪三个。
+
+### 不变量测试
+
+[`B07/tests/test_b08_regression.py`](B07/tests/test_b08_regression.py) —— **17 项**，纯离线：
+
+| 组 | 钉住的事 |
+|---|---|
+| R1 | 案例 ≥10、5 个场景全覆盖、每个分组 ≥2、负对照不在正常案例里、case_id 不重复 |
+| R2 | 负对照必须被抓到，且坏数据**不许落盘** |
+| R3 | `--recompute` 模式真的产出 L1 复算项（archived / recomputed / match / recomputable），默认模式**没有** layers 字段（第二遍行为一字未改） |
+| R4 | 冻结的期望清单覆盖全部案例；第二遍的 5 行冻结记录仍完好 |
+| R5/R6 | 跑两次能 diff；故意改期望必须报翻转；`git_commit` 变了要标「跨版本」；记录是**追加**的；`--no-write` 不落盘 |
+| R7 | 回归**不许新跑任何一次**（run 存档目录数不变） |
+
+```bash
+python -m pytest B07/tests -q     # 403 passed（上一轮 386 + 本轮 17）
+```

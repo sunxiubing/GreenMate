@@ -1,0 +1,231 @@
+{
+  "regression_set_id": "B08_regression_v1",
+  "frozen_at": "2026-10-31T14:42:53",
+  "app_version": "B08_baseline_01@0cacc241c957640614558a93f189c8a85c1b2a25",
+  "git_commit": "0cacc241c957640614558a93f189c8a85c1b2a25",
+  "git_dirty": true,
+  "cases": {
+    "S1_stable_a": {
+      "scenario_id": "S1",
+      "run_id": "run_121",
+      "kind": "stable",
+      "role": "case",
+      "intent": "第二遍的 S1 正式回放：内部稳定 → 不误报",
+      "checks": {
+        "S1-1": true,
+        "S1-2": true,
+        "S1-3": true,
+        "S1-4": true,
+        "S1-5": true
+      },
+      "counter_expected": true,
+      "l1_expected": true,
+      "l3_expected": true
+    },
+    "S1_stable_b": {
+      "scenario_id": "S1",
+      "run_id": "run_113",
+      "kind": "stable",
+      "role": "case",
+      "intent": "场景文件的源 run（同场景、不同 run）：稳定结论必须一样",
+      "checks": {
+        "S1-1": true,
+        "S1-2": true,
+        "S1-3": true,
+        "S1-4": true,
+        "S1-5": true
+      },
+      "counter_expected": true,
+      "l1_expected": true,
+      "l3_expected": true
+    },
+    "S2_drift_a": {
+      "scenario_id": "S2",
+      "run_id": "run_122",
+      "kind": "drift",
+      "role": "case",
+      "intent": "第二遍的 S2 正式回放：内部漂移 → 能发现",
+      "checks": {
+        "S2-1": true,
+        "S2-2": true,
+        "S2-3": true
+      },
+      "counter_expected": true,
+      "l1_expected": true,
+      "l3_expected": true
+    },
+    "S2_drift_b": {
+      "scenario_id": "S2",
+      "run_id": "run_114",
+      "kind": "drift",
+      "role": "case",
+      "intent": "场景文件的源 run：漂移结论必须一样",
+      "checks": {
+        "S2-1": true,
+        "S2-2": true,
+        "S2-3": true
+      },
+      "counter_expected": true,
+      "l1_expected": true,
+      "l3_expected": true
+    },
+    "S3_ext_stable": {
+      "scenario_id": "S3",
+      "run_id": "run_116",
+      "kind": "external",
+      "role": "case",
+      "intent": "外部信号 external_stable：外部**不恶化**就不该抬升关注度",
+      "checks": {
+        "S3-1": false,
+        "S3-2": true,
+        "S3-3": true,
+        "S3-4": false
+      },
+      "counter_expected": false,
+      "l1_expected": true,
+      "l3_expected": true
+    },
+    "S3_ext_deteriorating": {
+      "scenario_id": "S3",
+      "run_id": "run_123",
+      "kind": "external",
+      "role": "case",
+      "intent": "外部信号 external_deteriorating：外部恶化 → watch_external",
+      "checks": {
+        "S3-1": true,
+        "S3-2": true,
+        "S3-3": true,
+        "S3-4": true
+      },
+      "counter_expected": true,
+      "l1_expected": true,
+      "l3_expected": true
+    },
+    "S3_no_weather": {
+      "scenario_id": "S3",
+      "run_id": "run_115",
+      "kind": "external",
+      "role": "control",
+      "intent": "对照组：这次运行根本没有外部天气 —— 天气相关的断言必须**全部不成立**（不许在没有天气时凭空报外部关注）",
+      "checks": {
+        "S3-1": false,
+        "S3-2": false,
+        "S3-3": false,
+        "S3-4": false
+      },
+      "counter_expected": false,
+      "l1_expected": true,
+      "l3_expected": true
+    },
+    "S4_conflict_a": {
+      "scenario_id": "S4",
+      "run_id": "run_124",
+      "kind": "conflict",
+      "role": "case",
+      "intent": "第二遍的 S4 正式回放：证据分歧成立 → conflict_unresolved",
+      "checks": {
+        "S4-1": true,
+        "S4-2": true,
+        "S4-3": true,
+        "S4-4": true
+      },
+      "counter_expected": true,
+      "l1_expected": true,
+      "l3_expected": true
+    },
+    "S4_conflict_b": {
+      "scenario_id": "S4",
+      "run_id": "run_117",
+      "kind": "conflict",
+      "role": "case",
+      "intent": "存档自称 S5，但证据形态是分歧（B03=ok）→ 用 S4 的验证器；同一场景不同 run 的分歧结论必须一样",
+      "checks": {
+        "S4-1": true,
+        "S4-2": true,
+        "S4-3": true,
+        "S4-4": true
+      },
+      "counter_expected": true,
+      "l1_expected": true,
+      "l3_expected": true
+    },
+    "S5_degrade_a": {
+      "scenario_id": "S5",
+      "run_id": "run_125",
+      "kind": "degrade",
+      "role": "case",
+      "intent": "第二遍的 S5 正式回放：证据退化 → 主动退让 watch_internal",
+      "checks": {
+        "S5-1": true,
+        "S5-2": true,
+        "S5-3": true,
+        "S5-4": true,
+        "S5-5": true
+      },
+      "counter_expected": true,
+      "l1_expected": true,
+      "l3_expected": true
+    },
+    "S5_degrade_b": {
+      "scenario_id": "S5",
+      "run_id": "run_119",
+      "kind": "degrade",
+      "role": "case",
+      "intent": "开发期的一条降级 run：退化结论必须一样",
+      "checks": {
+        "S5-1": true,
+        "S5-2": true,
+        "S5-3": true,
+        "S5-4": true,
+        "S5-5": true
+      },
+      "counter_expected": true,
+      "l1_expected": true,
+      "l3_expected": true
+    },
+    "S5_degrade_c": {
+      "scenario_id": "S5",
+      "run_id": "run_127",
+      "kind": "degrade",
+      "role": "case",
+      "intent": "第三遍的又一条降级 run：退化结论必须一样",
+      "checks": {
+        "S5-1": true,
+        "S5-2": true,
+        "S5-3": true,
+        "S5-4": true,
+        "S5-5": true
+      },
+      "counter_expected": true,
+      "l1_expected": true,
+      "l3_expected": true
+    },
+    "S5_degrade_d": {
+      "scenario_id": "S5",
+      "run_id": "run_126",
+      "kind": "degrade",
+      "role": "case",
+      "intent": "★ 第三遍**主动制造**的失败 run：回归断言它与 run_125 行为一致，**不是**断言它「成功」",
+      "checks": {
+        "S5-1": true,
+        "S5-2": true,
+        "S5-3": true,
+        "S5-4": true,
+        "S5-5": true
+      },
+      "counter_expected": true,
+      "l1_expected": true,
+      "l3_expected": true
+    }
+  },
+  "negative_control": {
+    "case_id": "NEG_must_fail",
+    "expected": "FAIL",
+    "corruption": {
+      "target": "history[2].temperature",
+      "delta": 1.0
+    },
+    "note": "负对照的坏案例只在内存副本上，绝不落盘"
+  },
+  "note": "期望值保存在这份冻结件里，代码只负责「重算 → 比对 → 记录」。冻结时跑过三组交叉校验：第二遍冻结记录 / 同场景孪生案例 / S3 组语义规则。"
+}
