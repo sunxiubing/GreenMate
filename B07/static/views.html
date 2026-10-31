@@ -2,33 +2,91 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>GreenMate · 视图一 状态总览 / 视图二 状态演化 / 视图三 证据空间 / 视图四 场景回放与对比</title>
+<title>GreenMate · 可视化工作台（状态总览 / 状态演化 / 证据空间 / 场景回放与对比）</title>
 <!-- 离线可开：不引任何 CDN 外链 -->
 <style>
   :root{
-    --bg:#0f1416; --panel:#161d20; --line:#2a3539; --fg:#e6edef; --dim:#8b9a9f;
+    --bg:#0f1416; --panel:#161d20; --line:#2a3539; --line2:#4b6066; --fg:#e6edef;
+    --dim:#8b9a9f; --dim2:#5f6f74;
     --raw:#3b2f18; --rawfg:#e0b872; --und:#14301f; --undfg:#7fd1a0;
     --warn:#e0796b; --t:#e0796b; --h:#7fd1a0; --l:#e0b872;
+    --card:#1e272a; --navbg:#12181a; --hover:#232d31;
+    --chartbg:#111719; --attribbg:#141b1d;
+    --ok:#7fd1a0; --bad:#e0796b;
+    --brand1:#7fd1a0; --brand2:#2f9e6b; --brandfg:#0f1416;
+  }
+  /* ★ 浅色主题：只覆盖变量，不重写规则 —— 换肤 = 换一组变量 */
+  body.theme-light{
+    --bg:#f3f5f6; --panel:#ffffff; --line:#d9e0e3; --line2:#9db0b6; --fg:#16211f;
+    --dim:#5f7076; --dim2:#7d8b90;
+    --raw:#fdf3dd; --rawfg:#8a5a10; --und:#e4f3ea; --undfg:#1f7a4d;
+    --warn:#b3402f; --t:#b3402f; --h:#1f7a4d; --l:#8a5a10;
+    --card:#ffffff; --navbg:#eef1f2; --hover:#e4eaec;
+    --chartbg:#ffffff; --attribbg:#f1f7f3;
+    --ok:#1f7a4d; --bad:#b3402f;
+    --brand1:#1f7a4d; --brand2:#0f6b43; --brandfg:#ffffff;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);
        font-family:"Microsoft YaHei",Consolas,monospace;line-height:1.6}
-  header{position:sticky;top:0;z-index:5;background:var(--panel);
-         border-bottom:1px solid var(--line);padding:14px 22px}
-  h1{margin:0 0 8px;font-size:19px}
+  a{color:var(--h)}
+
+  /* ================= 工作台骨架 ================= */
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;
+          justify-content:space-between;gap:16px;padding:10px 18px;
+          background:var(--panel);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .brand .mark{width:32px;height:32px;border-radius:9px;flex:0 0 32px;
+               display:flex;align-items:center;justify-content:center;
+               background:linear-gradient(135deg,var(--brand1),var(--brand2))}
+  .brand .mark svg{width:19px;height:19px;display:block}
+  .brand .name{font-size:16px;font-weight:700;letter-spacing:.6px}
+  .brand .sub{font-size:12px;color:var(--dim);border-left:1px solid var(--line);
+              padding-left:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topright{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+  .theme-btn{background:var(--card);color:var(--fg);border:1px solid var(--line2);
+              border-radius:6px;padding:6px 12px;font-size:13px;font-family:inherit;
+              cursor:pointer;white-space:nowrap}
+  .theme-btn:hover{background:var(--hover)}
+
+  .layout{display:flex;align-items:flex-start}
+  .sidebar{position:sticky;top:53px;flex:0 0 226px;width:226px;
+           padding:14px 10px 24px;min-height:calc(100vh - 53px);
+           background:var(--panel);border-right:1px solid var(--line)}
+  .nav{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;
+       background:transparent;border:1px solid transparent;border-radius:7px;
+       padding:9px 11px;color:var(--dim);font-size:13.5px;font-family:inherit;
+       cursor:pointer;margin-bottom:3px}
+  .nav:hover{background:var(--hover);color:var(--fg)}
+  .nav.on{background:var(--hover);color:var(--fg);border-color:var(--line);
+          box-shadow:inset 3px 0 0 var(--undfg)}
+  .nav .t{font-weight:600}
+  .nav .d{font-size:11px;color:var(--dim2);margin-top:2px}
+  .nav.on .d{color:var(--dim)}
+  .side-foot{margin-top:16px;padding:10px 11px;border-top:1px solid var(--line);
+             font-size:11px;color:var(--dim2);line-height:1.7}
+  .side-foot b{color:var(--dim)}
+
+  .content{flex:1 1 auto;min-width:0;padding:14px 18px 56px}
+  .toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;
+           background:var(--panel);border:1px solid var(--line);border-radius:8px;
+           padding:9px 13px;margin-bottom:12px}
+  .tb-label{font-size:12px;color:var(--dim)}
+  .tb-note{font-size:12px;color:var(--dim2)}
+  select,button{background:var(--card);color:var(--fg);border:1px solid var(--line);
+                border-radius:5px;padding:6px 10px;font-size:13px;font-family:inherit}
+  button{cursor:pointer}
+  button:hover{border-color:var(--line2)}
+  .mini{padding:5px 11px;font-size:12px}
+
+  /* ★ 主区域：只显示当前选中视图，其余隐藏 */
+  .view{display:none}
+  .view.on{display:block}
+
   .fp{font-size:13px;color:var(--dim)}
   .fp b{color:var(--fg);font-weight:600}
   .bar{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
-  select,button{background:#1e272a;color:var(--fg);border:1px solid var(--line);
-                border-radius:5px;padding:6px 10px;font-size:13px;font-family:inherit}
-  button{cursor:pointer}
-  button:hover{border-color:#4b6066}
-  .tabs{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
-  .tab{background:#12181a;color:var(--dim);border:1px solid var(--line);
-       border-radius:5px;padding:6px 14px;font-size:13px;cursor:pointer;
-       font-family:inherit}
-  .tab.on{background:#1e272a;color:var(--fg);border-color:#4b6066}
-  main{padding:16px 20px 52px;max-width:1460px;margin:0 auto}
+
   /* ★ 版面规则：所有视图一律**单列自上而下**，
      按【一】【二】【三】【四】的编号顺序读下来；
      并排只发生在"一个面板内部的并列小块"上，不再左右分栏。 */
@@ -38,7 +96,7 @@
   @media (min-width:1080px){
     .cards{grid-template-columns:repeat(4,minmax(0,1fr))}
   }
-  .card{background:#1e272a;border:1px solid var(--line);border-radius:6px;
+  .card{background:var(--card);border:1px solid var(--line);border-radius:6px;
         padding:9px 12px;min-width:0}
   .card.wide{grid-column:1/-1}
   .card.half{grid-column:1/-1}
@@ -76,26 +134,36 @@
   ol{margin:0;padding-left:22px}
   li{margin-bottom:8px}
   .meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:6px}
-  .meta span{background:#1e272a;border:1px solid var(--line);border-radius:5px;
+  .meta span{background:var(--card);border:1px solid var(--line);border-radius:5px;
              padding:3px 9px;font-size:12px;color:var(--dim)}
   .meta span b{color:var(--fg);font-weight:600}
+
+  /* ---- 视图二 · 对比面板（内置在视图二里） ---- */
+  .sep{margin-top:16px;border:1px solid var(--line);border-radius:8px;
+       background:var(--panel);overflow:hidden}
+  .sep-head{display:flex;align-items:center;justify-content:space-between;
+            gap:12px;padding:10px 16px;border-bottom:1px solid var(--line)}
+  .sep-head .ttl{font-size:14px;font-weight:600;letter-spacing:.4px}
+  .sep-head .ttl span{font-size:12px;color:var(--dim);font-weight:400;margin-left:8px}
+  .sep.collapsed .sep-body{display:none}
+
   /* ---- 视图二 ---- */
-  .chart{display:block;width:100%;height:auto;background:#111719;
+  .chart{display:block;width:100%;height:auto;background:var(--chartbg);
          border:1px solid var(--line);border-radius:6px;margin:4px 0 10px}
   .mk{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
       gap:8px}
-  .mkitem{background:#1e272a;border:1px solid var(--line);border-radius:6px;
+  .mkitem{background:var(--card);border:1px solid var(--line);border-radius:6px;
           padding:8px 11px;font-size:13px;min-width:0}
   .mkitem .when{font-size:12px;color:var(--dim)}
   .mkitem .kind{color:var(--warn);font-weight:600}
   .mkitem .src{font-size:12px;color:var(--dim);margin-top:4px}
   .pill{display:inline-block;border-radius:4px;padding:1px 7px;font-size:12px;
         border:1px solid var(--line);margin-right:6px}
-  .ok{color:#7fd1a0}
-  .bad{color:#e0796b}
+  .ok{color:var(--ok)}
+  .bad{color:var(--bad)}
   .tline{position:relative;padding-left:18px}
   .tline:before{content:"";position:absolute;left:5px;top:6px;bottom:6px;
-                width:2px;background:#2a3539}
+                width:2px;background:var(--line)}
   .tline>div{position:relative;margin-bottom:10px}
   .tline>div:before{content:"";position:absolute;left:-16px;top:6px;
                      width:9px;height:9px;border-radius:50%;
@@ -104,49 +172,49 @@
   /* ---- 视图三 | 证据空间 ---- */
   .evgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
           gap:12px}
-  .evcard{background:#1e272a;border:1px solid var(--line);border-radius:8px;
+  .evcard{background:var(--card);border:1px solid var(--line);border-radius:8px;
           overflow:hidden;min-width:0}
-  .evcard.bad{border-color:#e0796b;box-shadow:0 0 0 1px rgba(224,121,107,.25)}
+  .evcard.bad{border-color:var(--bad);box-shadow:0 0 0 1px rgba(224,121,107,.25)}
   .evcard.absent{border-style:dashed;opacity:.85}
   .evcard>summary{list-style:none;cursor:pointer;padding:10px 14px;
       display:flex;gap:10px;align-items:center;flex-wrap:wrap;
       border-bottom:1px solid var(--line)}
   .evcard>summary::-webkit-details-marker{display:none}
-  .evcard>summary:hover{background:#232d31}
+  .evcard>summary:hover{background:var(--hover)}
   .evcard .ttl{font-size:14px;font-weight:600}
   .evcard .id{font-size:12px;color:var(--dim)}
   .badge{display:inline-block;border-radius:4px;padding:1px 9px;font-size:12px;
          border:1px solid;letter-spacing:.5px}
-  .badge.supporting{color:#7fd1a0;border-color:#7fd1a0;
+  .badge.supporting{color:var(--ok);border-color:var(--ok);
                      background:rgba(127,209,160,.10)}
-  .badge.opposing{color:#e0796b;border-color:#e0796b;
+  .badge.opposing{color:var(--bad);border-color:var(--bad);
                    background:rgba(224,121,107,.12)}
-  .badge.undetermined{color:#8b9a9f;border-color:#8b9a9f;
+  .badge.undetermined{color:var(--dim);border-color:var(--dim);
                        background:rgba(139,154,159,.10)}
   .st{font-size:12px;padding:1px 8px;border-radius:4px;
       border:1px solid var(--line);color:var(--dim)}
-  .st.bad{color:#e0796b;border-color:#e0796b}
+  .st.bad{color:var(--bad);border-color:var(--bad)}
   .qa{padding:10px 14px;border-top:1px solid var(--line)}
   .qa>div{margin-bottom:10px}
   .qa .q{font-size:12px;color:var(--dim);letter-spacing:.5px;margin-bottom:3px}
   .qa ul{margin:0;padding-left:20px}
   .qa li{margin-bottom:4px;font-size:13px}
   .impact{border-left:3px solid var(--l);padding-left:9px}
-  .impact.bad{border-left-color:#e0796b}
+  .impact.bad{border-left-color:var(--bad)}
   .toolrow{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;
            padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
   .toolrow .mark{font-size:12px;white-space:nowrap}
-  .toolrow .mark.yes{color:#7fd1a0}
-  .toolrow .mark.no{color:#e0796b}
+  .toolrow .mark.yes{color:var(--ok)}
+  .toolrow .mark.no{color:var(--bad)}
   .toolrow .nm{font-weight:600}
   .toolrow .full{grid-column:1/-1}
-  .toolrow .why{color:#e0b872;font-size:12px}
+  .toolrow .why{color:var(--l);font-size:12px}
   /* ---- 视图四 | 场景回放与对比 ---- */
   .diff2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
   @media (max-width:960px){ .diff2{grid-template-columns:1fr} }
   .side{border:1px solid var(--line);border-radius:8px;overflow:hidden;
-        background:#1e272a}
-  .side>header{position:static;background:#232d31;border-bottom:1px solid var(--line);
+        background:var(--card)}
+  .side>header{position:static;background:var(--hover);border-bottom:1px solid var(--line);
                padding:10px 14px;display:flex;gap:10px;align-items:center;
                flex-wrap:wrap}
   .side>header .who{font-size:14px;font-weight:600}
@@ -160,42 +228,129 @@
   .layer h3{font-size:13px;color:var(--dim);margin:0 0 6px;letter-spacing:.4px}
   .chg{color:var(--warn)}
   .nochg{color:var(--dim)}
-  .attrib{border-left:3px solid var(--h);padding:10px 14px;background:#141b1d;
+  .attrib{border-left:3px solid var(--h);padding:10px 14px;background:var(--attribbg);
           border-radius:0 6px 6px 0}
   .attrib.bad{border-left-color:var(--warn)}
   .attrib .rule{font-size:15px;font-weight:600;margin-bottom:6px}
   .attrib .chain{font-size:14px;margin:6px 0}
   .attrib ul{margin:6px 0 0;padding-left:22px}
+
+  @media (max-width:820px){
+    .layout{flex-direction:column}
+    .sidebar{position:static;width:100%;flex:1 1 auto;min-height:0;
+             border-right:none;border-bottom:1px solid var(--line)}
+    .brand .sub{display:none}
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>B07 · 视图一 状态总览　/　视图二 状态演化　/　视图三 证据空间　/　视图四 场景回放与对比</h1>
-  <div class="fp" id="fp">正在读取…</div>
-  <div class="tabs">
-    <button class="tab on" data-tab="overview">视图一 | 状态总览</button>
-    <button class="tab" data-tab="evolution">视图二 | 状态演化</button>
-    <button class="tab" data-tab="compare">视图二 | S1↔S2 对比</button>
-    <button class="tab" data-tab="evidence">视图三 | 证据空间</button>
-    <button class="tab" data-tab="view4">视图四 | 场景回放与对比</button>
-  </div>
-  <div class="bar">
-    <label class="fp">run：</label>
-    <select id="runs"></select>
-    <span class="fp" id="comparebar" style="display:none">
-      对比对象：
-      <select id="runA"></select> vs <select id="runB"></select>
+<!-- ================= 顶栏：左 Logo / 右主题切换 ================= -->
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 21c0-6 2.5-10 8.5-12.5C21 15 17.5 21 12 21z" fill="var(--brandfg)"/>
+        <path d="M12 21C12 14 9 9 3 6.5 2.5 13.5 6 21 12 21z" fill="var(--brandfg)" opacity=".72"/>
+        <rect x="11.2" y="12" width="1.6" height="9" rx=".8" fill="var(--brandfg)"/>
+      </svg>
     </span>
-    <button onclick="refresh()">刷新</button>
-    <span class="fp">（本页只读 run 存档，绝不重新计算；刷新不会改变已保存的运行结果）</span>
+    <span class="name">GreenMate</span>
+    <span class="sub">大棚环境智能体 · B07 可视化工作台（只读 run 存档）</span>
+  </div>
+  <div class="topright">
+    <button class="theme-btn" id="themeBtn" title="切换深色 / 浅色主题">☾ 深色</button>
   </div>
 </header>
-<main id="main"><div class="dim">加载中…</div></main>
+
+<div class="layout">
+  <!-- ================= 左侧导航：4 个视图 ================= -->
+  <nav class="sidebar">
+    <button class="nav on" data-view="overview">
+      <span class="t">视图一 · 状态总览</span>
+      <span class="d">原始数值 / 系统理解 / LLM 解释 / 四个问题</span>
+    </button>
+    <button class="nav" data-view="evolution">
+      <span class="t">视图二 · 状态演化</span>
+      <span class="d">逐点过程 / 曲线 / 时间线　+　内置 S1↔S2 对比面板</span>
+    </button>
+    <button class="nav" data-view="evidence">
+      <span class="t">视图三 · 证据空间</span>
+      <span class="d">证据可用度 / 四类证据 / 工具台账 / 分歧</span>
+    </button>
+    <button class="nav" data-view="view4">
+      <span class="t">视图四 · 场景回放与对比</span>
+      <span class="d">A|B 五项并排 / 三层差异归因</span>
+    </button>
+    <div class="side-foot">
+      <b>只读存档</b>：本页只读 run 存档，绝不重新计算。<br>
+      发起新运行只在命令行：<b>python -m B07.replay S1</b>
+    </div>
+  </nav>
+
+  <!-- ================= 主区域：只显示当前选中视图 ================= -->
+  <main class="content">
+    <div class="toolbar">
+      <span class="tb-label">run：</span>
+      <select id="runs"></select>
+      <span class="tb-label" id="comparebar" style="display:none">
+        对比对象：
+        <select id="runA"></select> vs <select id="runB"></select>
+      </span>
+      <button class="mini" onclick="refresh()">刷新</button>
+      <span class="tb-note">（本页只读 run 存档，绝不重新计算；刷新不会改变已保存的运行结果）</span>
+    </div>
+
+    <section class="view on" id="v-overview">
+      <div class="fp" id="fp-overview">正在读取…</div>
+      <div id="v-overview-body"></div>
+    </section>
+
+    <section class="view" id="v-evolution">
+      <div class="fp" id="fp-evolution"></div>
+      <div id="v-evolution-body"></div>
+      <div class="sep" id="cmp-block">
+        <div class="sep-head">
+          <span class="ttl">S1 ↔ S2 对比面板<span>视图二内置 · 两个 run 共用同一把 Y 轴刻度</span></span>
+          <button class="mini" id="cmpToggle" onclick="toggleCompare()">收起</button>
+        </div>
+        <div class="sep-body">
+          <div class="fp" id="fp-compare" style="padding:10px 16px 0"></div>
+          <div id="v-compare-body"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="v-evidence">
+      <div class="fp" id="fp-evidence"></div>
+      <div id="v-evidence-body"></div>
+    </section>
+
+    <section class="view" id="v-view4">
+      <div class="fp" id="fp-view4"></div>
+      <div id="v-view4-body"></div>
+    </section>
+  </main>
+</div>
 
 <script>
 const $ = s => document.querySelector(s);
-let TAB = "overview";
+let VIEW = "overview";
 let RUNS = [];
+let THEME = "dark";
+
+/* ★ 图表配色随主题走（SVG 内联在页面里，直接用调色板变量最省事） */
+const PAL = {
+  dark: {bg:"#111719", grid:"#2a3539", axis:"#8b9a9f", foot:"#5f6f74",
+         poly:"#111719", ref:"#e0b872",
+         m:["#e0796b","#7fd1a0","#e0b872"],
+         mk:["#d9a441","#9c8cf0","#4fb0c6","#e07fb0","#8fd06a"]},
+  light:{bg:"#ffffff", grid:"#d9e0e3", axis:"#5b6b70", foot:"#7d8b90",
+         poly:"#ffffff", ref:"#8a5a10",
+         m:["#b3402f","#1f7a4d","#8a5a10"],
+         mk:["#b8860b","#6d5bd0","#2b8fa6","#c25790","#4f9d33"]}
+};
+function P(){ return PAL[THEME]; }
+
 function esc(s){
   return String(s===undefined||s===null?"—":s)
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -225,6 +380,23 @@ function fpHtml(d){
     "</div>";
 }
 
+/* ================= 主题（深色 / 浅色） ================= */
+function applyTheme(t, rerender){
+  THEME = t;
+  document.body.classList.toggle("theme-light", t==="light");
+  const b = $("#themeBtn");
+  if(b){
+    b.textContent = (t==="light") ? "☀ 浅色" : "☾ 深色";
+    b.title = (t==="light") ? "点击切换到深色主题" : "点击切换到浅色主题";
+  }
+  try{ localStorage.setItem("gm_theme", t); }catch(e){}
+  if(rerender) refresh();
+}
+function toggleTheme(){
+  applyTheme(THEME==="light" ? "dark" : "light", true);
+}
+
+/* ================= 视图切换 ================= */
 async function loadRuns(){
   const r = await fetch("/api/runs");
   const j = await r.json();
@@ -236,44 +408,55 @@ async function loadRuns(){
   $("#runA").innerHTML = opts;
   $("#runB").innerHTML = opts;
   const want = new URLSearchParams(location.search).get("run_id");
-  if (want && RUNS.some(x=>x.run_id===want)) $("#runs").value = want;
+  if(want && RUNS.some(x=>x.run_id===want)) $("#runs").value = want;
   const pick = (id,v)=>{ if(RUNS.some(x=>x.run_id===v)) $(id).value=v; };
   pick("#runA","run_012"); pick("#runB","run_015");
 }
-function setTab(t){
-  TAB = t;
-  document.querySelectorAll(".tab").forEach(b=>
-    b.classList.toggle("on", b.dataset.tab===t));
+function setView(v){
+  VIEW = v;
+  document.querySelectorAll(".nav").forEach(b=>
+    b.classList.toggle("on", b.dataset.view===v));
+  document.querySelectorAll(".view").forEach(s=>
+    s.classList.toggle("on", s.id==="v-"+v));
   $("#comparebar").style.display =
-    (t==="compare"||t==="view4")?"inline-block":"none";
+    (v==="evolution"||v==="view4")?"inline-block":"none";
   refresh();
 }
-document.querySelectorAll(".tab").forEach(b=>
-  b.onclick = ()=>setTab(b.dataset.tab));
+document.querySelectorAll(".nav").forEach(b=>
+  b.onclick = ()=>setView(b.dataset.view));
+/* 下拉框改值即重载（只重绘，不重算） */
+$("#runs").onchange  = ()=>refresh();
+$("#runA").onchange  = ()=>refresh();
+$("#runB").onchange  = ()=>refresh();
+
+function toggleCompare(){
+  const blk = $("#cmp-block");
+  const collapsed = blk.classList.toggle("collapsed");
+  $("#cmpToggle").textContent = collapsed ? "展开" : "收起";
+}
 
 async function refresh(){
-  if(TAB==="overview") return loadOverview();
-  if(TAB==="evolution") return loadEvolution();
-  if(TAB==="evidence") return loadEvidence();
-  if(TAB==="view4") return loadView4();
-  return loadCompare();
+  if(VIEW==="overview") return loadOverview();
+  if(VIEW==="evolution"){ await loadEvolution(); return loadCompare(); }
+  if(VIEW==="evidence") return loadEvidence();
+  return loadView4();
 }
 
 /* ================= 视图一 ================= */
 async function loadOverview(){
   const rid = $("#runs").value;
-  if(!rid){ $("#main").innerHTML = '<div class="err">没有可用的 run 存档</div>'; return; }
+  if(!rid){ $("#v-overview-body").innerHTML = '<div class="err">没有可用的 run 存档</div>'; return; }
   let d;
   try{
     const r = await fetch("/api/overview?run_id="+encodeURIComponent(rid));
     if(!r.ok){ const e = await r.json(); throw new Error(e.detail||r.statusText); }
     d = await r.json();
   }catch(err){
-    $("#main").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
+    $("#v-overview-body").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
     return;
   }
   history.replaceState(null,"","?tab=overview&run_id="+encodeURIComponent(rid));
-  $("#fp").innerHTML = fpHtml(d);
+  $("#fp-overview").innerHTML = fpHtml(d);
 
   const raw = d.raw, und = d.understood, ev = d.evidence, ce = und.current_environment||{};
   const att = und.attention||{}, tr = und.recent_trend||{}, pa = und.predicted_attention||{};
@@ -319,7 +502,7 @@ async function loadOverview(){
     `<div class="card"><div class="k">${esc(q.q)}</div>`+
     `<div class="v">${esc(q.a)}</div></div>`).join("");
 
-  $("#main").innerHTML = `
+  $("#v-overview-body").innerHTML = `
   <div class="cols">
   <div class="col">
   <div class="panel raw p-raw"><h2>【一】原始数值 —— 这次分析真正使用的当前环境</h2><div class="body">
@@ -365,11 +548,10 @@ async function loadOverview(){
 
 /* ================= 视图二 ================= */
 const METRICS = [
-  {key:"temperature", label:"温度", unit:"℃", color:"#e0796b"},
-  {key:"humidity",    label:"湿度", unit:"%",  color:"#7fd1a0"},
-  {key:"lux",         label:"光照", unit:"lux",color:"#e0b872"}
+  {key:"temperature", label:"温度", unit:"℃"},
+  {key:"humidity",    label:"湿度", unit:"%"},
+  {key:"lux",         label:"光照", unit:"lux"}
 ];
-const MK_COLORS = ["#d9a441","#9c8cf0","#4fb0c6","#e07fb0","#8fd06a"];
 
 function fmtV(v){ return String(Math.round(v*100)/100); }
 function svgText(x,y,txt,color,anchor,size,family){
@@ -395,6 +577,7 @@ function xLabel(p,i){
 /* 单 run：一个指标一个 panel，各自归一化 */
 function buildChart(points, markers, opt){
   opt = opt || {};
+  const pal = P();
   const W=800, PH=86, GAP=52, TOP=78, LEFT=72, RIGHT=20, BOT=60;
   const n = points.length;
   const plotW = W-LEFT-RIGHT;
@@ -402,10 +585,10 @@ function buildChart(points, markers, opt){
   const totalH = TOP + METRICS.length*(PH+GAP) - GAP + BOT;
   let s = `<svg class="chart" viewBox="0 0 ${W} ${totalH}" width="100%" `+
           `preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">`;
-  s += `<rect x="0" y="0" width="${W}" height="${totalH}" fill="#111719"/>`;
+  s += `<rect x="0" y="0" width="${W}" height="${totalH}" fill="${pal.bg}"/>`;
 
   (markers||[]).filter(m=>m.scope==="window").forEach((m,i)=>{
-    const c = MK_COLORS[i%MK_COLORS.length];
+    const c = pal.mk[i%pal.mk.length];
     s += `<rect x="${LEFT}" y="${TOP-24}" width="${plotW}" height="${totalH-TOP-BOT+24}" `+
          `fill="${c}" opacity="0.06"/>`;
     s += `<rect x="${LEFT}" y="${TOP-24}" width="${plotW}" height="${totalH-TOP-BOT+24}" `+
@@ -415,6 +598,7 @@ function buildChart(points, markers, opt){
   const scale = (opt && opt.scale) || null;
   const refLine = (opt && opt.refLine) || null;
   METRICS.forEach((m,k)=>{
+    const color = pal.m[k];
     const top = TOP + k*(PH+GAP);
     const vals = points.map(p=>Number(p[m.key]));
     let yMin, yMax;
@@ -431,47 +615,47 @@ function buildChart(points, markers, opt){
     const shared = !!(scale && scale[m.key]);
     s += svgText(LEFT, top-10,
       m.label+"（"+m.unit+"）"+(shared?"　·　两图共用同一刻度 "+fmtV(yMin)+" ~ "+fmtV(yMax):""),
-      m.color, "start", 12, "Microsoft YaHei,Consolas,monospace");
+      color, "start", 12, "Microsoft YaHei,Consolas,monospace");
     if(refLine && refLine[m.key]!==undefined && refLine[m.key]!==null){
       const ry = y(refLine[m.key]);
       s += `<line x1="${LEFT}" y1="${ry}" x2="${W-RIGHT}" y2="${ry}" `+
-           `stroke="#e0b872" stroke-dasharray="6 4" opacity="0.85"/>`;
+           `stroke="${pal.ref}" stroke-dasharray="6 4" opacity="0.85"/>`;
       s += svgText(W-RIGHT-2, ry-6, "两 run 末点 "+fmtV(refLine[m.key])+m.unit,
-                   "#e0b872", "end", 10, "Microsoft YaHei,Consolas,monospace");
+                   pal.ref, "end", 10, "Microsoft YaHei,Consolas,monospace");
     }
     for(let g=0; g<=3; g++){
       const val = yMin + (yMax-yMin)*g/3;
       const yy = y(val);
-      s += `<line x1="${LEFT}" y1="${yy}" x2="${W-RIGHT}" y2="${yy}" stroke="#2a3539"/>`;
-      s += svgText(LEFT-8, yy+4, fmtV(val), "#8b9a9f", "end", 11);
+      s += `<line x1="${LEFT}" y1="${yy}" x2="${W-RIGHT}" y2="${yy}" stroke="${pal.grid}"/>`;
+      s += svgText(LEFT-8, yy+4, fmtV(val), pal.axis, "end", 11);
     }
     const pts = vals.map((v,i)=>xs(i).toFixed(1)+","+y(v).toFixed(1)).join(" ");
-    s += `<polyline points="${pts}" fill="none" stroke="${m.color}" stroke-width="2"/>`;
+    s += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2"/>`;
     vals.forEach((v,i)=>{
-      s += `<circle cx="${xs(i)}" cy="${y(v)}" r="3.6" fill="${m.color}"/>`;
-      s += svgText(xs(i), y(v)-10, fmtV(v), m.color, "middle", 11);
+      s += `<circle cx="${xs(i)}" cy="${y(v)}" r="3.6" fill="${color}"/>`;
+      s += svgText(xs(i), y(v)-10, fmtV(v), color, "middle", 11);
     });
   });
 
   // X 轴（只有一行，避免两行数字叠在一起）
   const axisY = TOP + METRICS.length*(PH+GAP) - GAP + 28;
   points.forEach((p,i)=>{
-    s += svgText(xs(i), axisY, xLabel(p,i), "#8b9a9f", "middle", 12);
+    s += svgText(xs(i), axisY, xLabel(p,i), pal.axis, "middle", 12);
   });
   s += svgText(LEFT, axisY+24, "X 轴 = 窗口内相对位置（不是绝对时间）",
-               "#5f6f74", "start", 11, "Microsoft YaHei,Consolas,monospace");
+               pal.foot, "start", 11, "Microsoft YaHei,Consolas,monospace");
 
   // 时点标记（竖虚线 + 菱形 + 顶部引线标签）
   const pm = (markers||[]).filter(m=>m.scope==="point"&&m.point_index!==null);
   pm.forEach((m,i)=>{
-    const c = MK_COLORS[i%MK_COLORS.length];
+    const c = pal.mk[i%pal.mk.length];
     const x = xs(m.point_index);
     const row = i%2, ly = 16+row*13;
     s += `<line x1="${x}" y1="${ly+4}" x2="${x}" y2="${totalH-BOT+8}" stroke="${c}" `+
          `stroke-dasharray="3 3" opacity="0.6"/>`;
     const top0 = TOP;
     s += `<polygon points="${x},${top0-6} ${x+5},${top0+1} ${x},${top0+8} ${x-5},${top0+1}" `+
-         `fill="${c}" stroke="#111719"/>`;
+         `fill="${c}" stroke="${pal.poly}"/>`;
     s += `<line x1="${x}" y1="${ly+4}" x2="${x}" y2="${top0-4}" stroke="${c}"/>`;
     s += svgText(x, ly+8, mkShort(m.kind), c, "middle", 10,
                  "Microsoft YaHei,Consolas,monospace");
@@ -510,18 +694,18 @@ function markerCards(markers){
 
 async function loadEvolution(){
   const rid = $("#runs").value;
-  if(!rid){ $("#main").innerHTML = '<div class="err">没有可用的 run 存档</div>'; return; }
+  if(!rid){ $("#v-evolution-body").innerHTML = '<div class="err">没有可用的 run 存档</div>'; return; }
   let d;
   try{
     const r = await fetch("/api/evolution?run_id="+encodeURIComponent(rid));
     if(!r.ok){ const e = await r.json(); throw new Error(e.detail||r.statusText); }
     d = await r.json();
   }catch(err){
-    $("#main").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
+    $("#v-evolution-body").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
     return;
   }
   history.replaceState(null,"","?tab=evolution&run_id="+encodeURIComponent(rid));
-  $("#fp").innerHTML = fpHtml(d);
+  $("#fp-evolution").innerHTML = fpHtml(d);
 
   const pts = d.points||[], met = (d.process&&d.process.metrics)||{};
   const win = d.window||{};
@@ -557,7 +741,7 @@ async function loadEvolution(){
 
   const na = ((d.timeline||{}).not_available)||[];
 
-  $("#main").innerHTML = `
+  $("#v-evolution-body").innerHTML = `
   <div class="cols">
   <div class="col">
     <div class="panel"><h2>【一】过程 —— 逐点读数</h2><div class="body">
@@ -571,7 +755,7 @@ async function loadEvolution(){
       <div class="meta" style="margin-bottom:6px">
         <span>曲线数据源 <b>${esc(d.curve_source)}</b></span>
         <span>存档窗口 <b>${esc(win.start)} → ${esc(win.end)}</b></span>
-        <span>窗口核对 <b>${align.checked ? (align.ok?"一致 ✔":"不一致 ✘") : "—"}</b></span>
+        <span>窗口核对 <b>${esc(align.checked ? (align.ok?"一致 ✔":"不一致 ✘") : "—")}</b></span>
       </div>
       <div class="chartwrap">${buildChart(pts,(d.timeline||{}).markers)}</div>
       <div class="dim">只读存档：曲线画的就是那次分析真正用的那段 history（6 个采样点连线，
@@ -617,10 +801,10 @@ ${esc(d.external_conditions.basis)}</pre>
   </div>`;
 }
 
-/* ================= 视图二 · 对比 ================= */
+/* ================= 视图二 · 内置 S1↔S2 对比面板 ================= */
 async function loadCompare(){
   const a = $("#runA").value, b = $("#runB").value;
-  if(!a||!b){ $("#main").innerHTML='<div class="err">请选择两个 run</div>'; return; }
+  if(!a||!b){ $("#v-compare-body").innerHTML='<div class="err">请选择两个 run</div>'; return; }
   let d;
   try{
     const r = await fetch("/api/evolution/compare?a="+encodeURIComponent(a)+
@@ -628,12 +812,13 @@ async function loadCompare(){
     if(!r.ok){ const e = await r.json(); throw new Error(e.detail||r.statusText); }
     d = await r.json();
   }catch(err){
-    $("#main").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
+    $("#v-compare-body").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
     return;
   }
-  history.replaceState(null,"","?tab=compare&a="+encodeURIComponent(a)+"&b="+encodeURIComponent(b));
+  history.replaceState(null,"","?tab=evolution&run_id="+encodeURIComponent($("#runs").value)+
+                        "&a="+encodeURIComponent(a)+"&b="+encodeURIComponent(b));
   const A=d.a, B=d.b;
-  $("#fp").innerHTML = "本次对比 = <b>"+esc(d.run_a)+"</b> vs <b>"+esc(d.run_b)+"</b>"+
+  $("#fp-compare").innerHTML = "本次对比 = <b>"+esc(d.run_a)+"</b> vs <b>"+esc(d.run_b)+"</b>"+
     "<div class='meta'>"+
     "<span>A <b>"+esc(d.run_a)+"</b> · "+esc(A.scenario)+" · "+esc(A.analysis_time)+"</span>"+
     "<span>A model <b>"+esc(A.fingerprint.model)+"</b></span>"+
@@ -675,10 +860,10 @@ async function loadCompare(){
       `${esc(String(B.window.start).slice(0,10))}）—— 下面的 X 轴一律用<b>窗口内相对位置</b>，`+
       `不是绝对时间</div>`;
 
-  $("#main").innerHTML = `
+  $("#v-compare-body").innerHTML = `
   <div class="cols">
   <div class="col">
-    <div class="panel"><h2>【一】两个 run 的身份 —— 绝对时间不在同一天</h2><div class="body">
+    <div class="panel"><h2>【1】两个 run 的身份 —— 绝对时间不在同一天</h2><div class="body">
       ${warnSame}
       <div style="margin-top:10px">
         ${dataTable(["run","scenario","analysis_time","窗口起","窗口止","model"],
@@ -688,7 +873,7 @@ async function loadCompare(){
       </div>
     </div></div>
 
-    <div class="panel"><h2>【二】曲线（两个 run 共用同一把 Y 轴刻度 + 同一条 X 轴）</h2><div class="body">
+    <div class="panel"><h2>【2】曲线（两个 run 共用同一把 Y 轴刻度 + 同一条 X 轴）</h2><div class="body">
       <div class="meta" style="margin-bottom:8px">
         <span>A <b>${esc(d.run_a)}</b>（${esc(A.scenario)}）绝对窗口
           <b>${esc(A.window.start)} → ${esc(A.window.end)}</b></span>
@@ -700,29 +885,29 @@ async function loadCompare(){
         <div class="chartwrap">${buildChart(B.points,(B.timeline||{}).markers,SH)}</div>
       </div>
       <div class="dim">「稳定到现在」vs「持续变化到现在」直接看图就能看出来：
-        上面的 ${esc(d.run_a)}（S1）在 ${esc(A.window.start).slice(11,16)} 前基本走平，
+        上面的 ${esc(d.run_a)}（S1）在 ${esc(String(A.window.start).slice(11,16))} 前基本走平，
         下面的 ${esc(d.run_b)}（S2）一路上行 —— <b>两条线用同一把尺子</b>，
         而且都终止在同一条水平虚线（末点温度相同）上，所以"当前值一样、过程不同"一眼可见。</div>
     </div></div>
 
-    <div class="panel"><h2>【三】过程量对比表</h2><div class="body">
+    <div class="panel"><h2>【3】过程量对比表</h2><div class="body">
       <table class="data"><tr><th>过程量</th>
         <th style="text-align:right">${esc(d.run_a)}(${esc(A.scenario)})</th>
         <th style="text-align:right">${esc(d.run_b)}(${esc(B.scenario)})</th>
         <th style="text-align:right">差异</th></tr>${rowsHtml}</table>
     </div></div>
 
-    <div class="panel"><h2>【四】机器判定 C1~C5（相对比较，不拍绝对阈值）</h2><div class="body">
+    <div class="panel"><h2>【4】机器判定 C1~C5（相对比较，不拍绝对阈值）</h2><div class="body">
       <div class="mk">${asserts}</div>
       <div class="warn" style="margin-top:8px">反向检查：${esc(d.reverse_check)}</div>
       <div class="dim">★ C1~C5 全部只从 history 序列算，不读 structured_judgement</div>
     </div></div>
 
-    <div class="panel"><h2>【五】对照检查（同段窗口 → 过程量必须完全相同）</h2><div class="body">
+    <div class="panel"><h2>【5】对照检查（同段窗口 → 过程量必须完全相同）</h2><div class="body">
       <div class="mk">${ctrl(d.control_a,d.run_a)}${ctrl(d.control_b,d.run_b)}</div>
     </div></div>
 
-    <div class="panel"><h2>【六】为什么这两个 run 可比（窗口选择依据）</h2><div class="body">
+    <div class="panel"><h2>【6】为什么这两个 run 可比（窗口选择依据）</h2><div class="body">
       ${(d.why_comparable||[]).map(w=>
         `<div style="margin-bottom:8px"><b>${esc(w.run_id)}</b><pre>${esc(w.reason)}</pre></div>`
       ).join("")}
@@ -769,18 +954,18 @@ function evBlock(b){
 }
 async function loadEvidence(){
   const rid = $("#runs").value;
-  if(!rid){ $("#main").innerHTML = '<div class="err">没有可用的 run 存档</div>'; return; }
+  if(!rid){ $("#v-evidence-body").innerHTML = '<div class="err">没有可用的 run 存档</div>'; return; }
   let d;
   try{
     const r = await fetch("/api/evidence?run_id="+encodeURIComponent(rid));
     if(!r.ok){ const e = await r.json(); throw new Error(e.detail||r.statusText); }
     d = await r.json();
   }catch(err){
-    $("#main").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
+    $("#v-evidence-body").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
     return;
   }
   history.replaceState(null,"","?tab=evidence&run_id="+encodeURIComponent(rid));
-  $("#fp").innerHTML = fpHtml(d);
+  $("#fp-evidence").innerHTML = fpHtml(d);
 
   const tc = d.tool_calls||{}, dv = d.divergence||{}, ca = d.combined_attention||{};
   const reasons = tc.not_adopted_reasons||{};
@@ -812,7 +997,7 @@ async function loadEvidence(){
           (m.error||"（存档未记录 error 字段）");}).join("\n"))+"</pre>";
   }
 
-  $("#main").innerHTML =
+  $("#v-evidence-body").innerHTML =
   "<div class='cols'>"+
   "<div class='col'>"+
     "<div class='panel'><h2>【0】证据可用度（★ 按 status==ok 统计）</h2><div class='body'>"+
@@ -897,7 +1082,7 @@ function layerHtml(title, layer, ra, rb){
 }
 async function loadView4(){
   const a = $("#runA").value, b = $("#runB").value;
-  if(!a||!b){ $("#main").innerHTML='<div class="err">请选择两个 run</div>'; return; }
+  if(!a||!b){ $("#v-view4-body").innerHTML='<div class="err">请选择两个 run</div>'; return; }
   let d;
   try{
     const r = await fetch("/api/compare?a="+encodeURIComponent(a)+
@@ -905,13 +1090,13 @@ async function loadView4(){
     if(!r.ok){ const e = await r.json(); throw new Error(e.detail||r.statusText); }
     d = await r.json();
   }catch(err){
-    $("#main").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
+    $("#v-view4-body").innerHTML = '<div class="err">读取失败：'+esc(err.message)+'</div>';
     return;
   }
   history.replaceState(null,"","?tab=view4&a="+encodeURIComponent(a)+"&b="+encodeURIComponent(b));
 
   const A=d.a, B=d.b, at=d.attribution;
-  $("#fp").innerHTML =
+  $("#fp-view4").innerHTML =
     "本次对比 = <b>"+esc(d.run_a)+"</b>（A）　vs　<b>"+esc(d.run_b)+"</b>（B）"+
     "<div class='meta'>"+
     "<span>A <b>"+esc(d.run_a)+"</b> · "+esc(A.scenario)+" · "+esc(A.analysis_time)+"</span>"+
@@ -953,7 +1138,7 @@ async function loadView4(){
   const notes = (at.notes&&at.notes.length)
     ? "<ul>"+at.notes.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>" : "";
 
-  $("#main").innerHTML =
+  $("#v-view4-body").innerHTML =
   "<div class='panel' style='margin-bottom:13px'>"+
   "<h2>【一】五项并排 —— A / B 各自一份（一次只比两个 run）</h2><div class='body'>"+
     "<div class='diff2'>"+
@@ -993,15 +1178,27 @@ async function loadView4(){
   "</div></div>";
 }
 
+/* ================= 启动 ================= */
+let savedTheme = "dark";
+try{ savedTheme = localStorage.getItem("gm_theme") || "dark"; }catch(e){}
+const urlTheme = new URLSearchParams(location.search).get("theme");
+if(urlTheme==="light"||urlTheme==="dark") savedTheme = urlTheme;
+if(savedTheme!=="light") savedTheme="dark";
+applyTheme(savedTheme, false);
+$("#themeBtn").onclick = toggleTheme;
+
 loadRuns().then(()=>{
   const q = new URLSearchParams(location.search);
-  const t = q.get("tab");
-  if(t==="evolution"||t==="compare"||t==="evidence"||t==="view4"){
-    if(q.get("a")) $("#runA").value=q.get("a");
-    if(q.get("b")) $("#runB").value=q.get("b");
-    setTab(t);
-  }else{
-    refresh();
+  if(q.get("a")) $("#runA").value=q.get("a");
+  if(q.get("b")) $("#runB").value=q.get("b");
+  let t = q.get("tab");
+  if(t==="compare") t = "evolution";      // 旧链接：对比面板现在内置在视图二
+  if(t==="evolution"||t==="evidence"||t==="view4") setView(t);
+  else setView("overview");
+  /* hash 深链：#cmp-block 直接滚到视图二内置的对比面板 */
+  if(location.hash){
+    const el = document.querySelector(location.hash);
+    if(el) setTimeout(()=>el.scrollIntoView({block:"start"}), 200);
   }
 });
 </script>
