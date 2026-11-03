@@ -205,6 +205,69 @@ def test_thresholds_unchanged():
 
 
 # --------------------------------------------------------------------------
+# 六之二、稳定性阈值只有一个来源（B07/stability.py）
+# --------------------------------------------------------------------------
+
+def test_judgement_thresholds_come_from_stability():
+    """judgement.py 不得自己再抄一份阈值 —— 必须与 stability 同源。
+
+    防的是"两边各写一个 2.0，改了一处忘了另一处"这类分叉。
+    """
+    from B07 import judgement
+
+    # 别名 = "STABILITY_" + stability 里的常量名（避免手抄错名字）
+    pairs = [
+        ("TEMP_RANGE_MAX", "TEMP_RANGE_MAX"),
+        ("HUMI_TOTAL_MAX", "HUMI_TOTAL_MAX"),
+        ("HUMI_STEP_MAX", "HUMI_STEP_MAX"),
+        ("LUX_JUMP_MAX", "LUX_JUMP_MAX"),
+        ("NO_MONOTONE", "REQUIRE_NO_MONOTONE"),
+    ]
+    for alias_tail, real_name in pairs:
+        alias = "STABILITY_" + alias_tail
+        assert getattr(judgement, alias) is getattr(stability, real_name), (
+            f"judgement.{alias} 与 stability.{real_name} 不同源")
+
+
+def test_judgement_thresholds_used_matches_stability():
+    """recent_trend.thresholds_used 里复述的数值必须等于 stability 的当前值。"""
+    from B07.judgement import _recent_trend
+
+    bundle = {
+        "history": [
+            {"timestamp": "2026-10-21T16:00:00", "temperature": 25.0,
+             "humidity": 60.0, "lux": 5000.0},
+        ],
+        "model_output": {},
+        "current_state": {},
+        "latest_in_db": {},
+    }
+    used = _recent_trend(bundle)["thresholds_used"]
+    assert used["temp_range_max"] == stability.TEMP_RANGE_MAX
+    assert used["humi_total_max"] == stability.HUMI_TOTAL_MAX
+    assert used["humi_step_max"] == stability.HUMI_STEP_MAX
+    assert used["lux_jump_max"] == stability.LUX_JUMP_MAX
+    assert used["require_no_monotone"] == stability.REQUIRE_NO_MONOTONE
+
+
+def test_judgement_has_no_literal_threshold_copy():
+    """judgement.py 源码里不允许出现字面量阈值（必须来自 stability）。
+
+    源码级检查：防止有人"图省事"又写一份 2.0 / 3.0 / 1.5 / 15000。
+    """
+    import re
+
+    from B07 import judgement
+
+    src = Path(judgement.__file__).read_text(encoding="utf-8")
+    # 去掉注释与文档字符串后再找（注释里提到数字是允许的）
+    code = re.sub(r"#.*", "", src)
+    for literal in ("2.0", "3.0", "1.5", "15000"):
+        assert literal not in code, (
+            f"judgement.py 里出现了字面量 {literal} —— 阈值必须来自 stability.py")
+
+
+# --------------------------------------------------------------------------
 # 七、S1 / S2 两套流程跑出来的存档必须可对照
 # --------------------------------------------------------------------------
 

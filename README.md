@@ -1624,10 +1624,14 @@ S1–S5 是**把系统做出来**；创新点 1/2/3 是**证明它做到了什�
 ./venv/Scripts/python.exe -m B07.innovation2 --run run_082 --claim "综上所述，……" --show
 ```
 
-> ⚠ 已知问题（**本轮只做文档，未改代码**）：`B07/verify_innovation2.py` 目前解析不到记录 ——
-> 它按 `runs` / `records` / `claims` 三个键找记录，而 `innovation2_trace.json` 的实际顶层键是
-> `traces` / `system_scan`，所以脚本会打印"所有候选文件里都没解析出记录"。
-> 该脚本的输出 `B07/artifacts/verify_innovation2.txt` 是可再生的调试日志，已在 `.gitignore` 里排除。
+> ✅ 已修复（原已知问题）：`B07/verify_innovation2.py` 曾按 `runs` / `records` / `claims`
+> 三个键找记录，而 `innovation2_trace.json` 的实际顶层键是 `traces` / `system_scan`，
+> 导致打印"所有候选文件里都没解析出记录"。现在脚本直接读 `traces`（同时兼容旧的
+> `runs` / `records` / `claims` 结构与纯列表），对 **run_082 / run_084 / run_057 逐个**
+> 重算 V1、V2、V2b、V3、V4、V5、V6，并与产物自报的 checks 并列对照（自报值不作为通过依据）。
+> 两个 trace 文件内容重叠，脚本自动选字段更全的 `innovation2_trace_detail.json`，不重复统计。
+> 脚本**只读** `B07/artifacts/` 下的产物，默认只打印；要留文件用 `-o 路径` 指定，
+> 不再写 `B07/artifacts/verify_innovation2.txt`。
 
 ### 创新点 3 —— 让系统学会"有些话现在不能说"
 
@@ -1687,7 +1691,7 @@ B06 窗口、知识 query、固定问题（`d3cc394bfcbe`）、system prompt（`
 # ── 创新点 2 ────────────────────────────────────────────
 ./venv/Scripts/python.exe -m B07.innovation2                # 溯源 + 报告 + 终端 12 节走查（0 次 LLM）
 ./venv/Scripts/python.exe -m B07.innovation2 --report-only  # 只重建报告
-./venv/Scripts/python.exe B07/verify_innovation2.py         # 独立复核（只读；见上面的已知问题）
+./venv/Scripts/python.exe B07/verify_innovation2.py         # 独立复核（只读，逐 run 重算 V1–V6）
 
 # ── 创新点 3 ────────────────────────────────────────────
 ./venv/Scripts/python.exe -m B07.innovation3                # 1 次 LLM + C1–C5 + 12 节走查

@@ -46,12 +46,16 @@ LIMITATION_KEYS = [
     "no_weather_no_kb",
 ]
 
-# 稳定性判据阈值（与 B07/stability.py 一致，用于复述具体数值）
-STABILITY_TEMP_RANGE_MAX = 2.0
-STABILITY_HUMI_TOTAL_MAX = 3.0
-STABILITY_HUMI_STEP_MAX = 1.5
-STABILITY_LUX_JUMP_MAX = 15000
-STABILITY_NO_MONOTONE = True
+# 稳定性判据阈值：**唯一来源是 B07/stability.py**。
+# 本模块只负责把具体数值复述进 thresholds_used，不自己再定义一份 ——
+# 下面这些名字是**别名**，值直接取自 stability，改阈值只改 stability.py 一处。
+from B07 import stability as _stability
+
+STABILITY_TEMP_RANGE_MAX = _stability.TEMP_RANGE_MAX
+STABILITY_HUMI_TOTAL_MAX = _stability.HUMI_TOTAL_MAX
+STABILITY_HUMI_STEP_MAX = _stability.HUMI_STEP_MAX
+STABILITY_LUX_JUMP_MAX = _stability.LUX_JUMP_MAX
+STABILITY_NO_MONOTONE = _stability.REQUIRE_NO_MONOTONE
 
 
 # --------------------------------------------------------------------------
