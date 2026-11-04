@@ -805,6 +805,23 @@ B07 的 S1 阶段做一件事：**用「当前状态 + 最近历史 + 已保存�
 > `--question` 必须是 S1-4 定的固定问题，改写会被直接拒绝（退出码 2）：LLM 解释环节用的就是这个问题，换问法会让存档里的 `question` 与实际提问不一致，事后回溯失真。
 > `python -m B07`（不带子命令）等价于 `python -m B07.s1`。
 
+**CI（GitHub Actions）**
+
+`.github/workflows/b07-tests.yml` 在 push 到 `main` 和手动触发时跑 `B07/tests` 全量不变量测试，Python 3.12 + `ubuntu-24.04`。
+
+- 依赖按 `requirements.txt` 安装；`B02/greenmate.db` 与 `B06/artifacts/` 不在版本库里，由 `.github/scripts/prepare_fixtures.py` 用固定 seed（`start_time=2026-10-15 02:00`）确定性重建。
+- 仓库根目录的 `.gitattributes` 把 `B07/runs/**/*.json` 固定为 **CRLF 检出**：场景文件里的 `source_run_sha256` 是开发期 Windows 工作区 CRLF 字节的哈希，行尾策略写进仓库，证据链才能在任何平台上复现。
+- CI 里固定跳过 2 条测试（`--deselect`），它们依赖作者本机状态，**不是代码回归**：
+
+  | 测试 | 为什么跳过 |
+  | --- | --- |
+  | `test_model_fingerprints_match_real_files` | 基线记录的模型清单含 `saved_at`（保存时刻），CI 重建模型时该时间必然不同 |
+  | `test_dirty_flag_is_real` | 基线是在作者工作区**脏**（`dirty=True`）时冻结的，CI 干净检出为 `False`，两者不可能相等 |
+
+  冻结的 sha256 / dirty 记录本身不做任何修改；跳过说明也会打印在 CI 日志和 Run Summary 里。
+
+预期：`404 passed, 2 deselected`。
+
 **预期输出**
 
 ```
