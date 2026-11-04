@@ -645,6 +645,33 @@ def test_knowledge_direction_is_supporting_even_without_relevant_hit():
     }) in ("supporting", "undetermined")
 
 
+def test_knowledge_failure_summary_says_unavailable_not_zero_hits():
+    """检索失败 ≠ 命中 0 条：摘要必须写「知识证据不可用」，不能写成零命中。"""
+    from B07.evidence_ledger import summarize
+
+    for status in ("error", "unavailable"):
+        text = summarize({
+            "status": status, "source_type": "B04",
+            "result": None, "error": "模拟：B04 索引加载失败",
+        })
+        assert "知识证据不可用" in text
+        assert f"status={status}" in text
+        assert "命中 0 条" not in text
+
+
+def test_knowledge_failure_undetermined_reason_says_unavailable():
+    """失败时不能只说「证据不足以判定」，必须点明证据源不可用。"""
+    from B07.evidence_ledger import undetermined_reason
+
+    text = undetermined_reason({
+        "status": "unavailable", "source_type": "B04",
+        "result": None, "error": "模拟：知识库暂时不可用",
+    })
+    assert "知识证据当前不可用" in text
+    assert "status=unavailable" in text
+    assert "不改变关注判断" in text
+
+
 # --------------------------------------------------------------------------
 # 12. A 组叙述由程序从台账生成，且不含来源标识
 # --------------------------------------------------------------------------

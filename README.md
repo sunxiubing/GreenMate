@@ -2730,14 +2730,17 @@ python -m B07.b08 report
 
 ```bash
 # 证明二：制造一次真实失败（会产生新 run_id，消耗 1 次 LLM 额度）
-python -m B07.replay S5 --degraded --offline
+python -m B07.replay S5 --degraded --offline          # 天气不可用（B03）
+B07_KNOWLEDGE_UNAVAILABLE=1 python -m B07.replay S5 --offline   # 知识检索不可用（B04）
 
 # 证明一：四组对照 + 三条因果证明（纯函数重算，零 LLM）
 python -m B07.b08_trace --contrast
 python -m B07.b08_trace --contrast --doc-pairs   # 换用文档靶子 run 对
 
-# 证明二判定：F-1~F-4 + 反向对照
+# 证明二判定：F-1~F-4 + 反向对照（--source 可显式指定 B03/B04，
+# 不指定则从失败 run 自动识别被降级的那条证据）
 python -m B07.b08_trace --failure run_126 run_124
+python -m B07.b08_trace --failure run_130 run_124
 
 # 证明三：12 环节运行追踪
 python -m B07.b08_trace run_082
@@ -2769,8 +2772,12 @@ python -m B07.b08_trace run_082 --json
   **不等于**证明模型内部机制如此。
 - **L3** 因果证明重算时**沿用原存档的 `model_output`**（B06 预测不在重算范围内）。
 - **L4** 因果证明的重算**不落盘**，不产生 run，不进索引。
-- **L5** 证明二只制造了"天气不可用"一种失败；参数错误、超时、空结果、
-  知识检索失败尚未覆盖。
+- **L5** 证明二目前已覆盖**两种**失败，且都有实物 run 与同一套
+  F-1~F-4 + 反向对照判定：
+  · **天气不可用**（`run_126`，`B07_WEATHER_UNAVAILABLE=1`）；
+  · **知识检索不可用**（`run_130`，`B07_KNOWLEDGE_UNAVAILABLE=1`；
+    判定命令 `python -m B07.b08_trace --failure run_130 run_124`）。
+  **仍未覆盖**：参数错误、调用超时、检索成功但空结果。
 - **L6** S4 与 S5 的实质区别是**证据状态**，不是 scenario 字符串 ——
   仓库里 `scenario="S5"` 实际混着"分歧"与"缺失"两种状态。
 - **L7** 本遍的对照与追踪是**离线复算 + 存档读取**，不重新消耗 LLM；

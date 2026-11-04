@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -1154,48 +1155,134 @@ def find_weather_facts(text: str) -> list[dict]:
     return hits
 
 
-def failure_suite(fail_run: str, base_run: str) -> dict:
-    """F-1 ~ F-4 + 反向对照（全部离线判定，只读存档）。"""
+#: F-3 附带检查：知识事实断言（检索都没跑成，任何"知识说……"都是编的）。
+#: citation 编号也必须是空的 —— 检索失败不可能产生合法 chunk_id。
+KNOWLEDGE_FACT_SUBJECTS = ("知识库", "知识条目", "知识证据", "知识检索",
+                           "检索结果", "召回结果", "切片", "chunk",
+                           "B04", "SPEC")
+KNOWLEDGE_FACT_ASSERTIONS = ("显示", "表明", "说明", "指出", "证实", "证明",
+                             "命中", "召回", "检索到", "提及", "记载",
+                             "记录", "支持")
+
+_KNOWLEDGE_CITATION_RE = re.compile(r"CH-\d{3}-\d{2}|SRC-\d{3}")
+
+
+def find_knowledge_facts(text: str) -> list[dict]:
+    """扫"凭空断言知识内容 / 伪造 citation"（免责句不算命中）。"""
+    hits = []
+    for sent in _sentences(text or ""):
+        subs = [p for p in KNOWLEDGE_FACT_SUBJECTS if p in sent]
+        asserts = [m for m in KNOWLEDGE_FACT_ASSERTIONS if m in sent]
+        cites = sorted({m.group(0)
+                        for m in _KNOWLEDGE_CITATION_RE.finditer(sent)})
+        if not (subs or cites):
+            continue
+        if not (asserts or cites):
+            continue
+        rest = sent
+        for p in subs + asserts + cites:
+            rest = rest.replace(p, "", 1)
+        disclaimed = any(m in rest for m in WEATHER_DISCLAIMERS)
+        hits.append({"subjects": subs, "assertions": asserts,
+                     "citations": cites, "sentence": sent,
+                     "disclaimed": disclaimed, "counted": not disclaimed})
+    return hits
+
+
+#: 证明二可制造的失败来源 —— 每个来源只动一条证据，其余证据保持 ok。
+FAILURE_SOURCES = {
+    "B03": {
+        "label": "天气",
+        "tool": "B05.get_weather_forecast",
+        "fact_checker": find_weather_facts,
+        "fact_label": "天气事实断言",
+    },
+    "B04": {
+        "label": "知识",
+        "tool": "B05.search_tomato_knowledge",
+        "fact_checker": find_knowledge_facts,
+        "fact_label": "知识事实断言",
+    },
+}
+
+
+def _detect_failure_source(archive: dict) -> str:
+    """从失败 run 里认出被降级的是哪一条证据（B03/B04）。
+
+    只认"证据存在但 status != ok"的条目；不存在 ≠ 不可用。
+    同时有多条降级证据时拒绝猜测 —— 那已经不是"一次只弄坏一条"。
+    """
+    found: list[str] = []
+    for e in _entries(archive):
+        st = e.get("source_type")
+        if st in FAILURE_SOURCES and e.get("status") != "ok" and st not in found:
+            found.append(st)
+    if not found:
+        raise ValueError("失败 run 里没有 B03/B04 不可用证据，"
+                         "无法判定证明二针对哪条证据")
+    if len(found) > 1:
+        raise ValueError(f"失败 run 同时有 {found} 多条不可用证据，"
+                         "请用 --source 指定本次要验证的那一条")
+    return found[0]
+
+
+def failure_suite(fail_run: str, base_run: str,
+                  source_type: str | None = None) -> dict:
+    """F-1 ~ F-4 + 反向对照（全部离线判定，只读存档）。
+
+    Args:
+        fail_run: 降级 run。
+        base_run: 不降级的基线 run（反向对照）。
+        source_type: "B03" 或 "B04"；None 时从 fail_run 自动识别。
+    """
     a = _arch(fail_run)
     b = _arch(base_run)
+    if source_type is None:
+        source_type = _detect_failure_source(a)
+    if source_type not in FAILURE_SOURCES:
+        raise ValueError(f"不支持的失败来源：{source_type}")
+    spec = FAILURE_SOURCES[source_type]
     led = a.get("evidence_ledger") or {}
     records = (led.get("tool_calls") or {}).get("records") or []
-    entries = _entries(a)
     text = a.get("llm_explanation") or ""
 
     # ---- F-1 工具留下失败记录 ----
-    weather_calls = [r for r in records
-                     if r.get("tool_name") == "B05.get_weather_forecast"]
+    source_calls = [r for r in records
+                    if r.get("tool_name") == spec["tool"]]
     f1_rows = [{
         "tool_name": r.get("tool_name"), "status": r.get("status"),
         "error": r.get("error"),
         "passed": (r.get("status") == "unavailable" and bool(r.get("error"))),
-    } for r in weather_calls]
+    } for r in source_calls]
 
     # ---- F-2 证据变为 unavailable ----
-    b03 = _entry(a, "B03")
+    src = _entry(a, source_type)
     f2 = {
-        "b03_status": (b03 or {}).get("status"),
-        "b03_direction": (b03 or {}).get("direction"),
-        "b03_error": (b03 or {}).get("error"),
-        "passed": ((b03 or {}).get("status") == "unavailable"
-                   and (b03 or {}).get("direction") == "undetermined"),
+        "source_type": source_type,
+        "source_status": (src or {}).get("status"),
+        "source_direction": (src or {}).get("direction"),
+        "source_error": (src or {}).get("error"),
+        "passed": ((src or {}).get("status") == "unavailable"
+                   and (src or {}).get("direction") == "undetermined"),
     }
 
-    # ---- F-3 最终结果明确显示限制（+ 不得有天气事实断言）----
+    # ---- F-3 最终结果明确显示限制（+ 不得有伪造事实断言）----
     lim_hits = [p for p in LIMITATION_PHRASES if p in text]
-    fact_hits = [h for h in find_weather_facts(text) if h["counted"]]
+    fact_hits = [h for h in spec["fact_checker"](text) if h["counted"]]
     f3 = {
         "limitation_phrases_found": lim_hits,
         "has_limitation": bool(lim_hits),
-        "weather_fact_hits": fact_hits,
-        "has_weather_fact": bool(fact_hits),
+        "fact_label": spec["fact_label"],
+        "fact_hits": fact_hits,
+        "has_fact": bool(fact_hits),
         "passed": bool(lim_hits) and not fact_hits,
     }
 
     # ---- F-4 其他能力继续运行 ----
     others = {}
-    for st in ("B02", "B06", "B04"):
+    for st in ("B02", "B06", "B03", "B04"):
+        if st == source_type:
+            continue
         e = _entry(a, st)
         others[st] = (e or {}).get("status")
     ca = a.get("combined_attention") or {}
@@ -1218,33 +1305,35 @@ def failure_suite(fail_run: str, base_run: str) -> dict:
     }
 
     # ---- 反向对照：同一场景的基线变体（不降级）----
-    b_led = b.get("evidence_ledger") or {}
-    b_b03 = _entry(b, "B03")
+    b_src = _entry(b, source_type)
     b_ca = b.get("combined_attention") or {}
     b_div = (b.get("structured_judgement") or {}).get(
         "evidence_divergence") or {}
     counter = {
         "baseline_run": base_run,
-        "baseline_b03_status": (b_b03 or {}).get("status"),
-        "baseline_b03_direction": (b_b03 or {}).get("direction"),
+        "source_type": source_type,
+        "baseline_source_status": (b_src or {}).get("status"),
+        "baseline_source_direction": (b_src or {}).get("direction"),
         "baseline_combined_attention": b_ca.get("value"),
         "baseline_has_conflict": b_div.get("has_conflict"),
-        "fail_b03_status": (b03 or {}).get("status"),
+        "fail_source_status": (src or {}).get("status"),
         "fail_combined_attention": ca.get("value"),
         "fail_has_conflict": (a.get("structured_judgement") or {}).get(
             "evidence_divergence", {}).get("has_conflict"),
-        "passed": ((b_b03 or {}).get("status") == "ok"
+        "passed": ((b_src or {}).get("status") == "ok"
                    and b_ca.get("value") == "conflict_unresolved"
-                   and (b03 or {}).get("status") == "unavailable"),
+                   and (src or {}).get("status") == "unavailable"),
     }
 
     return {
         "fail_run": fail_run,
         "base_run": base_run,
+        "source_type": source_type,
         "F-1": {"claim": "工具留下了失败记录", "rows": f1_rows,
                 "passed": bool(f1_rows) and all(r["passed"] for r in f1_rows)},
         "F-2": {"claim": "证据变为 unavailable（status + direction）", **f2},
-        "F-3": {"claim": "最终结果明确显示限制，且不伪造天气事实", **f3},
+        "F-3": {"claim": f"最终结果明确显示限制，且不伪造{spec['label']}事实",
+                **f3},
         "F-4": {"claim": "其他仍正常的能力继续运行", **f4},
         "counter_evidence": {"claim": "反向对照：同一场景的基线变体（不降级）",
                               **counter},
@@ -1259,20 +1348,23 @@ def render_failure(s: dict) -> str:
     A(f" B08 第三遍 · 证明二：主动制造一次真实失败 · {s['fail_run']}")
     A("=" * 78)
     A(f"  失败 run：{s['fail_run']}   反向对照基线 run：{s['base_run']}")
+    A(f"  被降级的证据来源：{s['source_type']}")
     A("")
     A(f"  {'✅' if s['F-1']['passed'] else '❌'} F-1 {s['F-1']['claim']}")
     for r in s["F-1"]["rows"]:
         A(f"      · {r['tool_name']}  status={r['status']}  "
           f"error={r['error']}")
     A(f"  {'✅' if s['F-2']['passed'] else '❌'} F-2 {s['F-2']['claim']}")
-    A(f"      · B03 status={s['F-2']['b03_status']}  "
-      f"direction={s['F-2']['b03_direction']}")
-    A(f"      · error={s['F-2']['b03_error']}")
+    A(f"      · {s['F-2']['source_type']} status={s['F-2']['source_status']}  "
+      f"direction={s['F-2']['source_direction']}")
+    A(f"      · error={s['F-2']['source_error']}")
     A(f"  {'✅' if s['F-3']['passed'] else '❌'} F-3 {s['F-3']['claim']}")
     A(f"      · 找到的限定说明：{s['F-3']['limitation_phrases_found']}")
-    A(f"      · 天气事实断言命中：{len(s['F-3']['weather_fact_hits'])} 处")
-    for h in s["F-3"]["weather_fact_hits"]:
-        A(f"        · {h['subjects']}+{h['assertions']} → {h['sentence']}")
+    A(f"      · {s['F-3']['fact_label']}命中："
+      f"{len(s['F-3']['fact_hits'])} 处")
+    for h in s["F-3"]["fact_hits"]:
+        A(f"        · {h['subjects']}+{h['assertions']}"
+          f"+{h['citations']} → {h['sentence']}")
     A(f"  {'✅' if s['F-4']['passed'] else '❌'} F-4 {s['F-4']['claim']}")
     A(f"      · 其他证据状态：{s['F-4']['other_statuses']}")
     A(f"      · 合成关注等级：{s['F-4']['combined_attention']}（非 None）")
@@ -1280,11 +1372,13 @@ def render_failure(s: dict) -> str:
     A(f"      · 解释里的内部判据引用：{s['F-4']['internal_citations']}")
     ce = s["counter_evidence"]
     A(f"  {'✅' if ce['passed'] else '❌'} 反向对照 {ce['claim']}")
-    A(f"      · 基线 {ce['baseline_run']}：B03={ce['baseline_b03_status']}"
-      f"/{ce['baseline_b03_direction']}  "
+    A(f"      · 基线 {ce['baseline_run']}："
+      f"{ce['source_type']}={ce['baseline_source_status']}"
+      f"/{ce['baseline_source_direction']}  "
       f"CA={ce['baseline_combined_attention']}  "
       f"has_conflict={ce['baseline_has_conflict']}")
-    A(f"      · 失败 {s['fail_run']}：B03={ce['fail_b03_status']}  "
+    A(f"      · 失败 {s['fail_run']}："
+      f"{ce['source_type']}={ce['fail_source_status']}  "
       f"CA={ce['fail_combined_attention']}  "
       f"has_conflict={ce['fail_has_conflict']}")
     A("=" * 78)
@@ -1306,10 +1400,16 @@ def main(argv=None) -> int:
                     help="对照用文档指定的靶子 run（默认用第二遍的正式 run）")
     ap.add_argument("--failure", nargs=2, metavar=("FAIL_RUN", "BASE_RUN"),
                     help="跑证明二：F-1~F-4 + 反向对照")
+    ap.add_argument("--source", choices=sorted(FAILURE_SOURCES),
+                    help="证明二针对的证据来源（默认从失败 run 自动识别）")
     args = ap.parse_args(argv)
 
     if args.failure:
-        s = failure_suite(args.failure[0], args.failure[1])
+        try:
+            s = failure_suite(args.failure[0], args.failure[1], args.source)
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"❌ {exc}")
+            return 1
         s["verdict"] = ("PASS" if all(s[k]["passed"] for k in
                                       ("F-1", "F-2", "F-3", "F-4"))
                         and s["counter_evidence"]["passed"] else "FAIL")

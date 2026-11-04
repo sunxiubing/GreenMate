@@ -228,6 +228,10 @@ def summarize(entry: dict) -> str:
                 f"（{result.get('judge_method')}）")
 
     if source_type == SOURCE_TYPE_B04:
+        # 与 B03 同一口径：检索**没成**时说"不可用"，
+        # 不许因为 result 是 None 就写出"命中 0 条"——那读起来像检索成功但无命中。
+        if (entry.get("status") or "") != EVIDENCE_STATUS_OK:
+            return f"知识证据不可用（status={entry.get('status')}）"
         citations = result.get("citations") or []
         top = citations[0] if citations else {}
         return (f"知识检索 {result.get('query')!r} 命中 {len(citations)} 条"
@@ -275,6 +279,14 @@ def undetermined_reason(entry: dict) -> str:
         return (f"外部条件判定为 {result.get('signal')}，"
                 f"既不构成恶化也不构成缓解，不改变关注判断")
 
+    if source_type == SOURCE_TYPE_B04:
+        # 检索失败 ≠ 检索成功但没命中：没取到知识时，必须说"不可用"，
+        # 否则 LLM 会把"这次没检索到"误读成"知识库没有相关内容"。
+        if (entry.get("status") or "") != EVIDENCE_STATUS_OK:
+            return (f"知识证据当前不可用（status={entry.get('status')}），"
+                    f"没有知识方向可判，不改变关注判断")
+        return "该来源的证据不足以判定方向"
+
     if source_type == SOURCE_TYPE_B06:
         return (f"模型输出 {result.get('predicted_attention')}，"
                 f"既不属于 WATCH 也不属于 NORMAL，方向无法判定")
@@ -293,7 +305,10 @@ def limitations_of(entry: dict) -> list[dict]:
     ext = entry.get("ext") or {}
     out: list[dict] = []
 
-    if source_type == SOURCE_TYPE_B04:
+    # S5-2：这条限定说的是"检索到的那条知识"的口径。
+    # 检索**没成**时根本没有命中内容，这条限定不适用（留着会变成误导）。
+    if source_type == SOURCE_TYPE_B04 and \
+            (entry.get("status") or "") == EVIDENCE_STATUS_OK:
         out.append({
             "summary": "知识证据只支持『需要关注』",
             "reason": ("只支持『要关注』，不能证明未来一定恶化 —— "

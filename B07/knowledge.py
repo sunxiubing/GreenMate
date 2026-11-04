@@ -50,6 +50,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -83,6 +84,43 @@ CANDIDATE_QUERIES = (
     "决策依据不完整可能带来什么风险",
     "证据缺失时的正确做法",
 )
+
+# --------------------------------------------------------------------------
+# S5-2 知识降级开关（与 S5-1 天气开关同一口径）
+# --------------------------------------------------------------------------
+#
+# 为什么用开关而不是真删索引：
+#   删索引不可复现（跑一次就没了），而且会让人分不清"知识库坏了"
+#   还是"检索逻辑写错了"。显式开关只动知识这一条证据，
+#   其它证据、其它判据、其它进程一概不受影响。
+#
+# 硬约束：
+#   - 判定逻辑只有 knowledge_unavailable_reason() 一处，
+#     search_knowledge() 只调用它；
+#   - 失败必须显式：status=unavailable、data=None、error 写明原因，
+#     **不许写"命中 0 条"、不许返回上次成功的内容**。
+KNOWLEDGE_UNAVAILABLE_ENV = "B07_KNOWLEDGE_UNAVAILABLE"
+
+#: 开关打开时写进 error 的说明（固定文案，但 error 本身非空且指明开关）
+KNOWLEDGE_UNAVAILABLE_ERROR = (
+    "knowledge retrieval unavailable (B07_KNOWLEDGE_UNAVAILABLE=1): "
+    "模拟知识库检索故障，未执行 TF-IDF 检索"
+)
+
+
+def knowledge_unavailable_reason() -> str | None:
+    """开关是否打开；打开就返回显式失败原因，没打开返回 None。
+
+    这是知识降级开关的**唯一判定出处** —— 别处只调用它，
+    不各自判断环境变量（免得两处漂移）。
+
+    Returns:
+        None（正常）或一段非空的失败原因（降级）。
+    """
+    raw = os.environ.get(KNOWLEDGE_UNAVAILABLE_ENV, "")
+    if raw.strip() == "1":
+        return KNOWLEDGE_UNAVAILABLE_ERROR
+    return None
 
 
 # --------------------------------------------------------------------------
@@ -130,6 +168,17 @@ def search_knowledge(query: str = DEFAULT_QUERY,
         return make_evidence(
             make_tool_result(KNOWLEDGE_SOURCE, EVIDENCE_STATUS_ERROR, None,
                              "query 为空，无法检索"),
+            SOURCE_TYPE_B04_KNOWLEDGE,
+            {"citation": None, "retrieved": [], "question": query,
+             "has_relevant": False},
+        )
+
+    # ---- S5-2 知识降级：单一判定出处；未降级才走 B05 检索 ----
+    reason = knowledge_unavailable_reason()
+    if reason:
+        return make_evidence(
+            make_tool_result(KNOWLEDGE_SOURCE, EVIDENCE_STATUS_UNAVAILABLE,
+                             None, reason),
             SOURCE_TYPE_B04_KNOWLEDGE,
             {"citation": None, "retrieved": [], "question": query,
              "has_relevant": False},

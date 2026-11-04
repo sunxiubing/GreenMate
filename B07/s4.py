@@ -283,6 +283,10 @@ def build_ledger(bundle: dict, offline: dict, anchor: str) -> EvidenceLedger:
         "B05.search_tomato_knowledge",
         arguments={"query": DEFAULT_QUERY},
         purpose="方法论知识检索（决策基于不完整信息的风险）",
+        # S5-2：工具失败时，调用台账必须留下同一条 status/error，
+        # 否则 F-1 会看到 status=ok —— 证据不可用，调用记录却"成功"。
+        status=kb.get("status") or "ok",
+        error=kb.get("error"),
     )
     ledger.add_evidence(
         tr, "B04",

@@ -488,9 +488,17 @@ def replay(scenario: str, *, offline: bool = True, dry_run: bool = False,
         constructed = True
         warnings.append(CONSTRUCTED_WARNING)
         warnings.append("S5 的外部条件用 B07.s4_offline 的离线构造夹具，不联网。")
-        warnings.append(
-            "本次是**降级变体**（天气证据不可用）。"
-            if degraded else "本次是**基线变体**（一切正常）。")
+        # S5-2：知识降级是独立的开关（天气可以仍然正常）。
+        # 判定只调用 knowledge_unavailable_reason()，不在这里另读环境变量。
+        from B07.knowledge import knowledge_unavailable_reason
+        if degraded:
+            variant_note = "本次是**降级变体**（天气证据不可用）。"
+        elif knowledge_unavailable_reason():
+            variant_note = ("本次是**知识降级变体**：天气正常，"
+                            "知识证据不可用（B07_KNOWLEDGE_UNAVAILABLE=1）。")
+        else:
+            variant_note = "本次是**基线变体**（一切正常）。"
+        warnings.append(variant_note)
 
     else:                                          # pragma: no cover
         raise RuntimeError(f"未处理的场景：{scenario}")
@@ -618,7 +626,14 @@ def main(argv=None) -> int:
     if args.scenario == "S3" and offline:
         print(f"  构造用例：case={args.case}")
     if args.scenario == "S5":
-        print(f"  变体    ：{'降级（天气证据不可用）' if args.degraded else '基线（一切正常）'}")
+        from B07.knowledge import knowledge_unavailable_reason
+        if args.degraded:
+            variant = "天气降级（B03 不可用）"
+        elif knowledge_unavailable_reason():
+            variant = "知识降级（B04 不可用，天气正常）"
+        else:
+            variant = "基线（一切正常）"
+        print(f"  变体    ：{variant}")
     print(f"\n  {QUOTA_NOTICE}")
 
     try:

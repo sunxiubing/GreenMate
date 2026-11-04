@@ -1669,15 +1669,26 @@ def _block_b04(entry: dict) -> tuple[list[str], list[str]]:
     """知识证据（B04）。"""
     res = entry.get("result") or {}
     ext = entry.get("ext") or {}
+    ok = (entry.get("status") or "") == "ok"
+    query = res.get("query") or ext.get("question")
+    time_label = "检索时刻" if ok else "失败时刻"
+    time_note = ("（★ 这是知识检索时刻，与分析时刻可能差好几天）"
+                 if ok else "（★ 这是本次检索失败的时刻）")
     where = [
         f"证据编号 {entry.get('evidence_id')}",
         f"来源 source = {entry.get('source')}",
-        f"检索时刻 time = {entry.get('time')}（★ 这是知识检索时刻，"
-        f"与分析时刻可能差好几天）",
-        f"检索式 query = {res.get('query')}",
-        f"top_k = {res.get('top_k')}",
+        f"{time_label} time = {entry.get('time')}{time_note}",
+        f"检索式 query = {query}",
     ]
+    if ok:
+        where.append(f"top_k = {res.get('top_k')}")
+    else:
+        where.append("top_k = —（检索未执行，没有 top_k）")
     said = []
+    if not ok:
+        # 检索失败 ≠ 命中 0 条：没召回内容是因为根本没检索。
+        said.append("（没有内容 —— 这次知识检索失败了，未召回任何切片）")
+        return where, said
     for c in (res.get("citations") or [])[:5]:
         if not isinstance(c, dict):
             continue
@@ -1702,9 +1713,10 @@ def _unavailable_impact(entry: dict, bundle: dict) -> tuple[list[str], list[str]
     """不可用证据的「为什么不可用」和「它影响了什么判断」。
 
     ★ 内容全部来自存档：
-      · 为什么不可用 → entry.error + ext.unavailable_context.warnings
-      · 它影响了什么判断 → ext.unavailable_context（judge_method / signal /
-        future_ok / basis）+ combined_attention.reason
+      · 为什么不可用 → entry.error（B03 另有 ext.unavailable_context.warnings）
+      · 它影响了什么判断 → B03 用 external_conditions 的未判定上下文；
+        B04 用 evidence_divergence.undetermined 里的 summary/reason；
+        两者都补 combined_attention.reason。
       **不写死通用文案。**
     """
     ext = entry.get("ext") or {}
@@ -1712,6 +1724,7 @@ def _unavailable_impact(entry: dict, bundle: dict) -> tuple[list[str], list[str]
     ca = bundle.get("combined_attention") or {}
     uc = (ext.get("unavailable_context")
           or ec.get("unavailable_context") or {})
+    source_type = entry.get("source_type")
 
     why = []
     if entry.get("error"):
@@ -1723,6 +1736,28 @@ def _unavailable_impact(entry: dict, bundle: dict) -> tuple[list[str], list[str]
         why.append(f"警告原文：{w}")
 
     impact = []
+    if source_type == "B04":
+        # 知识没有"外部判定上下文"，它的影响落在 ⑦ 的 undetermined 列表里：
+        # summary 会写「知识证据不可用」，reason 会说明不改变关注判断。
+        div = (bundle.get("structured_judgement") or {}).get(
+            "evidence_divergence") or {}
+        for it in (div.get("undetermined") or []):
+            if it.get("source_type") != "B04":
+                continue
+            impact.append(
+                f"[未定] {it.get('summary')}"
+                + (f" —— {it.get('reason')}" if it.get("reason") else ""))
+        if ca.get("value"):
+            impact.append(f"因此合并关注等级仍为 {ca.get('value')}"
+                          f"（internal={ca.get('internal_predicted_attention')}"
+                          f"，external_signal={ca.get('external_signal')}"
+                          f"，has_conflict={ca.get('has_conflict')}）")
+            if ca.get("reason"):
+                impact.append(f"存档里的判定理由：{ca['reason']}")
+        if not impact:
+            impact.append("（存档未记录该项证据对最终判断的影响）")
+        return why, impact
+
     if uc:
         impact.append(
             f"外部判定未做出：judge_method = {uc.get('judge_method')}"
