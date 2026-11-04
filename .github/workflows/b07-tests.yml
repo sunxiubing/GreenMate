@@ -1,0 +1,40 @@
+name: B07 invariant tests
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 同一分支的旧运行直接取消，别排队等
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          # 按 requirements.txt 的哈希缓存 pip 下载缓存，
+          # 依赖没变时后续运行只花十几秒
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # B02/greenmate.db 与 B06/artifacts/ 不在版本库里，
+      # 用固定 seed 确定性重建（详见 .github/scripts/prepare_fixtures.py）
+      - name: Rebuild deterministic fixtures
+        run: python .github/scripts/prepare_fixtures.py
+
+      - name: Run B07 invariant tests
+        run: >
+          python -m pytest B07/tests -q
+          --deselect B07/tests/test_b08_freeze.py::test_model_fingerprints_match_real_files
