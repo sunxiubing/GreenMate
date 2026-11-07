@@ -42,11 +42,39 @@ from B07.config import DEFAULT_LOCATION
 from B07.explain import FIXED_QUESTION, MAX_ANSWER_CHARS, SYSTEM_PROMPT
 
 # ---- 实验常量 ----
-ANCHOR = "2026-10-21T16:00:00"          # 与 S1 同一个锚点，两次运行完全一致
+ANCHOR = "2026-10-21T16:00:00"          # 兜底锚点（与 S1 同一个锚点，两次运行完全一致）
 SCENARIO_WITHOUT = "S3_without"          # 对照组
 SCENARIO_WITH = "S3_with"                # 实验组
 WEATHER_LOCATION = "河北固安"            # 与 B07/weather.py 的默认一致
 WEATHER_WINDOW = "6h"
+
+
+def resolve_anchor() -> str:
+    """S3 用的时间锚点 —— 优先跟随数据库实际数据范围。
+
+    **为什么不能只用硬编码常量**：B02 的数据生成器（B02/simulator/engine.py
+    的 `_align_now`）以「运行当天」为基准生成最近 7 天的 336 条样本，
+    所以干净克隆后 `generate.py` 造出来的库覆盖的是
+    「当天 → 当天+7 天」，而不是固定的历史区间。
+
+    早期版本把锚点写死成 `2026-10-21T16:00:00`，于是冷启动复现时
+    S3 会请求一段**库里根本没有**的历史窗口，报
+    `EvidenceValidationError: 历史窗口点数校验失败：期望 6，实际 0`，
+    而 S1/S2/S4/S5 因为走 `select_stable_window()` 动态选窗不受影响。
+
+    现在改成：从库里动态选一个稳定窗口取它的终点当锚点；
+    库里没有可用数据时才回退到硬编码常量（保持老存档可复现）。
+    """
+    try:
+        from B07.s1 import select_stable_window
+
+        ws = select_stable_window()
+        anchor = ws.get("anchor_time")
+        if anchor is not None:
+            return anchor.isoformat() if hasattr(anchor, "isoformat") else str(anchor)
+    except Exception:
+        pass
+    return ANCHOR
 
 # --------------------------------------------------------------------------
 # "模型有没有引用外部条件"的判定器
@@ -484,13 +512,13 @@ def run_pair(location: str = DEFAULT_LOCATION,
         model_path = DEFAULT_MODEL_PATH
 
     print(f"\n  ▸ Run A（{SCENARIO_WITHOUT}）：不接外部天气")
-    archive_a = run_analysis(ANCHOR, location, model_path,
+    archive_a = run_analysis(resolve_anchor(), location, model_path,
                               scenario=SCENARIO_WITHOUT,
                               external_conditions=None,
                               progress=progress)
 
     print(f"\n  ▸ Run B（{SCENARIO_WITH}）：接外部天气")
-    archive_b = run_analysis(ANCHOR, location, model_path,
+    archive_b = run_analysis(resolve_anchor(), location, model_path,
                               scenario=SCENARIO_WITH,
                               external_conditions=external_conditions,
                               progress=progress)
@@ -510,7 +538,7 @@ def run_with_weather_only(external_conditions: dict,
         from B07.runs import DEFAULT_MODEL_PATH
         model_path = DEFAULT_MODEL_PATH
 
-    return run_analysis(ANCHOR, location, model_path,
+    return run_analysis(resolve_anchor(), location, model_path,
                         scenario=scenario,
                         external_conditions=external_conditions,
                         progress=progress)
@@ -555,7 +583,7 @@ def _find_s1_reference_run() -> str | None:
             archive = load_run(item["run_id"])
         except Exception:
             continue
-        if archive.get("analysis_time") == ANCHOR:
+        if archive.get("analysis_time") == resolve_anchor():
             return item["run_id"]
     return None
 
@@ -1027,7 +1055,7 @@ def offline_group(location: str = DEFAULT_LOCATION,
     import B07.runs as runs
     from B07.weather import build_external_context
 
-    anchor = datetime.fromisoformat(ANCHOR)
+    anchor = datetime.fromisoformat(resolve_anchor())
     results = []
 
     orig_dir, orig_index = runs.RUNS_DIR, runs.INDEX_PATH
@@ -1128,7 +1156,7 @@ def run_s3(location: str = DEFAULT_LOCATION,
     from B07.runs import explain_run, run_json_path
     from B07.weather import build_external_context
 
-    anchor = datetime.fromisoformat(ANCHOR)
+    anchor = datetime.fromisoformat(resolve_anchor())
     result: dict = {"limitations": []}
 
     # 判据阈值：报告里直接引用常量本身，避免手抄
@@ -1140,7 +1168,7 @@ def run_s3(location: str = DEFAULT_LOCATION,
 
     # ---------------- 一、实验设置 ----------------
     hr("一、实验设置")
-    print(f"  锚点 analysis_time : {ANCHOR}（两次运行完全一致）")
+    print(f"  锚点 analysis_time : {resolve_anchor()}（两次运行完全一致）")
     print(f"  固定问题            : {FIXED_QUESTION}")
     print(f"  回答长度上限        : {MAX_ANSWER_CHARS}")
     print(f"  对照组场景          : {SCENARIO_WITHOUT}")
@@ -1162,7 +1190,7 @@ def run_s3(location: str = DEFAULT_LOCATION,
         base_ts = (ext.get("baseline_point") or {}).get("timestamp")
         print(f"\n  forecast_time   = {fore_ts}")
         print(f"  baseline 时间   = {base_ts}")
-        print(f"  analysis_time   = {ANCHOR}")
+        print(f"  analysis_time   = {resolve_anchor()}")
         print(f"  forecast_time 晚于 analysis_time？ "
               f"{'✅ 是' if ext.get('future_ok') else '❌ 否'}")
 

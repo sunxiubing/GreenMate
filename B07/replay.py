@@ -151,11 +151,11 @@ def _s3_external_context(offline: bool, case: str) -> tuple[dict, bool]:
     """
     from datetime import datetime as _dt
 
-    from B07.s3 import (ANCHOR, OFFLINE_CASES, WEATHER_LOCATION, WEATHER_WINDOW,
-                        _install_fake_weather, _make_offline_weather)
+    from B07.s3 import (OFFLINE_CASES, WEATHER_LOCATION, WEATHER_WINDOW,
+                        _install_fake_weather, _make_offline_weather, resolve_anchor)
     from B07.weather import build_external_context
 
-    anchor = _dt.fromisoformat(ANCHOR)
+    anchor = _dt.fromisoformat(resolve_anchor())
     if offline:
         if case not in OFFLINE_CASES:
             raise KeyError(
@@ -452,9 +452,9 @@ def replay(scenario: str, *, offline: bool = True, dry_run: bool = False,
             notes.append(f"离线构造用例 case={case}" if constructed else "实时天气")
         else:
             from B07.runs import run_analysis
-            from B07.s3 import ANCHOR
+            from B07.s3 import resolve_anchor
 
-            archive = run_analysis(ANCHOR, location, model_path,
+            archive = run_analysis(resolve_anchor(), location, model_path,
                                    scenario="S3_without",
                                    external_conditions=None)
             source = "B07.runs.run_analysis(scenario='S3_without')"
