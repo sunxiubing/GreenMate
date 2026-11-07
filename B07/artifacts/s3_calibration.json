@@ -10,7 +10,7 @@
   "points": [
     {
       "label": "固安 now",
-      "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+      "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
       "location": "河北固安",
       "precipitation_probability": 21.0,
       "temperature": 13.4,
@@ -18,7 +18,7 @@
     },
     {
       "label": "固安 6h",
-      "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+      "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
       "location": "河北固安",
       "precipitation_probability": 70.0,
       "temperature": 12.7,
@@ -26,7 +26,7 @@
     },
     {
       "label": "寿光 now",
-      "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+      "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
       "location": "山东寿光",
       "precipitation_probability": 0.0,
       "temperature": 13.8,
@@ -34,7 +34,7 @@
     },
     {
       "label": "寿光 6h",
-      "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+      "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
       "location": "山东寿光",
       "precipitation_probability": 0.0,
       "temperature": 11.5,
@@ -42,7 +42,7 @@
     },
     {
       "label": "大兴 now",
-      "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+      "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
       "location": "北京大兴",
       "precipitation_probability": 34.0,
       "temperature": 13.3,
@@ -50,7 +50,7 @@
     },
     {
       "label": "大兴 6h",
-      "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+      "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
       "location": "北京大兴",
       "precipitation_probability": 96.0,
       "temperature": 12.3,
@@ -76,19 +76,19 @@
   "pairs": [
     {
       "label": "固安（6h 相对 now）",
-      "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+      "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
       "baseline": "固安 now",
       "forecast": "固安 6h"
     },
     {
       "label": "寿光（6h 相对 now）",
-      "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+      "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
       "baseline": "寿光 now",
       "forecast": "寿光 6h"
     },
     {
       "label": "大兴（6h 相对 now）",
-      "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+      "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
       "baseline": "大兴 now",
       "forecast": "大兴 6h"
     },

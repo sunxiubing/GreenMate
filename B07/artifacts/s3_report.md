@@ -446,9 +446,9 @@ sha 不同 = ⑥ 块内容不同（真实取数会漂移），这类存档之间
 
 | 组 | 来源 | 降水概率 | 相对差分（主判定） | 绝对阈值（兜底） | 结论 |
 |---|---|---|---|---|---|
-| 固安（6h 相对 now） | S3-0 实测校准（转录自 S3-1 任务书） | 21.0% → 70.0% | external_deteriorating（Δ=49.0 pp） | external_deteriorating | ✅ 一致 |
-| 寿光（6h 相对 now） | S3-0 实测校准（转录自 S3-1 任务书） | 0.0% → 0.0% | external_stable（Δ=0.0 pp） | external_improving | ⚠️ **不一致** |
-| 大兴（6h 相对 now） | S3-0 实测校准（转录自 S3-1 任务书） | 34.0% → 96.0% | external_deteriorating（Δ=62.0 pp） | external_deteriorating | ✅ 一致 |
+| 固安（6h 相对 now） | S3-0 实测校准（转录自 S3-1 【项目设计】） | 21.0% → 70.0% | external_deteriorating（Δ=49.0 pp） | external_deteriorating | ✅ 一致 |
+| 寿光（6h 相对 now） | S3-0 实测校准（转录自 S3-1 【项目设计】） | 0.0% → 0.0% | external_stable（Δ=0.0 pp） | external_improving | ⚠️ **不一致** |
+| 大兴（6h 相对 now） | S3-0 实测校准（转录自 S3-1 【项目设计】） | 34.0% → 96.0% | external_deteriorating（Δ=62.0 pp） | external_deteriorating | ✅ 一致 |
 | 本次真实 API（河北固安 6h） | 本次真实 API 实测（存档里的两个点） | 13.0% → 65.0% | external_deteriorating（Δ=52.0 pp） | external_deteriorating | ✅ 一致 |
 
 **构造用例（不是实测，不得当实测结论引用）**
@@ -516,7 +516,7 @@ sha 不同 = ⑥ 块内容不同（真实取数会漂移），这类存档之间
 
 ## 5. 完成线逐条自评
 
-> 说明：S3 阶段文档的"完成线"原文以「关注重点能合理变化，并能说明变化来自外部天气」
+> 说明：S3 阶段【项目设计】的"完成线"原文以「关注重点能合理变化，并能说明变化来自外部天气」
 > 这一句为核心要求，并要求"先跑一次『不带天气』、再跑一次『加入天气』，其他条件保持不变，
 > 比较两次结果"。下面逐条按可核对的原句要求自评，每条给出结论与证据位置。
 

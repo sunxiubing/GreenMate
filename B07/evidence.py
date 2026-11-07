@@ -80,7 +80,7 @@ def build_evidence(anchor_time: datetime, location: str = DEFAULT_LOCATION) -> d
         location:   位置标识，仅作为时间锚点的一部分
 
     Returns:
-        证据包 dict（结构见模块文档）
+        证据包 dict（结构见模块【项目设计】）
 
     Raises:
         EvidenceValidationError: 任一校验不通过

@@ -103,7 +103,7 @@ def show_capability(raw: dict) -> None:
         return
     print(ctx[ctx.index("【⑥"):])
     print()
-    print("  ↑ 逐行对应文档：")
+    print("  ↑ 逐行对应【项目设计】：")
     print("    「不受影响的部分：①当前环境 ②最近历史 ③B06 预测 ⑤限制条件」"
           " ⇒ 还能判断什么")
     print("    「外部天气证据当前不可用 … 判断受到限制」"

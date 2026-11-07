@@ -453,7 +453,7 @@ def test_report_contains_required_sections():
     md = REPORT_PATH.read_text(encoding="utf-8")
     for must in ("## 0 一句话结论", "## 1 四类信息", "## 2 溯源链实录",
                  "## 3 第四步", "## 4 第五步", "## 5 黑盒对照",
-                 "## 6 文档五步逐条自评", "## 7 Limitations", "## 8 复现命令"):
+                 "## 6 【项目设计】五步逐条自评", "## 7 Limitations", "## 8 复现命令"):
         assert must in md, f"报告缺少章节：{must}"
     for lim in ("**L1**", "**L2**", "**L3**", "**L4**", "**L5**"):
         assert lim in md, f"报告缺少 Limitation {lim}"

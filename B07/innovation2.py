@@ -6,7 +6,7 @@
   * 不新增任何 LLM 调用，全部基于 S4/S5 已落盘的 run 存档；
   * 不改 SYSTEM_PROMPT / 固定问题 / 任何判据阈值，不碰 B01–B06。
 
-要证明的东西（文档 p.47–50 创新点 2）：
+要证明的东西（【项目设计】 p.47–50 创新点 2）：
 
   第一步  找一句最终判断，**反着往回查**：这句话依据了什么？
   第二步  四类信息各自的作用不能互相替代
@@ -140,7 +140,7 @@ DETAIL_JSON_PATH = ARTIFACTS_DIR / "innovation2_trace_detail.json"
 REPORT_PATH = ARTIFACTS_DIR / "innovation2_report.md"
 CONTRAST_PATH = ARTIFACTS_DIR / "s4_3_contrast.json"
 
-#: 主 run（文档建议 run_082；run_084 是它的天气降级变体）
+#: 主 run（【项目设计】建议 run_082；run_084 是它的天气降级变体）
 DEFAULT_RUN = "run_082"
 #: 附带审计的 run：run_084 让 V3 落在"调用过但失败"的情形上，
 #: run_057 的回答里真的出现了"知识"字样，让 V4 有一个真实触发点。
@@ -151,7 +151,7 @@ DEFAULT_RUNS = ("run_082", "run_084", "run_057")
 # 1. 规则化挑句：什么是"重要结论句"
 # --------------------------------------------------------------------------
 
-#: 判断/建议类动词（文档给的是"如…"，是举例不是穷举）。
+#: 判断/建议类动词（【项目设计】给的是"如…"，是举例不是穷举）。
 #: 除清单本身外收了三个同类词：祈使建议"请"、义务/建议"应"、判断性"预测"。
 CLAIM_VERBS = ("建议", "需要", "应当", "预计", "判定", "不排除", "请",
                "应", "预测")
@@ -389,7 +389,7 @@ def pick_claims(answer: str, entries: list[dict],
       6. 按分数降序、原文顺序升序取前 max_claims 句。
 
     `manual`：**教师人工指出的句子**（原文整句）。命中的句子**无条件进入**候选，
-    不受规则 2/3/4 约束 —— 文档第一步要的是"教师任意指出一句"，
+    不受规则 2/3/4 约束 —— 【项目设计】第一步要的是"教师任意指出一句"，
     规则挑句只是没指定时的默认。人工指定的句子排在最前面。
 
     Returns:
@@ -1387,8 +1387,8 @@ run.json 里的具体字段**（结论句 → `structured_judgement.<字段>` �
 | knowledge | 一般性依据 | `result.citations` / `result.query` / `ext.citation` | query=`{(e04.get('result') or {}).get('query')}`，chunk=`{(e04.get('ext') or {}).get('citation', {}).get('chunk_id')}` |
 | model | 下一窗口预测 | `result.predicted_attention` / `result.window_id` / `result.confidence` | predicted_attention=`{(e06.get('result') or {}).get('predicted_attention')}`，window_id=`{(e06.get('result') or {}).get('window_id')}` |
 
-> **重要提醒（文档第二步）**：天气预报**不是**已发生的历史事实；模型输出**不是**专业知识；
-> RAG 文档**不是**下一窗口一定会发生什么的证明。台账用 `direction` 字段把
+> **重要提醒（【项目设计】第二步）**：天气预报**不是**已发生的历史事实；模型输出**不是**专业知识；
+> RAG 【项目设计】**不是**下一窗口一定会发生什么的证明。台账用 `direction` 字段把
 > 「支持 / 反向 / 仍不足以确定」分开了 —— 本 run 的 `evidence_divergence.each_source` =
 > `{json.dumps(div.get('each_source'), ensure_ascii=False)}`，
 > supporting {len(div.get('supporting') or [])} 条 / opposing {len(div.get('opposing') or [])} 条 /
@@ -1415,7 +1415,7 @@ run.json 里的具体字段**（结论句 → `structured_judgement.<字段>` �
 
 ## 3 第四步「真调用」检查（V3 / V4 逐条判定）
 
-**文档第四步的判据**：如果最终报告写着"根据天气信息……"，但运行记录里根本没有
+**【项目设计】第四步的判据**：如果最终报告写着"根据天气信息……"，但运行记录里根本没有
 天气工具调用，这一轮不通过。
 
 ### V3 红线（天气）
@@ -1461,9 +1461,9 @@ run.json 里的具体字段**（结论句 → `structured_judgement.<字段>` �
 
 {_contrast_section()}
 
-## 6 文档五步逐条自评
+## 6 【项目设计】五步逐条自评
 
-| 文档步骤 | 本轮结论 | 证据位置 |
+| 【项目设计】步骤 | 本轮结论 | 证据位置 |
 | --- | --- | --- |
 | 第一步 找一句最终判断，反着往回查 | **通过** | 第 2 节溯源链实录：结论句 → `structured_judgement.<字段>` → `evidence_ledger.entries[i]` → 工具调用 |
 | 第二步 四类信息各自的作用 | **通过** | 第 1 节对照表 + V5 的结构化字段证据表 |
@@ -1514,7 +1514,7 @@ run.json 里的具体字段**（结论句 → `structured_judgement.<字段>` �
   这类通用词（只说明谈的是同一类东西，不等于该证据支撑了这句）。
   句子分类同样是规则的：先按**限制性短语**（`LIMITATION_CUES`）把限制陈述摘出去，
   剩下的才按「判断/建议类动词 + 证据线索 + 打分」挑结论句。
-- **L3** 文档第一步要的是"教师任意指出一句"。本轮**同时**支持两种：
+- **L3** 【项目设计】第一步要的是"教师任意指出一句"。本轮**同时**支持两种：
   ① 程序按规则挑句（含判断/建议类动词 + 带证据线索 + 打分排序）——
   这是没指定时的默认，但**结论句的选择不是穷尽的**，只是"程序认为重要"的那些；
   ② `--claim "句子原文"` / `--claim-index N` **人工指定任意一句**，
@@ -1527,7 +1527,7 @@ run.json 里的具体字段**（结论句 → `structured_judgement.<字段>` �
   （V5 验的是结构化字段在不在），**不能证明"确实不可替代"**。
 - **L6** 主 run 是 `{main['source_run_id']}`，但它的 `scenario` 字段是
   `{meta['scenario']}`（S5 = S4 场景 + 天气降级开关的基线变体），
-  不是文档字面写的 "S4"；本轮按文档指定用了 run_082 / run_084，
+  不是【项目设计】字面写的 "S4"；本轮按【项目设计】指定用了 run_082 / run_084，
   两者除天气开关外同源（同一 anchor、同一 B06 窗口、同一固定问题：
   `system_prompt_sha256={meta['system_prompt_sha256']}`、
   `question_sha256={meta['question_sha256']}`）。
@@ -1555,8 +1555,8 @@ run.json 里的具体字段**（结论句 → `structured_judgement.<字段>` �
   （"温度波动 4.4℃，超过阈值 2.0℃" 就在 `time_anchor` 的限制原文里），
   文本重叠会把正常结论句一并误判成限制陈述（59 个 run 里误判 13 个），
   该做法已**整体废弃**，改回只认"带限制语义"的结构化短语。
-  另外 `CLAIM_VERBS` 在文档清单（建议/需要/应当/预计/判定/不排除）之外
-  补了「请 / 应 / 预测」三个同类词 —— 文档原话是"如…"，属于举例。
+  另外 `CLAIM_VERBS` 在【项目设计】清单（建议/需要/应当/预计/判定/不排除）之外
+  补了「请 / 应 / 预测」三个同类词 —— 【项目设计】原话是"如…"，属于举例。
 - **L11** 全库里有 {len(scan['non_success_runs'])} 个 `status=failed` 的 run
   （LLM 调用失败、`llm_explanation` 为空），它们**有台账但没有回答**，
   V1 对它们是**空真**（既无违反也无检验对象）。这类 run 不会被伪装成成功 ——

@@ -6,7 +6,7 @@
   * 只新跑 **1 次** LLM 调用（run_agree），另外两次复用 S4/S5 已落盘的 run 存档；
   * 不改 SYSTEM_PROMPT / 固定问题 / 任何判据阈值，不碰 B01–B06。
 
-要证明的东西（文档 p.51–55 创新点 3）：
+要证明的东西（【项目设计】 p.51–55 创新点 3）：
 
   第一步  看一次"证据方向一致"的运行                    → run_agree
   第二步  只改变一份证据让它出现分歧                    → run_conflict
@@ -790,7 +790,7 @@ def build_sections(runs: dict, checks: dict) -> list[dict]:
     # ---------------- 1 标题块 + 这一轮要看懂什么 ----------------
     body = [
         "B07 · 创新点 3 | 让系统学会\"有些话现在不能说\"",
-        "文档 p.51–55 | 第二遍走查",
+        "【项目设计】 p.51–55 | 第二遍走查",
         "",
         "【这一轮要看懂什么】",
         "  ① 环境状态改变时，判断是否跟着调整（而不是照抄上一句话）；",
@@ -802,13 +802,13 @@ def build_sections(runs: dict, checks: dict) -> list[dict]:
         f"  run_conflict       = {conflict['run_id']}　（外部转好，与内部反向）",
         f"  run_missing_weather= {missing['run_id']}　（外部不可用）",
         "",
-        "说明：仓库 docs/ 下没有 p.51–55 的文档原文，本节按该页六步要点转述，"
+        "说明：仓库 docs/ 下没有 p.51–55 的【项目设计】原文，本节按该页六步要点转述，"
         "不伪称引用原文。",
     ]
     secs.append({"no": 1, "title": "标题块 / 这一轮要看懂什么", "body": body})
 
-    # ---------------- 2 文档六步 ----------------
-    body = ["【文档六步】"]
+    # ---------------- 2 【项目设计】六步 ----------------
+    body = ["【【项目设计】六步】"]
     for i, (name, desc) in enumerate(DOC_STEPS, 1):
         body.append(f"  {i}. {name}：{desc}")
     body += ["", "本轮落地方式："]
@@ -818,7 +818,7 @@ def build_sections(runs: dict, checks: dict) -> list[dict]:
     body.append("  第四步 → 复用 run_084（不重跑）")
     body.append("  第五步 → 对 run_084 的回答做逐句扫描（带免责句豁免）")
     body.append("  第六步 → 三次运行对照表")
-    secs.append({"no": 2, "title": "文档六步", "body": body})
+    secs.append({"no": 2, "title": "【项目设计】六步", "body": body})
 
     # ---------------- 3 第一步 run_agree ----------------
     body = _run_header(agree, _ext_block(agree)) + _answer_block(agree)
@@ -1084,7 +1084,7 @@ def build_sections(runs: dict, checks: dict) -> list[dict]:
         "而不是档位字符串发生变化。根因是 combined_attention() 的分支顺序："
         "predicted=WATCH 分支先于外部信号分支命中。",
         "",
-        "L8 文档 p.51–55 的原文不在仓库 docs/ 下，本报告的六步要点是按该页转述的，"
+        "L8 【项目设计】 p.51–55 的原文不在仓库 docs/ 下，本报告的六步要点是按该页转述的，"
         "不是逐句引用原文。",
     ]
     secs.append({"no": 11, "title": "Limitations", "body": body})
@@ -1124,7 +1124,7 @@ def render_md(sections: list[dict], data: dict) -> str:
     lines = [
         "# B07 · 创新点 3 | 让系统学会\"有些话现在不能说\"",
         "",
-        "文档 p.51–55 | 第二遍走查",
+        "【项目设计】 p.51–55 | 第二遍走查",
         "",
         "| 三次运行 | run_id | 外部条件 | combined_attention |",
         "|---|---|---|---|",

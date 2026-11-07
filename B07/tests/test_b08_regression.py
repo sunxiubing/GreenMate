@@ -2,7 +2,7 @@
 
 ★ 这一遍钉死的几件事：
 
-  R1 **回归集够大、够分组**：13 个案例（文档要求 ≥10），每个场景至少 1 个案例，
+  R1 **回归集够大、够分组**：13 个案例（【项目设计】要求 ≥10），每个场景至少 1 个案例，
      每个分组至少 2 个案例，负对照必须在集里。
   R2 **负对照必须被抓到**：在内存里改坏一份真实存档 → 必须报 FAIL。
      抓不到就说明整个回归集没有鉴别力（无效）。
@@ -35,7 +35,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 def test_regression_set_has_at_least_ten_cases():
     cases = b08.REGRESSION_CASES
-    assert len(cases) >= 10, f"文档要求 ≥10 个固定回归案例，现在只有 {len(cases)} 个"
+    assert len(cases) >= 10, f"【项目设计】要求 ≥10 个固定回归案例，现在只有 {len(cases)} 个"
 
 
 def test_every_scenario_has_a_case():
@@ -225,7 +225,7 @@ def test_records_are_appended(tmp_path):
 
 
 def test_results_row_has_the_seven_documented_fields(tmp_path):
-    """文档写明的七项 + 版本信息，一个都不能少。"""
+    """【项目设计】写明的七项 + 版本信息，一个都不能少。"""
     exp = tmp_path / "expectations.json"
     res = tmp_path / "results.jsonl"
     rec = tmp_path / "records.jsonl"

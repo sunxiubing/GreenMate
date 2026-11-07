@@ -10,7 +10,7 @@
   我现在是否可用 → status（ok / unavailable / error）
   我提供了什么结果 → result
 
-设计原则（来自 S4 文档）：
+设计原则（来自 S4 【项目设计】）：
 
   - **统一的是最小语义，不是业务字段**。status / source / time / result / error
     五个字段各来源一致；业务字段（天气的 provider、知识的 citation、

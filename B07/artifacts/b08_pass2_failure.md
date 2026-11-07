@@ -133,7 +133,7 @@ weather provider unavailable (B07_WEATHER_UNAVAILABLE=1): 模拟天气 API 故�
 **⇒ 变化确实来自那一条证据失效**，不是别的地方变了：
 除 B03 之外的所有证据状态、判定、模型输出**都一模一样**。
 
-（文档靶子对同样成立：`run_057` 的 B03=ok/opposing、CA=conflict_unresolved、
+（【项目设计】靶子对同样成立：`run_057` 的 B03=ok/opposing、CA=conflict_unresolved、
 has_conflict=True ↔ `run_084` 的 B03=unavailable/undetermined、CA=watch_internal、
 has_conflict=False —— 这就是证明一的组 D。）
 

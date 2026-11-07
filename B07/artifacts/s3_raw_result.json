@@ -3309,7 +3309,7 @@
     "rows": [
       {
         "label": "固安（6h 相对 now）",
-        "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+        "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
         "baseline_pp": 21.0,
         "forecast_pp": 70.0,
         "forecast_cloud": 100.0,
@@ -3322,7 +3322,7 @@
       },
       {
         "label": "寿光（6h 相对 now）",
-        "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+        "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
         "baseline_pp": 0.0,
         "forecast_pp": 0.0,
         "forecast_cloud": 2.0,
@@ -3335,7 +3335,7 @@
       },
       {
         "label": "大兴（6h 相对 now）",
-        "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+        "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
         "baseline_pp": 34.0,
         "forecast_pp": 96.0,
         "forecast_cloud": 100.0,
@@ -3376,7 +3376,7 @@
     "disagreements": [
       {
         "label": "寿光（6h 相对 now）",
-        "provenance": "S3-0 实测校准（转录自 S3-1 任务书）",
+        "provenance": "S3-0 实测校准（转录自 S3-1 【项目设计】）",
         "baseline_pp": 0.0,
         "forecast_pp": 0.0,
         "forecast_cloud": 2.0,

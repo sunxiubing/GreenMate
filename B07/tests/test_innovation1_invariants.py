@@ -332,9 +332,9 @@ def _fake_raw(fake_llm):
 def test_report_contains_required_sections(fake_llm):
     raw = _fake_raw(fake_llm)
     md = build_report(raw)
-    for must in ("## 1 实验设计", "## 2 六次运行一览表", "## 3 文档第四步的三问",
+    for must in ("## 1 实验设计", "## 2 六次运行一览表", "## 3 【项目设计】第四步的三问",
                  "## 4 消融有效性检查", "## 5 “趋势 ≠ 预测”的实测证据",
-                 "## 6 文档四步逐条自评", "## 7 Limitations", "## 8 复现命令",
+                 "## 6 【项目设计】四步逐条自评", "## 7 Limitations", "## 8 复现命令",
                  "## 9 附录：6 次运行的回答原文"):
         assert must in md, f"报告缺少章节：{must}"
     for lim in ("**L1**", "**L2**", "**L3**", "**L4**", "**L5**", "**L6**"):

@@ -2,7 +2,7 @@
 
 这一层只做一件事：**把 B05 的知识检索工具返回值包装成统一证据**。
 
-规矩（来自 S4 文档 + B05 工具契约）：
+规矩（来自 S4 【项目设计】 + B05 工具契约）：
 
   1. **必须走 B05.test_functions.search_tomato_knowledge**。
      不绕过 B05 直接 import B04.SPEC，也不自己重写 TF-IDF 检索逻辑 ——

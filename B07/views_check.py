@@ -1,4 +1,4 @@
-"""B07 第三遍 · 四视图统一检查（文档 p.69）
+"""B07 第三遍 · 四视图统一检查（【项目设计】 p.69）
 
 检查**四个视图讲的是同一次分析**，而不是"判断本身对不对"。
 
@@ -436,7 +436,7 @@ def check_same_analysis(run_id: str, *, run_tests: bool = True) -> dict:
 
 def render_check(res: dict) -> str:
     W = 78
-    L = ["=" * W, " B07 · 四视图统一检查（文档 p.69）", "=" * W,
+    L = ["=" * W, " B07 · 四视图统一检查（【项目设计】 p.69）", "=" * W,
          f" run_id = {res['run_id']}", ""]
     for d in res["detail"]:
         mark = "PASS" if d["passed"] else "**FAIL**"

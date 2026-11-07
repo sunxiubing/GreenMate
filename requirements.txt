@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
 # GreenMate 项目统一依赖
+# ↑ 本行编码声明必须保留：中文 Windows 上 pip 默认按 GBK 读本文件会报
+#   UnicodeDecodeError（cp936 codec failed），声明后强制 UTF-8，跨平台可装。
 # 安装方式：pip install -r requirements.txt
 # Python 版本：3.12（开发验证于 3.12.7）
 #

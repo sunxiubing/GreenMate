@@ -1,4 +1,4 @@
-"""B08 第三遍 · 12 环节运行追踪（文档 p.97–98）
+"""B08 第三遍 · 12 环节运行追踪（【项目设计】 p.97–98）
 
     python -m B07.b08_trace run_082            # 终端输出
     python -m B07.b08_trace run_082 --json     # 结构化输出
@@ -683,7 +683,7 @@ def render(t: dict) -> str:
 # ★ 因果证明用**纯函数重算**：改一个输入 → 重算 → 看输出跟不跟着变。
 #   ★ 重算只在内存里做，**不落盘、不产生 run、不进索引**。
 
-#: 四组对照（正式 run = 第二遍的正式验证记录；文档靶子 = B07 开发期存档）
+#: 四组对照（正式 run = 第二遍的正式验证记录；【项目设计】靶子 = B07 开发期存档）
 CONTRAST_GROUPS = [
     {
         "key": "A",
@@ -695,7 +695,7 @@ CONTRAST_GROUPS = [
     },
     {
         "key": "B",
-        "title": "组 B · S2 ↔ S3 —— 文档要求的对照（★ 不干净）",
+        "title": "组 B · S2 ↔ S3 —— 【项目设计】要求的对照（★ 不干净）",
         "primary": ("run_122", "run_123"),
         "doc_pair": ("run_015", "run_023"),
         "target": "外部条件（但同时混进了历史窗口与稳定判定）",
@@ -1012,7 +1012,7 @@ def contrast_suite(formal: bool = True) -> dict:
         item = dict(g)
         item["pair_used"] = list(pair)
         item["compare"] = cmp_data
-        # 正式/文档两对都算，便于交叉核对
+        # 正式/【项目设计】两对都算，便于交叉核对
         other = g["doc_pair"] if formal else g["primary"]
         try:
             item["compare_other"] = compare_pair(*other)
@@ -1039,7 +1039,7 @@ def render_contrast(suite: dict) -> str:
         A("-" * 78)
         A(f"  {g['title']}")
         A(f"    正式 run 对：{g['pair_used'][0]} ↔ {g['pair_used'][1]}")
-        A(f"    文档靶子对：{g['doc_pair'][0]} ↔ {g['doc_pair'][1]}")
+        A(f"    【项目设计】靶子对：{g['doc_pair'][0]} ↔ {g['doc_pair'][1]}")
         A(f"    干净对照：{'是' if g['clean'] else '★ 否 —— ' + g['target']}")
         c = g.get("compare") or {}
         if "error" in c:
@@ -1397,7 +1397,7 @@ def main(argv=None) -> int:
     ap.add_argument("--contrast", action="store_true",
                     help="跑证明一：四组对照 + 三条因果证明")
     ap.add_argument("--doc-pairs", action="store_true",
-                    help="对照用文档指定的靶子 run（默认用第二遍的正式 run）")
+                    help="对照用【项目设计】指定的靶子 run（默认用第二遍的正式 run）")
     ap.add_argument("--failure", nargs=2, metavar=("FAIL_RUN", "BASE_RUN"),
                     help="跑证明二：F-1~F-4 + 反向对照")
     ap.add_argument("--source", choices=sorted(FAILURE_SOURCES),

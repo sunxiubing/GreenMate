@@ -260,7 +260,7 @@ def test_judgement_has_no_literal_threshold_copy():
     from B07 import judgement
 
     src = Path(judgement.__file__).read_text(encoding="utf-8")
-    # 去掉注释与文档字符串后再找（注释里提到数字是允许的）
+    # 去掉注释与【项目设计】字符串后再找（注释里提到数字是允许的）
     code = re.sub(r"#.*", "", src)
     for literal in ("2.0", "3.0", "1.5", "15000"):
         assert literal not in code, (
